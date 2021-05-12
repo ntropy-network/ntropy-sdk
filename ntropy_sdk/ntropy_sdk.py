@@ -118,6 +118,7 @@ class EnrichedTransaction:
         website=None,
         **kwargs,
     ):
+        self.sdk = sdk
         self.contact = contact
         self.labels = labels
         self.location = location
@@ -194,10 +195,13 @@ class Batch:
             while self.timeout - time.time() > 0:
                 resp, status = self.poll()
                 if status == "started":
-                    progress.update(resp.get("progress", 0))
+                    diff_n = resp.get("progress", 0) - progress.n
+                    progress.update(diff_n)
                     time.sleep(self.poll_interval)
+                    continue
                 progress.desc = status
-                progress.update(self.num_transactions)
+                diff_n = self.num_transactions - progress.n
+                progress.update(diff_n)
                 return resp
             raise NtropyError("Batch wait timeout")
 
@@ -263,5 +267,10 @@ class SDK:
         if not batch_id:
             raise ValueError("batch_id missing from response")
         return Batch(
-            self, batch_id, is_business[0], timeout=timeout, poll_interval=poll_interval
+            self,
+            batch_id,
+            is_business[0],
+            timeout=timeout,
+            poll_interval=poll_interval,
+            num_transactions=len(transactions),
         )
