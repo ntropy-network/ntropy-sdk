@@ -7,6 +7,7 @@ transaction = Transaction(
     amount=1.0,
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
     entry_type="debit",
+    entity_id="1",
 )
 
 batch = sdk.classify_batch([transaction])

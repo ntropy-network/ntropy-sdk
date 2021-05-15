@@ -25,6 +25,7 @@ class Transaction:
         "entry_type",
         "iso_currency_code",
         "transaction_id",
+        "entity_id",
     ]
 
     fields = [
@@ -57,6 +58,7 @@ class Transaction:
         pending=None,
         possible_labels=None,
         is_business=False,
+        entity_id=None,
     ):
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
@@ -74,10 +76,12 @@ class Transaction:
         self.payment_channel = payment_channel
         self.pending = pending
         self.possible_labels = possible_labels
+        self.entity_id = entity_id
+        self.is_business = is_business
+
         for field in self.required_fields:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} should be set")
-        self.is_business = is_business
 
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
@@ -88,6 +92,11 @@ class Transaction:
             value = getattr(self, field)
             if value is not None:
                 t["transaction"][field] = value
+        if self.is_business:
+            t["business"] = {"business_id": self.entity_id}
+        else:
+            t["user"] = {"user_id": self.entity_id}
+
         return t
 
 
