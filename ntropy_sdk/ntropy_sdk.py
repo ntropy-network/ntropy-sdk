@@ -65,9 +65,15 @@ class Transaction:
         if not date:
             date = datetime.now().strftime("%Y-%m-%d")
         self.transaction_id = transaction_id
+        if amount <= 0:
+            raise ValueError(
+                "amount must be a positive number. For negative amounts, change the entry_type field: debit means out of account, credit means into the account."
+            )
         self.amount = amount
         self.date = date
         self.description = description
+        if entry_type not in ["debit", "credit"]:
+            raise ValueError("entry_type nust be one of 'debit' or 'credit'")
         self.entry_type = entry_type
         self.iso_currency_code = iso_currency_code
         self.moto_eci_code = moto_eci_code
