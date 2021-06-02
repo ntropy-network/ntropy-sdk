@@ -2,6 +2,12 @@
 
 SDK for the Ntropy API
 
+Installation:
+
+```bash
+$ pip install --upgrade ntropy-sdk
+```
+
 Usage:
 
 ```python
