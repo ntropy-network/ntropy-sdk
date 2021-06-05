@@ -82,6 +82,8 @@ class Transaction:
         self.payment_channel = payment_channel
         self.pending = pending
         self.possible_labels = possible_labels
+        if not isinstance(entity_id, str):
+            raise ValueError("Entity_id must be a string")
         self.entity_id = entity_id
         self.is_business = is_business
 
@@ -244,6 +246,8 @@ class SDK:
                 try:
                     retry_after = int(resp.headers.get("retry-after", "1"))
                 except ValueError:
+                    retry_after = 1
+                if retry_after <= 0:
                     retry_after = 1
                 time.sleep(retry_after)
                 continue
