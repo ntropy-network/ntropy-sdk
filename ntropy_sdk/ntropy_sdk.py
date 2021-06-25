@@ -198,23 +198,27 @@ class Batch:
             raise NtropyBatchError(f"Batch failed: {results}", errors=results)
         return resp.json(), resp.json().get("status")
 
-    def wait(self):
+    def wait(self, poll_interval=None):
+        if not poll_interval:
+            poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
             resp, status = self.poll()
             if status == "started":
-                time.sleep(self.poll_interval)
+                time.sleep(poll_interval)
                 continue
             return resp
         raise NtropyError("Batch wait timeout")
 
-    def wait_with_progress(self):
+    def wait_with_progress(self, poll_interval=None):
+        if not poll_interval:
+            poll_interval = self.poll_interval
         with tqdm(total=self.num_transactions, desc="started") as progress:
             while self.timeout - time.time() > 0:
                 resp, status = self.poll()
                 if status == "started":
                     diff_n = resp.get("progress", 0) - progress.n
                     progress.update(diff_n)
-                    time.sleep(self.poll_interval)
+                    time.sleep(poll_interval)
                     continue
                 progress.desc = status
                 diff_n = self.num_transactions - progress.n
