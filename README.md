@@ -19,6 +19,7 @@ sdk = SDK(os.getenv("NTROPY_API_KEY"))
 transaction = Transaction(
     amount=1.0,
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
+    is_business=True,
     entry_type="debit",
     entity_id="1",
 )
