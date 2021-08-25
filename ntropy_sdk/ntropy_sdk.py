@@ -227,12 +227,12 @@ class SDK:
         self.base_url = "https://api.ntropy.network"
         self.retries = 10
         self.token = token
-        self.requests = requests
+        self.session = requests.Session()
         self.logger = logging.getLogger("Ntropy-SDK")
 
     def retry_ratelimited_request(self, method: str, url: str, payload: object):
         for i in range(self.retries):
-            resp = self.requests.request(
+            resp = self.session.request(
                 method,
                 self.base_url + url,
                 json=payload,
