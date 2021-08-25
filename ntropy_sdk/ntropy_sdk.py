@@ -94,7 +94,7 @@ class Transaction:
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
 
-    def to_dict(self):
+    def to_dict(self, latency_optimized=False):
         t = {"transaction": {}}
         for field in self.fields:
             value = getattr(self, field)
@@ -104,7 +104,8 @@ class Transaction:
             t["business"] = {"business_id": self.entity_id}
         else:
             t["user"] = {"user_id": self.entity_id}
-
+        if latency_optimized:
+            t["latency_optimized"] = True
         return t
 
 
@@ -252,7 +253,7 @@ class SDK:
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
-    def classify_realtime(self, transaction: Transaction):
+    def classify_realtime(self, transaction: Transaction, latency_optimized=False):
         if not isinstance(transaction, Transaction):
             raise ValueError("transaction should be of type Transaction")
         url = (
@@ -260,7 +261,9 @@ class SDK:
             if transaction.is_business
             else "/classifier/consumer"
         )
-        resp = self.retry_ratelimited_request("POST", url, transaction.to_dict())
+        resp = self.retry_ratelimited_request(
+            "POST", url, transaction.to_dict(latency_optimized=latency_optimized)
+        )
         return EnrichedTransaction.from_dict(self, resp.json())
 
     def classify_batch(
