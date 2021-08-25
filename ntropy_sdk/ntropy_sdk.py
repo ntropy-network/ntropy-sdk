@@ -113,11 +113,8 @@ class EnrichedTransactionList:
         self.transactions = transactions
 
     @classmethod
-    def from_dict(cls, sdk, val: dict):
-        t = []
-        for res in val.get("results", []):
-            t.append(EnrichedTransaction.from_dict(sdk, res))
-        return cls(t)
+    def from_list(cls, sdk, vals: list):
+        return cls([EnrichedTransaction.from_dict(sdk, val) for val in vals])
 
 
 class EnrichedTransaction:
@@ -186,17 +183,13 @@ class Batch:
             if self.is_business
             else f"/classifier/consumer/batch/{self.batch_id}"
         )
-        resp = self.sdk.retry_ratelimited_request("GET", url, None)
-        if resp.json().get("status") == "finished":
-            results = resp.json().get("results", [])
-            return (
-                EnrichedTransactionList.from_dict(self.sdk, resp.json()),
-                resp.json().get("status"),
-            )
-        if resp.json().get("status") == "error":
-            results = resp.json().get("results", [])
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        status, results = json_resp.get("status"), json_resp.get("results", [])
+        if status == "finished":
+            return EnrichedTransactionList.from_list(self.sdk, results), status
+        if status == "error":
             raise NtropyBatchError(f"Batch failed: {results}", errors=results)
-        return resp.json(), resp.json().get("status")
+        return json_resp, status
 
     def wait(self, poll_interval=None):
         if not poll_interval:
