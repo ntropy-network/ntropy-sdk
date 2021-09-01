@@ -1,4 +1,4 @@
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 from ntropy_sdk.ntropy_sdk import (
     Transaction,
