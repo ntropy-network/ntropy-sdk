@@ -65,7 +65,7 @@ class Transaction:
         if not date:
             date = datetime.now().strftime("%Y-%m-%d")
         self.transaction_id = transaction_id
-        if amount <= 0:
+        if amount < 0:
             raise ValueError(
                 "amount must be a positive number. For negative amounts, change the entry_type field."
             )
