@@ -18,6 +18,8 @@ class NtropyBatchError(Exception):
 
 
 class Transaction:
+    _zero_amount_check = True
+
     required_fields = [
         "amount",
         "date",
@@ -65,7 +67,7 @@ class Transaction:
         if not date:
             date = datetime.now().strftime("%Y-%m-%d")
         self.transaction_id = transaction_id
-        if amount <= 0:
+        if (amount == 0 and self._zero_amount_check) or amount < 0:
             raise ValueError(
                 "amount must be a positive number. For negative amounts, change the entry_type field."
             )
@@ -90,6 +92,14 @@ class Transaction:
         for field in self.required_fields:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} should be set")
+
+    @classmethod
+    def disable_zero_amount_check(cls):
+        cls._zero_amount_check = False
+
+    @classmethod
+    def enable_zero_amount_check(cls):
+        cls._zero_amount_check = True
 
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
