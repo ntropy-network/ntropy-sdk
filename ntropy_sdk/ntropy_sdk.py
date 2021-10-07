@@ -296,11 +296,6 @@ class SDK:
         if len(transactions) > 100000:
             raise ValueError("transactions list must be < 100000")
 
-        is_business = [transaction.is_business for transaction in transactions]
-
-        if not (all(is_business) or all([not a for a in is_business])):
-            raise ValueError("transactions should all have the same is_business value")
-
         url = "/v2/enrich/batch"
 
         resp = self.retry_ratelimited_request(
