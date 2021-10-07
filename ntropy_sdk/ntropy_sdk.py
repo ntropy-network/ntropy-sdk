@@ -184,13 +184,11 @@ class Batch:
         self,
         sdk,
         batch_id,
-        is_business,
         timeout=4 * 60 * 60,
         poll_interval=10,
         num_transactions=0,
     ):
         self.batch_id = batch_id
-        self.is_business = is_business
         self.timeout = time.time() + timeout
         self.poll_interval = poll_interval
         self.sdk = sdk
@@ -308,7 +306,6 @@ class SDK:
         return Batch(
             self,
             batch_id,
-            is_business[0],
             timeout=timeout,
             poll_interval=poll_interval,
             num_transactions=len(transactions),
