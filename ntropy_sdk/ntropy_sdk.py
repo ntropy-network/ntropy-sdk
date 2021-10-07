@@ -28,7 +28,7 @@ class Transaction:
         "country",
         "iso_currency_code",
         "transaction_id",
-        "entity_id",
+        "account_holder_id",
     ]
 
     fields = [
@@ -61,7 +61,7 @@ class Transaction:
         payment_channel=None,
         pending=None,
         is_business=False,
-        entity_id=None,
+        account_holder_id=None,
     ):
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
@@ -92,10 +92,10 @@ class Transaction:
         self.payment_channel = payment_channel
         self.pending = pending
 
-        if not isinstance(entity_id, str):
-            raise ValueError("Entity_id must be a string")
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id must be a string")
 
-        self.entity_id = entity_id
+        self.account_holder_id = account_holder_id
         self.is_business = is_business
 
         for field in self.required_fields:
@@ -121,7 +121,7 @@ class Transaction:
                 tx_dict[field] = value
 
         account_holder = {
-            "id": self.entity_id,
+            "id": self.account_holder_id,
             "type": "business" if self.is_business else "consumer"
         }
 
