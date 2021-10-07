@@ -122,7 +122,7 @@ class Transaction:
 
         account_holder = {
             "id": self.entity_id,
-            "type": "business" if self.is_business else "person"
+            "type": "business" if self.is_business else "consumer"
         }
 
         tx_dict["account_holder"] = account_holder
@@ -200,17 +200,17 @@ class Batch:
         return f"Batch(id={self.batch_id})"
 
     def poll(self):
-        url = (
-            f"/classifier/business/batch/{self.batch_id}"
-            if self.is_business
-            else f"/classifier/consumer/batch/{self.batch_id}"
-        )
+        url = f"/v2/enrich/batch/{self.batch_id}"
+
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status, results = json_resp.get("status"), json_resp.get("results", [])
+
         if status == "finished":
             return EnrichedTransactionList.from_list(self.sdk, results), status
+
         if status == "error":
             raise NtropyBatchError(f"Batch failed: {results}", errors=results)
+
         return json_resp, status
 
     def wait(self, poll_interval=None):
@@ -290,23 +290,24 @@ class SDK:
 
         return EnrichedTransaction.from_dict(self, resp.json())
 
-    def classify_batch(
+    def enrich_batch(
         self, transactions: List[Transaction], timeout=4 * 60 * 60, poll_interval=10
     ):
         if len(transactions) > 100000:
             raise ValueError("transactions list must be < 100000")
+
         is_business = [transaction.is_business for transaction in transactions]
+
         if not (all(is_business) or all([not a for a in is_business])):
             raise ValueError("transactions should all have the same is_business value")
-        url = (
-            "/classifier/business/batch"
-            if is_business[0]
-            else "/classifier/consumer/batch"
-        )
+
+        url = "/v2/enrich/batch"
+
         resp = self.retry_ratelimited_request(
             "POST", url, [transaction.to_dict() for transaction in transactions]
         )
         batch_id = resp.json().get("id", "")
+
         if not batch_id:
             raise ValueError("batch_id missing from response")
         return Batch(
