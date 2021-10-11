@@ -145,7 +145,7 @@ class EnrichedTransaction:
         self,
         sdk,
         contact=None,
-        label=None,
+        labels=None,
         location=None,
         logo=None,
         merchant=None,
@@ -157,7 +157,7 @@ class EnrichedTransaction:
     ):
         self.sdk = sdk
         self.contact = contact
-        self.label = label
+        self.labels = labels
         self.location = location
         self.logo = logo
         self.merchant = merchant
@@ -168,7 +168,7 @@ class EnrichedTransaction:
         self.kwargs = kwargs
 
     def __repr__(self):
-        return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, label={self.label})"
+        return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
 
     def report(self):
         return self.sdk.retry_ratelimited_request(
