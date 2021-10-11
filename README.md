@@ -21,14 +21,15 @@ transaction = Transaction(
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
     is_business=True,
     entry_type="outgoing",
-    entity_id="1",
+    account_holder_id="1",
+    country="US",
 )
 
-batch = sdk.classify_batch([transaction])
+batch = sdk.enrich_batch([transaction])
 enriched_list = batch.wait_with_progress()
 print("BATCH", enriched_list.transactions[0].labels)
 
-enriched = sdk.classify_realtime(transaction)
+enriched = sdk.enrich(transaction)
 print("REALTIME:", enriched.labels)
 ```
 

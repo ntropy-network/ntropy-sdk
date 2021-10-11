@@ -5,6 +5,7 @@ import requests
 import logging
 from tqdm.auto import tqdm
 from typing import List
+from urllib.parse import urlencode
 
 
 class NtropyError(Exception):
@@ -25,9 +26,10 @@ class Transaction:
         "date",
         "description",
         "entry_type",
+        "country",
         "iso_currency_code",
         "transaction_id",
-        "entity_id",
+        "account_holder_id",
     ]
 
     fields = [
@@ -37,12 +39,12 @@ class Transaction:
         "description",
         "entry_type",
         "iso_currency_code",
+        "country",
         "moto_eci_code",
         "pan_entry_mode_auth",
         "pan_entry_mode_capture",
         "payment_channel",
         "pending",
-        "possible_labels",
     ]
 
     def __init__(
@@ -53,40 +55,48 @@ class Transaction:
         description=None,
         entry_type=None,
         iso_currency_code="USD",
+        country=None,
         moto_eci_code=None,
         pan_entry_mode_auth=None,
         pan_entry_mode_capture=None,
         payment_channel=None,
         pending=None,
-        possible_labels=None,
         is_business=False,
-        entity_id=None,
+        account_holder_id=None,
     ):
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
+
         if not date:
             date = datetime.now().strftime("%Y-%m-%d")
+
         self.transaction_id = transaction_id
+
         if (amount == 0 and self._zero_amount_check) or amount < 0:
             raise ValueError(
                 "amount must be a positive number. For negative amounts, change the entry_type field."
             )
+
         self.amount = amount
         self.date = date
         self.description = description
+
         if entry_type not in ["debit", "credit", "outgoing", "incoming"]:
             raise ValueError("entry_type nust be one of 'incoming' or 'outgoing'")
+
         self.entry_type = entry_type
         self.iso_currency_code = iso_currency_code
+        self.country = country
         self.moto_eci_code = moto_eci_code
         self.pan_entry_mode_auth = pan_entry_mode_auth
         self.pan_entry_mode_capture = pan_entry_mode_capture
         self.payment_channel = payment_channel
         self.pending = pending
-        self.possible_labels = possible_labels
-        if not isinstance(entity_id, str):
-            raise ValueError("Entity_id must be a string")
-        self.entity_id = entity_id
+
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id must be a string")
+
+        self.account_holder_id = account_holder_id
         self.is_business = is_business
 
         for field in self.required_fields:
@@ -104,19 +114,21 @@ class Transaction:
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
 
-    def to_dict(self, latency_optimized=False):
-        t = {"transaction": {}}
+    def to_dict(self):
+        tx_dict = {}
         for field in self.fields:
             value = getattr(self, field)
             if value is not None:
-                t["transaction"][field] = value
-        if self.is_business:
-            t["business"] = {"business_id": self.entity_id}
-        else:
-            t["user"] = {"user_id": self.entity_id}
-        if latency_optimized:
-            t["latency_optimized"] = True
-        return t
+                tx_dict[field] = value
+
+        account_holder = {
+            "id": self.account_holder_id,
+            "type": "business" if self.is_business else "consumer"
+        }
+
+        tx_dict["account_holder"] = account_holder
+
+        return tx_dict
 
 
 class EnrichedTransactionList:
@@ -160,7 +172,7 @@ class EnrichedTransaction:
 
     def report(self):
         return self.sdk.retry_ratelimited_request(
-            "POST", "/classifier/report", {"transaction_id": self.transaction_id}
+            "POST", "/v2/report", {"transaction_id": self.transaction_id}
         )
 
     @classmethod
@@ -173,13 +185,11 @@ class Batch:
         self,
         sdk,
         batch_id,
-        is_business,
         timeout=4 * 60 * 60,
         poll_interval=10,
         num_transactions=0,
     ):
         self.batch_id = batch_id
-        self.is_business = is_business
         self.timeout = time.time() + timeout
         self.poll_interval = poll_interval
         self.sdk = sdk
@@ -189,17 +199,17 @@ class Batch:
         return f"Batch(id={self.batch_id})"
 
     def poll(self):
-        url = (
-            f"/classifier/business/batch/{self.batch_id}"
-            if self.is_business
-            else f"/classifier/consumer/batch/{self.batch_id}"
-        )
+        url = f"/v2/enrich/batch/{self.batch_id}"
+
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status, results = json_resp.get("status"), json_resp.get("results", [])
+
         if status == "finished":
             return EnrichedTransactionList.from_list(self.sdk, results), status
+
         if status == "error":
             raise NtropyBatchError(f"Batch failed: {results}", errors=results)
+
         return json_resp, status
 
     def wait(self, poll_interval=None):
@@ -235,6 +245,7 @@ class SDK:
     def __init__(self, token: str):
         if not token:
             raise NtropyError("API Token must be set")
+
         self.base_url = "https://api.ntropy.network"
         self.retries = 10
         self.token = token
@@ -263,42 +274,47 @@ class SDK:
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
-    def classify_realtime(self, transaction: Transaction, latency_optimized=False):
+    def enrich(self, transaction: Transaction, latency_optimized=False, categorization=True):
         if not isinstance(transaction, Transaction):
             raise ValueError("transaction should be of type Transaction")
-        url = (
-            "/classifier/business"
-            if transaction.is_business
-            else "/classifier/consumer"
-        )
+
+        params_str = urlencode({
+            "latency_optimized": latency_optimized,
+            "categorization": categorization
+        })
+        url = "/v2/enrich?" + params_str
+
         resp = self.retry_ratelimited_request(
-            "POST", url, transaction.to_dict(latency_optimized=latency_optimized)
+            "POST", url, transaction.to_dict()
         )
+
         return EnrichedTransaction.from_dict(self, resp.json())
 
-    def classify_batch(
-        self, transactions: List[Transaction], timeout=4 * 60 * 60, poll_interval=10
+    def enrich_batch(
+        self,
+        transactions: List[Transaction],
+        timeout=4 * 60 * 60,
+        poll_interval=10,
+        categorization=True
     ):
         if len(transactions) > 100000:
             raise ValueError("transactions list must be < 100000")
-        is_business = [transaction.is_business for transaction in transactions]
-        if not (all(is_business) or all([not a for a in is_business])):
-            raise ValueError("transactions should all have the same is_business value")
-        url = (
-            "/classifier/business/batch"
-            if is_business[0]
-            else "/classifier/consumer/batch"
-        )
+
+        url = "/v2/enrich/batch"
+
+        if not categorization:
+            url += "?categorization=false"
+
         resp = self.retry_ratelimited_request(
             "POST", url, [transaction.to_dict() for transaction in transactions]
         )
         batch_id = resp.json().get("id", "")
+
         if not batch_id:
             raise ValueError("batch_id missing from response")
         return Batch(
             self,
             batch_id,
-            is_business[0],
             timeout=timeout,
             poll_interval=poll_interval,
             num_transactions=len(transactions),
