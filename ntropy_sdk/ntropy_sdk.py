@@ -5,6 +5,7 @@ import requests
 import logging
 from tqdm.auto import tqdm
 from typing import List
+from urllib.parse import urlencode
 
 
 class NtropyError(Exception):
@@ -273,14 +274,15 @@ class SDK:
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
-    def enrich(self, transaction: Transaction, latency_optimized=False):
+    def enrich(self, transaction: Transaction, latency_optimized=False, categorization=True):
         if not isinstance(transaction, Transaction):
             raise ValueError("transaction should be of type Transaction")
 
-        url = "/v2/enrich"
-
-        if latency_optimized:
-            url += "?latency_optimized=true"
+        params_str = urlencode({
+            "latency_optimized": latency_optimized,
+            "categorization": categorization
+        })
+        url = "/v2/enrich?" + params_str
 
         resp = self.retry_ratelimited_request(
             "POST", url, transaction.to_dict()
@@ -289,12 +291,19 @@ class SDK:
         return EnrichedTransaction.from_dict(self, resp.json())
 
     def enrich_batch(
-        self, transactions: List[Transaction], timeout=4 * 60 * 60, poll_interval=10
+        self,
+        transactions: List[Transaction],
+        timeout=4 * 60 * 60,
+        poll_interval=10,
+        categorization=True
     ):
         if len(transactions) > 100000:
             raise ValueError("transactions list must be < 100000")
 
         url = "/v2/enrich/batch"
+
+        if not categorization:
+            url += "?categorization=false"
 
         resp = self.retry_ratelimited_request(
             "POST", url, [transaction.to_dict() for transaction in transactions]
