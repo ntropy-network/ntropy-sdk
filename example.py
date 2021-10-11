@@ -14,7 +14,7 @@ transaction = Transaction(
 
 batch = sdk.enrich_batch([transaction])
 enriched_list = batch.wait_with_progress()
-print("BATCH", enriched_list.transactions[0].label)
+print("BATCH", enriched_list.transactions[0].labels)
 
 enriched = sdk.enrich(transaction)
-print("REALTIME:", enriched.label)
+print("REALTIME:", enriched.labels)
