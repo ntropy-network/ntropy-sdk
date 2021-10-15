@@ -2,13 +2,30 @@
 
 SDK for the Ntropy API
 
-Installation:
+## Installation:
 
 ```bash
-$ pip install --upgrade ntropy-sdk
+$ pip install --upgrade 'ntropy-sdk[benchmark]'
 ```
 
-Usage:
+## Usage:
+### Programmatic usage for benchmarking:
+Assuming you have a CSV file called testset.csv with the following fields set:
+* iso_currency_code: The currency of the transaction
+* amount: The amount (a positive number)
+* entry_type: incoming for money coming into the account, outgoing for money going out of the account
+* description: The transaction description string
+* account_holder_id: A unique identifier for the account holder
+* is_business: A boolean indicating if this is a business transaction (True) or a consumer transaction (False)
+* (optional) correct_merchant: A string that should match the merchant output of the API. If you combine this with --ground-truth-merchant-field=correct_merchant you will be given an accuracy % for the API.
+* (optional) correct_labels: The label that the transaction should be marked as. If you combine this with --ground-truth-label-field=correct_labels you will be given an F1 score for the API.
+
+
+```bash
+$ ntropy-benchmark --api-key=$NTROPY_API_KEY --in-csv-file=testset.csv --out-csv-file=enriched.csv --ground-truth-label-field=correct_labels
+```
+
+### Using this as a python library:
 
 ```python
 import os
@@ -33,6 +50,7 @@ enriched = sdk.enrich(transaction)
 print("REALTIME:", enriched.labels)
 ```
 
-* Free software: MIT license
+## License:
+Free software: MIT license
 
 
