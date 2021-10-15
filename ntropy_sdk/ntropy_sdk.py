@@ -405,14 +405,27 @@ class SDK:
         df = df.drop(["_input_tx", "_output_tx"], axis=1)
         return df
 
-    def _flatten_labels(self, labels):
-        if isinstance(labels, list):
-            return [label for label in labels]
-        r = []
-        for k, labels_ in labels.items():
-            r.append(k)
-            r.extend(self._flatten_labels(labels_))
-        return r
+    def _get_nodes(self, x, prefix=""):
+        """
+        Args:
+            x: a tree where internal nodes are dictionaries, and leaves are lists.
+            prefix: not meant to be passed. The parent prefix of a label. e.g. given A -> B -> C,
+                the parent prefix of C is 'A [sep] B'.
+            sep: the separator to use between labels. Could be 'and', '-', or whatever
+        Returns:
+            All nodes in the hierarchy. Each node is given by a string A [sep] B [sep] C etc.
+        """
+        res = []
+        q = [(x, prefix)]
+        while q:
+            x, prefix = q.pop()
+            if isinstance(x, list):
+                res.extend([prefix + k for k in x])
+            else:
+                for k, v in x.items():
+                    res.append(prefix + k)
+                    q.append((v, prefix + k + f" - "))
+        return list(set(res))
 
     default_mapping = {
         "merchant": "merchant",
@@ -425,6 +438,11 @@ class SDK:
         "contact": "contact",
         # the entire enriched transaction object is at _output_tx
     }
+
+    def _node2branch(self, branch):
+        if isinstance(branch, str):
+            branch = branch.split(" - ")
+        return [" - ".join(branch[: i + 1]) for i in range(len(branch))]
 
     def benchmark(
         self,
@@ -492,19 +510,20 @@ class SDK:
             output = f"Merchant:\n\tAccuracy: {accuracy_merchant:.3f}%"
             print(output)
         if ground_truth_label_field:
-            consumer_labels = self._flatten_labels(self.get_labels("consumer"))
-            business_labels = self._flatten_labels(self.get_labels("business"))
-            correct_labels = df[ground_truth_label_field]
-            is_business = df["is_business"]
-            predicted_labels = df[mapping["labels"]]
+            consumer_labels = self._get_nodes(self.get_labels("consumer"))
+            business_labels = self._get_nodes(self.get_labels("business"))
+            correct_labels = df[ground_truth_label_field].to_list()
+            is_business = df["is_business"].to_list()
+            predicted_labels = df[mapping["labels"]].to_list()
             y_pred = []
             y_true = []
-            for x, y, is_business in zip(correct_labels, predicted_labels, is_business):
-                nodes = consumer_labels if not is_business else business_labels
-                x = x.split(" - ")
+            for x, y, is_biz in zip(correct_labels, predicted_labels, is_business):
+                nodes = business_labels if is_biz else consumer_labels
+                ground_truth = self._node2branch(x)
+                preds = self._node2branch(y)
                 for node in nodes:
-                    y_true.append(node in x)
-                    y_pred.append(node in y)
+                    y_true.append(node in ground_truth)
+                    y_pred.append(node in preds)
             labeller_accuracy = np.mean(
                 [x == " - ".join(y) for x, y in zip(correct_labels, predicted_labels)]
             )
