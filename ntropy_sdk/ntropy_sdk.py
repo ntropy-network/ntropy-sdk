@@ -334,17 +334,8 @@ class SDK:
         poll_interval=10,
     ):
         if mapping is None:
-            mapping = {
-                "merchant": "merchant",
-                "website": "website",
-                "labels": "labels",
-                "logo": "logo",
-                "location": "location",
-                "person": "person",
-                "rating": "rating",
-                "contact": "contact",
-                # the entire enriched transaction object is at _output_tx
-            }
+            mapping = self.default_mapping.copy()
+
         required_columns = [
             "iso_currency_code",
             "amount",
@@ -423,6 +414,18 @@ class SDK:
             r.extend(self._flatten_labels(labels_))
         return r
 
+    default_mapping = {
+        "merchant": "merchant",
+        "website": "website",
+        "labels": "labels",
+        "logo": "logo",
+        "location": "location",
+        "person": "person",
+        "rating": "rating",
+        "contact": "contact",
+        # the entire enriched transaction object is at _output_tx
+    }
+
     def benchmark(
         self,
         in_csv_file: str,
@@ -460,17 +463,7 @@ class SDK:
                 "Scikit-learn not found, please install ntropy-sdk with the benchmark extra (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
             )
             sys.exit(1)
-        default_mapping = {
-            "merchant": "merchant",
-            "website": "website",
-            "labels": "labels",
-            "logo": "logo",
-            "location": "location",
-            "person": "person",
-            "rating": "rating",
-            "contact": "contact",
-            # the entire enriched transaction object is at _output_tx
-        }
+        default_mapping = self.default_mapping.copy()
         if mapping is not None:
             default_mapping.update(mapping)
         mapping = default_mapping
