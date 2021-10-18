@@ -9,6 +9,10 @@ with open("README.md") as readme_file:
 
 requirements = ["requests", "tqdm", "typing"]
 
+EXTRAS_REQUIRE = {
+    "benchmark": ["pandas", "scikit-learn", "numpy"],
+}
+
 setup_requirements = []
 
 test_requirements = []
@@ -28,6 +32,12 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     description="SDK for the Ntropy API",
+    entry_points={
+        "console_scripts": [
+            "ntropy-benchmark = ntropy_sdk.__main__:benchmark",
+        ],
+    },
+    extras_require=EXTRAS_REQUIRE,
     install_requires=requirements,
     license="MIT license",
     long_description=readme,
