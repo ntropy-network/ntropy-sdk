@@ -4,6 +4,7 @@ from datetime import datetime
 import uuid
 import requests
 import logging
+import enum
 from tqdm.auto import tqdm
 from typing import List, Dict
 from urllib.parse import urlencode
@@ -17,6 +18,11 @@ class NtropyBatchError(Exception):
     def __init__(self, message, errors=None):
         super().__init__(message)
         self.errors = errors
+
+
+class AccountHolderType(enum.Enum):
+    consumer = "consumer"
+    business = "business"
 
 
 class Transaction:
@@ -40,11 +46,6 @@ class Transaction:
         "entry_type",
         "iso_currency_code",
         "country",
-        "moto_eci_code",
-        "pan_entry_mode_auth",
-        "pan_entry_mode_capture",
-        "payment_channel",
-        "pending",
     ]
 
     def __init__(
@@ -56,12 +57,7 @@ class Transaction:
         entry_type=None,
         iso_currency_code="USD",
         country=None,
-        moto_eci_code=None,
-        pan_entry_mode_auth=None,
-        pan_entry_mode_capture=None,
-        payment_channel=None,
-        pending=None,
-        is_business=False,
+        account_holder_type=AccountHolderType.consumer,
         account_holder_id=None,
     ):
         if not transaction_id:
@@ -87,17 +83,12 @@ class Transaction:
         self.entry_type = entry_type
         self.iso_currency_code = iso_currency_code
         self.country = country
-        self.moto_eci_code = moto_eci_code
-        self.pan_entry_mode_auth = pan_entry_mode_auth
-        self.pan_entry_mode_capture = pan_entry_mode_capture
-        self.payment_channel = payment_channel
-        self.pending = pending
 
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id must be a string")
 
         self.account_holder_id = account_holder_id
-        self.is_business = is_business
+        self.account_holder_type = account_holder_type
 
         for field in self.required_fields:
             if getattr(self, field) is None:
@@ -123,7 +114,7 @@ class Transaction:
 
         account_holder = {
             "id": self.account_holder_id,
-            "type": "business" if self.is_business else "consumer",
+            "type": self.account_holder_type.value
         }
 
         tx_dict["account_holder"] = account_holder
@@ -342,7 +333,7 @@ class SDK:
             "entry_type",
             "description",
             "account_holder_id",
-            "is_business",
+            "account_holder_type",
         ]
 
         optional_columns = [
@@ -359,7 +350,7 @@ class SDK:
                 iso_currency_code=row["iso_currency_code"],
                 transaction_id=row.get("transaction_id"),
                 account_holder_id=row["account_holder_id"],
-                is_business=row["is_business"],
+                account_holder_type=AccountHolderType(row["account_holder_type"]),
             )
 
         cols = set(df.columns)
@@ -510,15 +501,18 @@ class SDK:
             output = f"Merchant:\n\tAccuracy: {accuracy_merchant:.3f}%"
             print(output)
         if ground_truth_label_field:
-            consumer_labels = self._get_nodes(self.get_labels("consumer"))
-            business_labels = self._get_nodes(self.get_labels("business"))
+            labels_per_type = {
+                AccountHolderType.consumer: self._get_nodes(self.get_labels("consumer")),
+                AccountHolderType.business: self._get_nodes(self.get_labels("business"))
+            }
+
             correct_labels = df[ground_truth_label_field].to_list()
-            is_business = df["is_business"].to_list()
+            account_holder_types = [AccountHolderType(t) for t in df["account_holder_type"].to_list()]
             predicted_labels = df[mapping["labels"]].to_list()
             y_pred = []
             y_true = []
-            for x, y, is_biz in zip(correct_labels, predicted_labels, is_business):
-                nodes = business_labels if is_biz else consumer_labels
+            for x, y, account_holder_type in zip(correct_labels, predicted_labels, account_holder_types):
+                nodes = labels_per_type[account_holder_type]
                 ground_truth = self._node2branch(x)
                 preds = self._node2branch(y)
                 for node in nodes:

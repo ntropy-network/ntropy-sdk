@@ -8,4 +8,5 @@ from ntropy_sdk.ntropy_sdk import (
     NtropyBatchError,
     EnrichedTransaction,
     EnrichedTransactionList,
+    AccountHolderType,
 )
