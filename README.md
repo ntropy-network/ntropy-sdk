@@ -16,7 +16,7 @@ Assuming you have a CSV file called testset.csv with the following fields set:
 * entry_type: incoming for money coming into the account, outgoing for money going out of the account
 * description: The transaction description string
 * account_holder_id: A unique identifier for the account holder
-* is_business: A boolean indicating if this is a business transaction (True) or a consumer transaction (False)
+* account_holder_type: A string indicating the type of the account of the transaction (business or consumer)
 * (optional) correct_merchant: A string that should match the merchant output of the API. If you combine this with --ground-truth-merchant-field=correct_merchant you will be given an accuracy % for the API.
 * (optional) correct_labels: The label that the transaction should be marked as. If you combine this with --ground-truth-label-field=correct_labels you will be given an F1 score for the API.
 
@@ -29,16 +29,16 @@ $ ntropy-benchmark --api-key=$NTROPY_API_KEY --in-csv-file=testset.csv --out-csv
 
 ```python
 import os
-from ntropy_sdk.ntropy_sdk import SDK, Transaction
+from ntropy_sdk.ntropy_sdk import SDK, Transaction, AccountHolderType
 
 sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
 transaction = Transaction(
     amount=1.0,
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
-    is_business=True,
     entry_type="outgoing",
     account_holder_id="1",
+    account_holder_type=AccountHolderType.business,
     country="US",
 )
 
