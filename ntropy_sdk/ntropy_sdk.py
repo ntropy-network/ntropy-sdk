@@ -87,6 +87,9 @@ class Transaction:
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id must be a string")
 
+        if not isinstance(account_holder_type, AccountHolderType):
+            raise ValueError("account_holder_type must be of type AccountHolderType")
+
         self.account_holder_id = account_holder_id
         self.account_holder_type = account_holder_type
 
