@@ -144,7 +144,6 @@ class EnrichedTransaction:
         logo=None,
         merchant=None,
         person=None,
-        rating=None,
         transaction_id=None,
         website=None,
         **kwargs,
@@ -156,7 +155,6 @@ class EnrichedTransaction:
         self.logo = logo
         self.merchant = merchant
         self.person = person
-        self.rating = rating
         self.transaction_id = transaction_id
         self.website = website
         self.kwargs = kwargs
@@ -428,7 +426,6 @@ class SDK:
         "logo": "logo",
         "location": "location",
         "person": "person",
-        "rating": "rating",
         "contact": "contact",
         # the entire enriched transaction object is at _output_tx
     }
