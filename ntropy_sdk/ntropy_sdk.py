@@ -20,11 +20,6 @@ class NtropyBatchError(Exception):
         self.errors = errors
 
 
-class AccountHolderType(enum.Enum):
-    consumer = "consumer"
-    business = "business"
-
-
 class Transaction:
     _zero_amount_check = True
 
@@ -57,7 +52,7 @@ class Transaction:
         entry_type=None,
         iso_currency_code="USD",
         country=None,
-        account_holder_type=AccountHolderType.consumer,
+        account_holder_type="consumer",
         account_holder_id=None,
     ):
         if not transaction_id:
@@ -87,8 +82,8 @@ class Transaction:
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id must be a string")
 
-        if not isinstance(account_holder_type, AccountHolderType):
-            raise ValueError("account_holder_type must be of type AccountHolderType")
+        if account_holder_type not in ["consumer", "business"]:
+            raise ValueError("account_holder_type must be either consumer or business")
 
         self.account_holder_id = account_holder_id
         self.account_holder_type = account_holder_type
@@ -117,7 +112,7 @@ class Transaction:
 
         account_holder = {
             "id": self.account_holder_id,
-            "type": self.account_holder_type.value
+            "type": self.account_holder_type
         }
 
         tx_dict["account_holder"] = account_holder
@@ -351,7 +346,7 @@ class SDK:
                 iso_currency_code=row["iso_currency_code"],
                 transaction_id=row.get("transaction_id"),
                 account_holder_id=row["account_holder_id"],
-                account_holder_type=AccountHolderType(row["account_holder_type"]),
+                account_holder_type=row["account_holder_type"],
             )
 
         cols = set(df.columns)
@@ -502,12 +497,12 @@ class SDK:
             print(output)
         if ground_truth_label_field:
             labels_per_type = {
-                AccountHolderType.consumer: self._get_nodes(self.get_labels("consumer")),
-                AccountHolderType.business: self._get_nodes(self.get_labels("business"))
+                "consumer": self._get_nodes(self.get_labels("consumer")),
+                "business": self._get_nodes(self.get_labels("business"))
             }
 
             correct_labels = df[ground_truth_label_field].to_list()
-            account_holder_types = [AccountHolderType(t) for t in df["account_holder_type"].to_list()]
+            account_holder_types = [t for t in df["account_holder_type"].to_list()]
             predicted_labels = df[mapping["labels"]].to_list()
             y_pred = []
             y_true = []
