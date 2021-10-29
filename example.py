@@ -1,5 +1,5 @@
 import os
-from ntropy_sdk.ntropy_sdk import SDK, Transaction, AccountHolderType
+from ntropy_sdk.ntropy_sdk import SDK, Transaction
 
 sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
@@ -8,7 +8,7 @@ transaction = Transaction(
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
     entry_type="outgoing",
     account_holder_id="1",
-    account_holder_type=AccountHolderType.business,
+    account_holder_type="business",
     country="US",
 )
 
