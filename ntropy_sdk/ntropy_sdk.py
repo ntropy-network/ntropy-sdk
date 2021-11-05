@@ -50,9 +50,9 @@ class Transaction:
         date=None,
         description=None,
         entry_type=None,
-        iso_currency_code="USD",
+        iso_currency_code=None,
         country=None,
-        account_holder_type="consumer",
+        account_holder_type=None,
         account_holder_id=None,
     ):
         if not transaction_id:
@@ -112,7 +112,7 @@ class Transaction:
 
         account_holder = {
             "id": self.account_holder_id,
-            "type": self.account_holder_type
+            "type": self.account_holder_type,
         }
 
         tx_dict["account_holder"] = account_holder
@@ -261,9 +261,7 @@ class SDK:
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
-    def enrich(
-        self, transaction: Transaction, latency_optimized=False, labeling=True
-    ):
+    def enrich(self, transaction: Transaction, latency_optimized=False, labeling=True):
         if not isinstance(transaction, Transaction):
             raise ValueError("transaction should be of type Transaction")
 
@@ -498,7 +496,7 @@ class SDK:
         if ground_truth_label_field:
             labels_per_type = {
                 "consumer": self._get_nodes(self.get_labels("consumer")),
-                "business": self._get_nodes(self.get_labels("business"))
+                "business": self._get_nodes(self.get_labels("business")),
             }
 
             correct_labels = df[ground_truth_label_field].to_list()
@@ -506,7 +504,9 @@ class SDK:
             predicted_labels = df[mapping["labels"]].to_list()
             y_pred = []
             y_true = []
-            for x, y, account_holder_type in zip(correct_labels, predicted_labels, account_holder_types):
+            for x, y, account_holder_type in zip(
+                correct_labels, predicted_labels, account_holder_types
+            ):
                 nodes = labels_per_type[account_holder_type]
                 ground_truth = self._node2branch(x)
                 preds = self._node2branch(y)

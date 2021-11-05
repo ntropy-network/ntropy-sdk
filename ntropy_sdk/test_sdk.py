@@ -8,7 +8,9 @@ class TestSDK(unittest.TestCase):
             "description": "foo",
             "entry_type": "debit",
             "account_holder_id": "1",
+            "account_holder_type": "business",
             "country": "US",
+            "iso_currency_code": "USD",
         }
 
         testcases = [
@@ -42,7 +44,13 @@ class TestSDK(unittest.TestCase):
     def test_transaction_entry_type(self):
         for et in ["incoming", "outgoing", "debit", "credit"]:
             t = Transaction(
-                amount=1.0, description="foo", entry_type=et, account_holder_id="bar", country="US"
+                amount=1.0,
+                description="foo",
+                entry_type=et,
+                account_holder_id="bar",
+                account_holder_type="business",
+                iso_currency_code="USD",
+                country="US"
             )
 
         self.assertRaises(
@@ -52,6 +60,8 @@ class TestSDK(unittest.TestCase):
                 description="foo",
                 entry_type="bar",
                 account_holder_id="bar",
+                account_holder_type="business",
+                iso_currency_code="bla",
                 country="FOO"
             ),
         )
