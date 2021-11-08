@@ -39,6 +39,7 @@ transaction = Transaction(
     entry_type="outgoing",
     account_holder_id="1",
     account_holder_type="business",
+    iso_currency_code="USD",
     country="US",
 )
 
