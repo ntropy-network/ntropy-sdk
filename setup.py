@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 with open("README.md") as readme_file:
     readme = readme_file.read()
 
-requirements = ["requests", "tqdm", "typing"]
+requirements = ["requests", "tqdm"]
 
 EXTRAS_REQUIRE = {
     "benchmark": ["pandas", "scikit-learn", "numpy"],
