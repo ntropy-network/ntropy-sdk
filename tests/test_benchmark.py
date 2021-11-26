@@ -6,7 +6,7 @@ import pandas as pd
 
 from tests import API_KEY
 
-from ntropy_sdk.benchmark import benchmark
+from ntropy_sdk.benchmark import main
 
 
 TRANSACTIONS = [
@@ -39,7 +39,7 @@ def test_command_line(data_set_file):
             "--max-batch-size", "200",
         ]
 
-        benchmark()
+        main()
 
         result = pd.read_csv(output_file)
 
