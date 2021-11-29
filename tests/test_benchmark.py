@@ -23,7 +23,6 @@ def data_set_file():
         yield f.name
 
 
-
 def test_command_line(data_set_file):
     with tempfile.NamedTemporaryFile() as output_file:
         sys.argv = [

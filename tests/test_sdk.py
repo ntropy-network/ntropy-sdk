@@ -1,43 +1,44 @@
 import pytest
 
 from tests import API_KEY
-from ntropy_sdk import SDK, Transaction
+from ntropy_sdk import SDK, Transaction, EnrichedTransaction
 
-def test_enrich():
-    sdk = SDK(API_KEY)
 
-    tx = Transaction(
+@pytest.fixture
+def sdk():
+    return SDK(API_KEY)
+
+
+def test_enrich(sdk):
+    consumer_tx = Transaction(
         amount=24.56,
         description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        account_holder_type="consumer",
+        iso_currency_code="USD",
+    )
+    enriched_tx = sdk.enrich(consumer_tx)
+    assert len(enriched_tx.labels) > 0
+
+    business_tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
         entry_type="debit",
         date="2012-12-10",
         account_holder_id="1",
         account_holder_type="business",
         iso_currency_code="USD",
     )
+    enriched_tx = sdk.enrich(business_tx, latency_optimized=True)
+    assert len(enriched_tx.labels) > 0
 
-    resp = sdk.enrich(tx)
-
-    print("HELLO")
-    print(resp)
-
-    resp = sdk.enrich(tx, latency_optimized=True)
-    print(resp)
-
-    txs = [tx, tx, tx]
-
-    resp = sdk.enrich_batch(txs, labeling=False)
-
-    print(resp)
-
-    result = resp.wait()
-
-    print(result.transactions)
+    enriched_tx = sdk.enrich(business_tx, labeling=False)
+    assert enriched_tx.labels is None
 
 
-def test_enrich_business():
-    sdk = SDK(API_KEY)
-
+def test_enrich_batch(sdk):
     tx = Transaction(
         amount=24.56,
         description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
@@ -48,23 +49,40 @@ def test_enrich_business():
         iso_currency_code="USD",
     )
 
-    resp = sdk.enrich(tx)
+    txs = [tx] * 10
 
-    print("HELLO")
-    print(resp)
+    batch = sdk.enrich_batch(txs, labeling=False)
+    result = batch.wait()
 
-    resp = sdk.enrich(tx, latency_optimized=True)
-    print(resp)
+    assert len(result.transactions) == len(txs)
 
-    txs = [tx, tx, tx]
+    for enriched_tx in result.transactions:
+        assert isinstance(enriched_tx, EnrichedTransaction)
+        assert enriched_tx.merchant is not None
 
-    resp = sdk.enrich_batch(txs, labeling=False)
 
-    print(resp)
+def test_enrich_huge_batch(sdk):
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        account_holder_type="business",
+        iso_currency_code="USD",
+    )
 
-    result = resp.wait()
+    txs = [tx] * 10
+    sdk.MAX_BATCH_SIZE = 4
 
-    print(result.transactions)
+    batch = sdk.enrich_batch(txs, labeling=False)
+    result = batch.wait()
+
+    assert len(result.transactions) == len(txs)
+
+    for enriched_tx in result.transactions:
+        assert isinstance(enriched_tx, EnrichedTransaction)
+        assert enriched_tx.merchant is not None
 
 
 def test_transaction_zero_amount():
