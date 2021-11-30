@@ -231,7 +231,54 @@ class Batch:
             raise NtropyError("Batch wait timeout")
 
 
+class BatchGroup(Batch):
+    def __init__(self, sdk, chunks, timeout = 10 * 60 * 60, poll_interval=10):
+        self._chunks = chunks
+        self._batches = []
+        self._results = []
+        self._pending_batches = []
+        self._sdk = sdk
+        self.timeout = time.time() + timeout
+        self.poll_interval = poll_interval
+        self.num_transactions = sum([len(chunk) for chunk in chunks])
+        self._finished_num_transactions = 0
+
+        self._enrich_batches()
+
+    def _enrich_batches(self):
+        for chunk in self._chunks:
+            self._batches.append(self._sdk._enrich_batch(chunk))
+            time.sleep(self._sdk.MAX_BATCH_SIZE / 1000)
+
+        self._pending_batches = self._batches.copy()
+
+    def poll(self):
+        if self._pending_batches:
+            pending_progress = 0
+            for batch in self._pending_batches:
+                resp, status = batch.poll()
+
+                if status == "finished":
+                    self._pending_batches.remove(batch)
+                    self._finished_num_transactions += batch.num_transactions
+                    self._results += resp.transactions
+                else:
+                    pending_progress += resp.get("progress", 0)
+                    break
+
+            return {
+                "progress": pending_progress + self._finished_num_transactions
+            }, "started"
+        else:
+            return EnrichedTransactionList(self._results), "finished"
+
+    def __repr__(self):
+        return f"BatchGroup({repr(self._batches)})"
+
+
 class SDK:
+    MAX_BATCH_SIZE = 100000
+
     def __init__(self, token: str, timeout: int = DEFAULT_TIMEOUT):
         if not token:
             raise NtropyError("API Token must be set")
@@ -286,9 +333,23 @@ class SDK:
         poll_interval=10,
         labeling=True,
     ):
-        if len(transactions) > 100000:
-            raise ValueError("transactions list must be < 100000")
+        if len(transactions) > self.MAX_BATCH_SIZE:
+            chunks = [
+                transactions[i:i+self.MAX_BATCH_SIZE]
+                for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
+            ]
 
+            return BatchGroup(self, chunks)
+
+        return self._enrich_batch(transactions, timeout, poll_interval, labeling)
+
+    def _enrich_batch(
+        self,
+        transactions: List[Transaction],
+        timeout=4 * 60 * 60,
+        poll_interval=10,
+        labeling=True,
+    ):
         url = "/v2/enrich/batch"
 
         if not labeling:

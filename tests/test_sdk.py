@@ -76,13 +76,14 @@ def test_enrich_huge_batch(sdk):
     sdk.MAX_BATCH_SIZE = 4
 
     batch = sdk.enrich_batch(txs, labeling=False)
-    result = batch.wait()
+    result = batch.wait_with_progress()
 
     assert len(result.transactions) == len(txs)
 
-    for enriched_tx in result.transactions:
+    for i, enriched_tx in enumerate(result.transactions):
         assert isinstance(enriched_tx, EnrichedTransaction)
         assert enriched_tx.merchant is not None
+        assert enriched_tx.transaction_id == txs[i].transaction_id
 
 
 def test_transaction_zero_amount():
