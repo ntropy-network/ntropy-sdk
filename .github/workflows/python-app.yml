@@ -33,3 +33,5 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+      env:
+        NTROPY_API_KEY: ${{ secrets.NTROPY_API_KEY }}
