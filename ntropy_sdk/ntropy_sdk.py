@@ -10,6 +10,9 @@ from typing import List, Dict
 from urllib.parse import urlencode
 
 
+DEFAULT_TIMEOUT = 10 * 60
+
+
 class NtropyError(Exception):
     pass
 
@@ -229,7 +232,7 @@ class Batch:
 
 
 class SDK:
-    def __init__(self, token: str):
+    def __init__(self, token: str, timeout: int = DEFAULT_TIMEOUT):
         if not token:
             raise NtropyError("API Token must be set")
 
@@ -238,6 +241,7 @@ class SDK:
         self.token = token
         self.session = requests.Session()
         self.logger = logging.getLogger("Ntropy-SDK")
+        self._timeout = timeout
 
     def retry_ratelimited_request(self, method: str, url: str, payload: object):
         for i in range(self.retries):
@@ -246,6 +250,7 @@ class SDK:
                 self.base_url + url,
                 json=payload,
                 headers={"X-API-Key": self.token},
+                timeout=self._timeout,
             )
             if resp.status_code == 429:
                 self.logger.debug("Retrying due to ratelimit")
