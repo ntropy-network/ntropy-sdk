@@ -6,6 +6,7 @@ import pandas as pd
 
 from tests import API_KEY
 
+from ntropy_sdk import SDK
 from ntropy_sdk.benchmark import main
 
 
@@ -21,6 +22,22 @@ def data_set_file():
         pd.DataFrame(TRANSACTIONS).to_csv(f)
 
         yield f.name
+
+
+@pytest.fixture
+def sdk():
+    return SDK(API_KEY)
+
+
+def test_enrich_dataframe(sdk, data_set_file):
+    with open(data_set_file) as f:
+        df = pd.read_csv(f)
+        df['iso_currency_code'] = 'USD'
+        df['account_holder_id'] = '1'
+        df['account_holder_type'] = 'business'
+        del df['labels']
+
+        sdk.enrich_dataframe(df)
 
 
 def test_command_line(data_set_file):

@@ -375,3 +375,15 @@ class SDK:
         url = f"/v2/labels/hierarchy/{account_holder_type}"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
+
+    def enrich_dataframe(
+        self,
+        df,
+        mapping=None,
+        progress=True,
+        chunk_size=100000,
+        poll_interval=10,
+    ):
+        from ntropy_sdk.benchmark import enrich_dataframe
+
+        return enrich_dataframe(self, df, mapping, progress, chunk_size, poll_interval)
