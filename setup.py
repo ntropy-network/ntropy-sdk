@@ -34,7 +34,7 @@ setup(
     description="SDK for the Ntropy API",
     entry_points={
         "console_scripts": [
-            "ntropy-benchmark = ntropy_sdk.benchmark:main",
+            "ntropy-benchmark = ntropy_sdk.__main__:benchmark",
         ],
     },
     extras_require=EXTRAS_REQUIRE,
