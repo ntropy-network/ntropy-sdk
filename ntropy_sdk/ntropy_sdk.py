@@ -366,7 +366,7 @@ class SDK:
         prev_chunks = 0
         outputs = []
         with tqdm(total=df.shape[0], desc="started") as progress:
-            for chunk in chunks:
+            for chunk_idx, chunk in enumerate(chunks):
                 txs = chunk["_input_tx"]
                 b = self.enrich_batch(txs)
                 while b.timeout - time.time() > 0:
@@ -379,7 +379,10 @@ class SDK:
                     progress.desc = status
                     diff_n = b.num_transactions - (progress.n - prev_chunks)
                     progress.update(diff_n)
-                    df.loc[chunk.index, "_output_tx"] = resp.transactions
+
+                    for tx_idx, tx in enumerate(resp.transactions):
+                        df.at[chunk_idx * chunk_size + tx_idx, "_output_tx"] = tx
+
                     break
                 prev_chunks += b.num_transactions
 
