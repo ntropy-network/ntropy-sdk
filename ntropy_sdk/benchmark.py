@@ -132,7 +132,7 @@ def enrich_dataframe(
     prev_chunks = 0
     outputs = []
     with tqdm(total=df.shape[0], desc="started") as progress:
-        for chunk_idx, txs in enumerate(chunks):
+        for txs in chunks:
             b = sdk.enrich_batch(txs)
             while b.timeout - time.time() > 0:
                 resp, status = b.poll()
