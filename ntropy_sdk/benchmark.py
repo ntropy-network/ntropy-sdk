@@ -125,10 +125,11 @@ def enrich_dataframe(
     overlapping_cols = set(mapping.values()).intersection(cols)
     if overlapping_cols:
         raise KeyError(
-            f"Overlapping columns {overlapping_cols} will be overwritten - consider overriding the mapping keyword argument, or move the existing columns to another column"
+            f"Overlapping columns {overlapping_cols} will be overwritten"
+            "- consider overriding the mapping keyword argument, or move the existing columns to another column"
         )
     txs = df.apply(to_tx, axis=1)
-    chunks = [txs[i : i + chunk_size] for i in range(0, len(txs), chunk_size)]
+    chunks = [txs[i:i + chunk_size] for i in range(0, len(txs), chunk_size)]
     prev_chunks = 0
     outputs = []
     with tqdm(total=df.shape[0], desc="started") as progress:
@@ -183,7 +184,7 @@ def _get_nodes(x, prefix=""):
         else:
             for k, v in x.items():
                 res.append(prefix + k)
-                q.append((v, prefix + k + f" - "))
+                q.append((v, prefix + k + " - "))
     return list(set(res))
 
 
@@ -221,14 +222,16 @@ def benchmark(
         import pandas
     except ImportError:
         print(
-            "Pandas not found, please install ntropy-sdk with the benchmark extra (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
+            "Pandas not found, please install ntropy-sdk with the benchmark extra"
+            " (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
         )
         sys.exit(1)
     try:
         import numpy as np
     except ImportError:
         print(
-            "Numpy not found, please install ntropy-sdk with the benchmark extra (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
+            "Numpy not found, please install ntropy-sdk with the benchmark extra"
+            " (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
         )
         sys.exit(1)
     try:
@@ -239,7 +242,8 @@ def benchmark(
         )
     except ImportError:
         print(
-            "Scikit-learn not found, please install ntropy-sdk with the benchmark extra (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
+            "Scikit-learn not found, please install ntropy-sdk with the benchmark extra"
+            " (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
         )
         sys.exit(1)
     default_mapping = DEFAULT_MAPPING.copy()
@@ -302,7 +306,11 @@ def benchmark(
             y_true, y_pred, average="binary", zero_division=0.0
         )
 
-        output = f"Labels:\n\tF1: {f1_labeller:.3f}\n\tPrecision: {precision_labeller:.3f}\n\tRecall: {recall_labeller:.3f}\n\tAccuracy: {labeller_accuracy:.3f}"
+        output = ("Labels:\n"
+                  f"\tF1: {f1_labeller:.3f}\n"
+                  f"\tPrecision: {precision_labeller:.3f}\n"
+                  f"\tRecall: {recall_labeller:.3f}\n"
+                  f"\tAccuracy: {labeller_accuracy:.3f}\n")
         print(output)
     if out_csv_file:
         df.to_csv(out_csv_file)
