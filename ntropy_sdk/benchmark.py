@@ -144,7 +144,7 @@ def enrich_dataframe(
                 progress.desc = status
                 diff_n = b.num_transactions - (progress.n - prev_chunks)
                 progress.update(diff_n)
-                for tx_idx, tx in enumerate(resp.transactions):
+                for tx in resp.transactions:
                     outputs.append(tx)
                 break
             prev_chunks += b.num_transactions
