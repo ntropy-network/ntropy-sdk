@@ -232,7 +232,7 @@ class Batch:
 
 
 class BatchGroup(Batch):
-    def __init__(self, sdk, chunks, timeout = 10 * 60 * 60, poll_interval=10):
+    def __init__(self, sdk, chunks, timeout=10 * 60 * 60, poll_interval=10):
         self._chunks = chunks
         self._batches = []
         self._results = []
@@ -335,7 +335,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i:i+self.MAX_BATCH_SIZE]
+                transactions[i:i + self.MAX_BATCH_SIZE]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
