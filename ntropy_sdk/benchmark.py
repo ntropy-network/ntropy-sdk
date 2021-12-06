@@ -80,6 +80,7 @@ parser.add_argument(
     help="The field in the input csv containing the correct label (if unset no score will be calculated)",
 )
 
+
 def enrich_dataframe(
     sdk,
     df,
@@ -126,13 +127,12 @@ def enrich_dataframe(
         raise KeyError(
             f"Overlapping columns {overlapping_cols} will be overwritten - consider overriding the mapping keyword argument, or move the existing columns to another column"
         )
-    df["_input_tx"] = df.apply(to_tx, axis=1)
-    chunks = [df[i : i + chunk_size] for i in range(0, df.shape[0], chunk_size)]
+    txs = df.apply(to_tx, axis=1)
+    chunks = [txs[i : i + chunk_size] for i in range(0, len(txs), chunk_size)]
     prev_chunks = 0
     outputs = []
     with tqdm(total=df.shape[0], desc="started") as progress:
-        for chunk in chunks:
-            txs = chunk["_input_tx"]
+        for txs in chunks:
             b = sdk.enrich_batch(txs)
             while b.timeout - time.time() > 0:
                 resp, status = b.poll()
@@ -144,9 +144,12 @@ def enrich_dataframe(
                 progress.desc = status
                 diff_n = b.num_transactions - (progress.n - prev_chunks)
                 progress.update(diff_n)
-                df.loc[chunk.index, "_output_tx"] = resp.transactions
+                for tx in resp.transactions:
+                    outputs.append(tx)
                 break
             prev_chunks += b.num_transactions
+
+    df["_output_tx"] = outputs
 
     def get_tx_val(tx, v):
         sentinel = object()
@@ -157,7 +160,7 @@ def enrich_dataframe(
 
     for k, v in mapping.items():
         df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
-    df = df.drop(["_input_tx", "_output_tx"], axis=1)
+    df = df.drop(["_output_tx"], axis=1)
     return df
 
 
