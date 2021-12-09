@@ -324,7 +324,7 @@ def main():
         args.in_csv_file,
         args.out_csv_file,
         drop_fields=args.drop_fields.split(",") if args.drop_fields else [],
-        hardcode_fields=ast.literal_eval(args.hardcoded_fields),
+        hardcode_fields=ast.literal_eval(args.hardcoded_fields) if (args.hardcoded_fields) else None,
         mapping=ast.literal_eval(args.field_mapping) if args.field_mapping else None,
         ground_truth_merchant_field=args.ground_truth_merchant_field,
         ground_truth_label_field=args.ground_truth_label_field,
