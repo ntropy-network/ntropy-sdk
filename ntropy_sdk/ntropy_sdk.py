@@ -44,6 +44,7 @@ class Transaction:
         "entry_type",
         "iso_currency_code",
         "country",
+        "mcc",
     ]
 
     def __init__(
@@ -55,6 +56,7 @@ class Transaction:
         entry_type=None,
         iso_currency_code=None,
         country=None,
+        mcc=None,
         account_holder_type=None,
         account_holder_id=None,
     ):
@@ -81,6 +83,7 @@ class Transaction:
         self.entry_type = entry_type
         self.iso_currency_code = iso_currency_code
         self.country = country
+        self.mcc = mcc
 
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id must be a string")
