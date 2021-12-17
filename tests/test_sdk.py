@@ -9,6 +9,34 @@ def sdk():
     return SDK(API_KEY)
 
 
+def test_fileds():
+    tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        account_holder_type="consumer",
+        iso_currency_code="USD",
+        transaction_id="one-two-three",
+        mcc=5432,
+    )
+
+    assert tx.to_dict() == {
+        "amount": 24.56,
+        "description": "TARGET T- 5800 20th St 11/30/19 17:32",
+        "entry_type": "debit",
+        "date": "2012-12-10",
+        "iso_currency_code": "USD",
+        "transaction_id": "one-two-three",
+        "mcc": 5432,
+        "account_holder": {
+            "id": "1",
+            "type": "consumer",
+        },
+    }
+
+
 def test_enrich(sdk):
     consumer_tx = Transaction(
         amount=24.56,
