@@ -2,12 +2,33 @@ import pytest
 
 from tests import API_KEY
 from ntropy_sdk import SDK, Transaction, EnrichedTransaction
+from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 
 
 @pytest.fixture
 def sdk():
     return SDK(API_KEY)
 
+
+def test_account_holder_type():
+    def create_tx(account_holder_type):
+        return Transaction(
+            amount=24.56,
+            description="TARGET T- 5800 20th St 11/30/19 17:32",
+            entry_type="debit",
+            date="2012-12-10",
+            account_holder_id="1",
+            account_holder_type=account_holder_type,
+            iso_currency_code="USD",
+        )
+
+    for t in ACCOUNT_HOLDER_TYPES + ["not_valid"]:
+        if t in ACCOUNT_HOLDER_TYPES:
+            tx = create_tx(t)
+            assert tx.account_holder_type == t
+        else:
+            with pytest.raises(ValueError):
+                create_tx(t)
 
 def test_fileds():
     tx = Transaction(
