@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 
 
 DEFAULT_TIMEOUT = 10 * 60
+ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 
 
 class NtropyError(Exception):
@@ -91,8 +92,8 @@ class Transaction:
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id must be a string")
 
-        if account_holder_type not in ["consumer", "business"]:
-            raise ValueError("account_holder_type must be either consumer or business")
+        if account_holder_type not in ACCOUNT_HOLDER_TYPES:
+            raise ValueError("account_holder_type must be either consumer, business, freelance or unknown")
 
         self.account_holder_id = account_holder_id
         self.account_holder_type = account_holder_type
@@ -389,7 +390,7 @@ class SDK:
         )
 
     def get_labels(self, account_holder_type: str):
-        assert account_holder_type in ["business", "consumer"]
+        assert account_holder_type in ACCOUNT_HOLDER_TYPES
         url = f"/v2/labels/hierarchy/{account_holder_type}"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
