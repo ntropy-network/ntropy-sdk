@@ -164,9 +164,28 @@ class EnrichedTransaction:
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
 
-    def report(self):
+    def report(
+        self,
+        **kwargs,
+    ):
+        supported_fileds = [
+            "logo",
+            "website",
+            "merchant",
+            "location",
+            "contact",
+            "person",
+            "labels"
+        ]
+        excess_fields = set(kwargs.keys()) - set(supported_fileds)
+        if excess_fields:
+            raise ValueError(f"Unexpected keys supplied to report: {excess_fields}")
+
         return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", {"transaction_id": self.transaction_id}
+            "POST", "/v2/report", {
+                "transaction_id": self.transaction_id,
+                **kwargs
+            }
         )
 
     @classmethod
