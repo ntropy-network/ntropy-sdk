@@ -171,7 +171,7 @@ class EnrichedTransaction:
         self,
         **kwargs,
     ):
-        supported_fileds = [
+        supported_fields = [
             "logo",
             "website",
             "merchant",
