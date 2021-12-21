@@ -37,7 +37,7 @@ def test_account_holder_type():
                 create_tx(t)
 
 
-def test_fileds():
+def test_fields():
     tx = Transaction(
         amount=24.56,
         description="TARGET T- 5800 20th St 11/30/19 17:32",
