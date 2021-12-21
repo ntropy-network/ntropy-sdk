@@ -34,6 +34,7 @@ class Transaction:
         "iso_currency_code",
         "transaction_id",
         "account_holder_id",
+        "account_holder_type",
     ]
 
     fields = [
@@ -48,21 +49,18 @@ class Transaction:
 
     def __init__(
         self,
-        transaction_id=None,
-        amount=None,
-        date=None,
-        description=None,
-        entry_type=None,
-        iso_currency_code=None,
+        amount,
+        date,
+        description,
+        entry_type,
+        iso_currency_code,
+        account_holder_type,
+        account_holder_id,
         country=None,
-        account_holder_type=None,
-        account_holder_id=None,
+        transaction_id=None,
     ):
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
-
-        if not date:
-            date = datetime.now().strftime("%Y-%m-%d")
 
         self.transaction_id = transaction_id
 
@@ -168,6 +166,18 @@ class EnrichedTransaction:
     @classmethod
     def from_dict(cls, sdk, val: dict):
         return cls(sdk, **val)
+
+    def to_dict(self):
+        return {
+            "contact": self.contact,
+            "labels": self.labels,
+            "location": self.location,
+            "logo": self.logo,
+            "merchant": self.merchant,
+            "person": self.person,
+            "transaction_id": self.transaction_id,
+            "website": self.website,
+        }
 
 
 class Batch:
@@ -335,7 +345,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i:i + self.MAX_BATCH_SIZE]
+                transactions[i : i + self.MAX_BATCH_SIZE]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
