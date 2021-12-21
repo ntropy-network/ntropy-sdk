@@ -89,6 +89,7 @@ def test_enrich_huge_batch(sdk):
 def test_transaction_zero_amount():
     vals = {
         "description": "foo",
+        "date": "2021-12-12",
         "entry_type": "debit",
         "account_holder_id": "1",
         "account_holder_type": "business",
@@ -129,6 +130,7 @@ def test_transaction_entry_type():
         t = Transaction(
             amount=1.0,
             description="foo",
+            date="2012-12-10",
             entry_type=et,
             account_holder_id="bar",
             account_holder_type="business",
@@ -140,6 +142,7 @@ def test_transaction_entry_type():
         Transaction(
             amount=1.0,
             description="foo",
+            date="2012-12-10",
             entry_type="bar",
             account_holder_id="bar",
             account_holder_type="business",

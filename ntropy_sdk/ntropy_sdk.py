@@ -70,6 +70,11 @@ class Transaction:
             )
 
         self.amount = amount
+        if date:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError("date must be of the format %Y-%m-%d")
         self.date = date
         self.description = description
 
