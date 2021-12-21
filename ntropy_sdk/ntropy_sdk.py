@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 
 
 DEFAULT_TIMEOUT = 10 * 60
+ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 
 
 class NtropyError(Exception):
@@ -45,6 +46,7 @@ class Transaction:
         "entry_type",
         "iso_currency_code",
         "country",
+        "mcc",
     ]
 
     def __init__(
@@ -58,6 +60,7 @@ class Transaction:
         account_holder_id,
         country=None,
         transaction_id=None,
+        mcc=None,
     ):
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
@@ -84,12 +87,13 @@ class Transaction:
         self.entry_type = entry_type
         self.iso_currency_code = iso_currency_code
         self.country = country
+        self.mcc = mcc
 
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id must be a string")
 
-        if account_holder_type not in ["consumer", "business"]:
-            raise ValueError("account_holder_type must be either consumer or business")
+        if account_holder_type not in ACCOUNT_HOLDER_TYPES:
+            raise ValueError("account_holder_type must be either consumer, business, freelance or unknown")
 
         self.account_holder_id = account_holder_id
         self.account_holder_type = account_holder_type
@@ -163,9 +167,28 @@ class EnrichedTransaction:
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
 
-    def report(self):
+    def report(
+        self,
+        **kwargs,
+    ):
+        supported_fields = [
+            "logo",
+            "website",
+            "merchant",
+            "location",
+            "contact",
+            "person",
+            "labels"
+        ]
+        excess_fields = set(kwargs.keys()) - set(supported_fields)
+        if excess_fields:
+            raise ValueError(f"Unexpected keys supplied to report: {excess_fields}")
+
         return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", {"transaction_id": self.transaction_id}
+            "POST", "/v2/report", {
+                "transaction_id": self.transaction_id,
+                **kwargs
+            }
         )
 
     @classmethod
@@ -386,7 +409,7 @@ class SDK:
         )
 
     def get_labels(self, account_holder_type: str):
-        assert account_holder_type in ["business", "consumer"]
+        assert account_holder_type in ACCOUNT_HOLDER_TYPES
         url = f"/v2/labels/hierarchy/{account_holder_type}"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()

@@ -1,12 +1,68 @@
+import os
 import pytest
 
 from tests import API_KEY
 from ntropy_sdk import SDK, Transaction, EnrichedTransaction
+from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 
 
 @pytest.fixture
 def sdk():
-    return SDK(API_KEY)
+    sdk = SDK(API_KEY)
+
+    if url := os.environ.get("NTROPY_API_URL"):
+        sdk.base_url = url
+
+    return sdk
+
+
+def test_account_holder_type():
+    def create_tx(account_holder_type):
+        return Transaction(
+            amount=24.56,
+            description="TARGET T- 5800 20th St 11/30/19 17:32",
+            entry_type="debit",
+            date="2012-12-10",
+            account_holder_id="1",
+            account_holder_type=account_holder_type,
+            iso_currency_code="USD",
+        )
+
+    for t in ACCOUNT_HOLDER_TYPES + ["not_valid"]:
+        if t in ACCOUNT_HOLDER_TYPES:
+            tx = create_tx(t)
+            assert tx.account_holder_type == t
+        else:
+            with pytest.raises(ValueError):
+                create_tx(t)
+
+
+def test_fields():
+    tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        account_holder_type="consumer",
+        iso_currency_code="USD",
+        transaction_id="one-two-three",
+        mcc=5432,
+    )
+
+    assert tx.to_dict() == {
+        "amount": 24.56,
+        "description": "TARGET T- 5800 20th St 11/30/19 17:32",
+        "entry_type": "debit",
+        "date": "2012-12-10",
+        "iso_currency_code": "USD",
+        "transaction_id": "one-two-three",
+        "mcc": 5432,
+        "account_holder": {
+            "id": "1",
+            "type": "consumer",
+        },
+    }
 
 
 def test_enrich(sdk):
@@ -84,6 +140,24 @@ def test_enrich_huge_batch(sdk):
         assert isinstance(enriched_tx, EnrichedTransaction)
         assert enriched_tx.merchant is not None
         assert enriched_tx.transaction_id == txs[i].transaction_id
+
+
+def test_report(sdk):
+    consumer_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        account_holder_type="consumer",
+        iso_currency_code="USD",
+    )
+    enriched_tx = sdk.enrich(consumer_tx)
+
+    enriched_tx.report(website="ww2.target.com")
+
+    with pytest.raises(ValueError):
+        enriched_tx.report(not_supported=True)
 
 
 def test_transaction_zero_amount():
