@@ -180,7 +180,7 @@ class EnrichedTransaction:
             "person",
             "labels"
         ]
-        excess_fields = set(kwargs.keys()) - set(supported_fileds)
+        excess_fields = set(kwargs.keys()) - set(supported_fields)
         if excess_fields:
             raise ValueError(f"Unexpected keys supplied to report: {excess_fields}")
 
