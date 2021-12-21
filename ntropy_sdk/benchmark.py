@@ -93,6 +93,7 @@ def enrich_dataframe(
         mapping = DEFAULT_MAPPING.copy()
 
     required_columns = [
+        "date",
         "iso_currency_code",
         "amount",
         "entry_type",
@@ -129,7 +130,7 @@ def enrich_dataframe(
             "- consider overriding the mapping keyword argument, or move the existing columns to another column"
         )
     txs = df.apply(to_tx, axis=1)
-    chunks = [txs[i:i + chunk_size] for i in range(0, len(txs), chunk_size)]
+    chunks = [txs[i : i + chunk_size] for i in range(0, len(txs), chunk_size)]
     prev_chunks = 0
     outputs = []
     with tqdm(total=df.shape[0], desc="started") as progress:
@@ -306,11 +307,13 @@ def benchmark(
             y_true, y_pred, average="binary", zero_division=0.0
         )
 
-        output = ("Labels:\n"
-                  f"\tF1: {f1_labeller:.3f}\n"
-                  f"\tPrecision: {precision_labeller:.3f}\n"
-                  f"\tRecall: {recall_labeller:.3f}\n"
-                  f"\tAccuracy: {labeller_accuracy:.3f}\n")
+        output = (
+            "Labels:\n"
+            f"\tF1: {f1_labeller:.3f}\n"
+            f"\tPrecision: {precision_labeller:.3f}\n"
+            f"\tRecall: {recall_labeller:.3f}\n"
+            f"\tAccuracy: {labeller_accuracy:.3f}\n"
+        )
         print(output)
     if out_csv_file:
         df.to_csv(out_csv_file)
@@ -324,7 +327,9 @@ def main():
         args.in_csv_file,
         args.out_csv_file,
         drop_fields=args.drop_fields.split(",") if args.drop_fields else [],
-        hardcode_fields=ast.literal_eval(args.hardcoded_fields) if (args.hardcoded_fields) else None,
+        hardcode_fields=ast.literal_eval(args.hardcoded_fields)
+        if (args.hardcoded_fields)
+        else None,
         mapping=ast.literal_eval(args.field_mapping) if args.field_mapping else None,
         ground_truth_merchant_field=args.ground_truth_merchant_field,
         ground_truth_label_field=args.ground_truth_label_field,
