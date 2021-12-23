@@ -36,6 +36,28 @@ def test_account_holder_type():
             with pytest.raises(ValueError):
                 create_tx(t)
 
+def test_bad_date():
+    def create_tx(date):
+        return Transaction(
+            amount=24.56,
+            description="TARGET T- 5800 20th St 11/30/19 17:32",
+            entry_type="debit",
+            date=date,
+            account_holder_id="1",
+            account_holder_type="business",
+            iso_currency_code="USD",
+        )
+
+    assert isinstance(create_tx("2021-12-13"), Transaction)
+
+    with pytest.raises(ValueError):
+        create_tx("bad date")
+
+    with pytest.raises(ValueError):
+        create_tx("")
+
+    with pytest.raises(ValueError):
+        create_tx(None)
 
 def test_fields():
     tx = Transaction(
