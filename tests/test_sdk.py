@@ -223,3 +223,11 @@ def test_transaction_entry_type():
             iso_currency_code="bla",
             country="FOO",
         )
+
+
+def test_readme():
+    readme_file = open(
+        os.path.join(os.path.dirname(__file__), "..", "README.md")
+    ).read()
+    readme_data = readme_file.split("```python")[1].split("```")[0]
+    exec(readme_data)
