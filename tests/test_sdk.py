@@ -36,6 +36,7 @@ def test_account_holder_type():
             with pytest.raises(ValueError):
                 create_tx(t)
 
+
 def test_bad_date():
     def create_tx(date):
         return Transaction(
@@ -58,6 +59,7 @@ def test_bad_date():
 
     with pytest.raises(ValueError):
         create_tx(None)
+
 
 def test_fields():
     tx = Transaction(
