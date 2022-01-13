@@ -184,6 +184,19 @@ def test_report(sdk):
         enriched_tx.report(not_supported=True)
 
 
+def test_hierarchy(sdk):
+    consumer_hierarchy = sdk.get_labels("consumer")
+    assert isinstance(consumer_hierarchy, dict)
+
+    business_hierarchy = sdk.get_labels("business")
+    assert isinstance(business_hierarchy, dict)
+
+
+def test_chart_of_accounts(sdk):
+    coa = sdk.get_chart_of_accounts()
+    assert isinstance(coa, dict)
+
+
 def test_transaction_zero_amount():
     vals = {
         "description": "foo",

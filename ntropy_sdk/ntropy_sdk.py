@@ -150,6 +150,7 @@ class EnrichedTransaction:
         person=None,
         transaction_id=None,
         website=None,
+        chart_of_accounts=None,
         **kwargs,
     ):
         self.sdk = sdk
@@ -162,6 +163,7 @@ class EnrichedTransaction:
         self.transaction_id = transaction_id
         self.website = website
         self.kwargs = kwargs
+        self.chart_of_accounts = chart_of_accounts
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -204,6 +206,7 @@ class EnrichedTransaction:
             "person": self.person,
             "transaction_id": self.transaction_id,
             "website": self.website,
+            "chart_of_accounts": self.chart_of_accounts,
         }
 
 
@@ -410,6 +413,11 @@ class SDK:
     def get_labels(self, account_holder_type: str):
         assert account_holder_type in ACCOUNT_HOLDER_TYPES
         url = f"/v2/labels/hierarchy/{account_holder_type}"
+        resp = self.retry_ratelimited_request("GET", url, None)
+        return resp.json()
+
+    def get_chart_of_accounts(self):
+        url = f"/v2/chart_of_accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
