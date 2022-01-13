@@ -417,7 +417,7 @@ class SDK:
         return resp.json()
 
     def get_chart_of_accounts(self):
-        url = f"/v2/chart_of_accounts"
+        url = f"/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
