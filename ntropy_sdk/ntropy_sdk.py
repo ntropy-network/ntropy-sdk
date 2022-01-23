@@ -92,7 +92,9 @@ class Transaction:
             raise ValueError("account_holder_id must be a string")
 
         if account_holder_type not in ACCOUNT_HOLDER_TYPES:
-            raise ValueError("account_holder_type must be either consumer, business, freelance or unknown")
+            raise ValueError(
+                "account_holder_type must be either consumer, business, freelance or unknown"
+            )
 
         self.account_holder_id = account_holder_id
         self.account_holder_type = account_holder_type
@@ -151,6 +153,7 @@ class EnrichedTransaction:
         transaction_id=None,
         website=None,
         chart_of_accounts=None,
+        recurrence=None,
         **kwargs,
     ):
         self.sdk = sdk
@@ -164,6 +167,7 @@ class EnrichedTransaction:
         self.website = website
         self.kwargs = kwargs
         self.chart_of_accounts = chart_of_accounts
+        self.recurrence = recurrence
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -179,17 +183,14 @@ class EnrichedTransaction:
             "location",
             "contact",
             "person",
-            "labels"
+            "labels",
         ]
         excess_fields = set(kwargs.keys()) - set(supported_fields)
         if excess_fields:
             raise ValueError(f"Unexpected keys supplied to report: {excess_fields}")
 
         return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", {
-                "transaction_id": self.transaction_id,
-                **kwargs
-            }
+            "POST", "/v2/report", {"transaction_id": self.transaction_id, **kwargs}
         )
 
     @classmethod
@@ -207,6 +208,7 @@ class EnrichedTransaction:
             "transaction_id": self.transaction_id,
             "website": self.website,
             "chart_of_accounts": self.chart_of_accounts,
+            "recurrence": self.recurrence,
         }
 
 
