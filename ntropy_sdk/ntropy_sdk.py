@@ -135,6 +135,13 @@ class EnrichedTransactionList:
     def __init__(self, transactions: List[Transaction]):
         self.transactions = transactions
 
+    def __iter__(self):
+        for tx in self.transactions:
+            yield tx
+
+    def __getitem__(self, i):
+        return self.transactions[i]
+
     @classmethod
     def from_list(cls, sdk, vals: list):
         return cls([EnrichedTransaction.from_dict(sdk, val) for val in vals])
