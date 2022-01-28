@@ -1,5 +1,6 @@
 import time
 import sys
+import csv
 from datetime import datetime
 import uuid
 import requests
@@ -131,9 +132,20 @@ class Transaction:
         return tx_dict
 
 
-class EnrichedTransactionList:
+class EnrichedTransactionList(list):
     def __init__(self, transactions: List[Transaction]):
+        super().__init__(transactions)
         self.transactions = transactions
+
+    def to_csv(self, filepath):
+        if not len(self):
+            return
+        with open(filepath, "w") as fp:
+            tx = self[0]
+            writer = csv.DictWriter(fp, tx.to_dict().keys())
+            writer.writeheader()
+            for tx in self:
+                writer.writerow(tx.to_dict())
 
     @classmethod
     def from_list(cls, sdk, vals: list):
