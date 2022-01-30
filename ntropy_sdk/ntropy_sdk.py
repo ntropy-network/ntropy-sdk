@@ -289,19 +289,21 @@ class BatchGroup(Batch):
     def __init__(self, sdk, chunks, timeout=10 * 60 * 60, poll_interval=10):
         self._chunks = chunks
         self._batches = []
-        self._results = []
         self._pending_batches = []
         self._sdk = sdk
         self.timeout = time.time() + timeout
         self.poll_interval = poll_interval
         self.num_transactions = sum([len(chunk) for chunk in chunks])
+        self._results = [None] * self.num_transactions
         self._finished_num_transactions = 0
 
         self._enrich_batches()
 
     def _enrich_batches(self):
+        i = 0
         for chunk in self._chunks:
-            self._batches.append(self._sdk._enrich_batch(chunk))
+            self._batches.append((self._sdk._enrich_batch(chunk), i, len(chunk)))
+            i += len(chunk)
             time.sleep(self._sdk.MAX_BATCH_SIZE / 1000)
 
         self._pending_batches = self._batches.copy()
@@ -309,13 +311,13 @@ class BatchGroup(Batch):
     def poll(self):
         if self._pending_batches:
             pending_progress = 0
-            for batch in self._pending_batches:
+            for (batch, offset, size) in self._pending_batches:
                 resp, status = batch.poll()
 
                 if status == "finished":
-                    self._pending_batches.remove(batch)
+                    self._pending_batches.remove((batch, offset, size))
                     self._finished_num_transactions += batch.num_transactions
-                    self._results += resp.transactions
+                    self._results[offset : offset + size] = resp.transactions
                 else:
                     pending_progress += resp.get("progress", 0)
                     break
