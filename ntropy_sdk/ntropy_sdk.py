@@ -156,7 +156,6 @@ class EnrichedTransaction:
     def __init__(
         self,
         sdk,
-        contact=None,
         labels=None,
         location=None,
         logo=None,
@@ -169,7 +168,6 @@ class EnrichedTransaction:
         **kwargs,
     ):
         self.sdk = sdk
-        self.contact = contact
         self.labels = labels
         self.location = location
         self.logo = logo
@@ -193,7 +191,6 @@ class EnrichedTransaction:
             "website",
             "merchant",
             "location",
-            "contact",
             "person",
             "labels",
         ]
@@ -211,7 +208,6 @@ class EnrichedTransaction:
 
     def to_dict(self):
         return {
-            "contact": self.contact,
             "labels": self.labels,
             "location": self.location,
             "logo": self.logo,
