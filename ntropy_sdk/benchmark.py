@@ -196,7 +196,6 @@ DEFAULT_MAPPING = {
     "logo": "logo",
     "location": "location",
     "person": "person",
-    "contact": "contact",
     # the entire enriched transaction object is at _output_tx
 }
 
