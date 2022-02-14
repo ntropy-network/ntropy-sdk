@@ -29,26 +29,32 @@ $ ntropy-benchmark --api-key=$NTROPY_API_KEY --in-csv-file=testset.csv --out-csv
 
 ```python
 import os
-from ntropy_sdk.ntropy_sdk import SDK, Transaction
+import uuid
+from ntropy_sdk.ntropy_sdk import SDK, AccountHolderTransaction
 
 sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
-transaction = Transaction(
+account_holder = AccountHolder(
+    id=str(uuid.uuid4()),
+    type="business",
+    industry="SaaS",
+    website="mycorp.com"
+)
+
+transaction = AccountHolderTransaction(
     amount=1.0,
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
     date="2021-12-13",
     entry_type="outgoing",
-    account_holder_id="1",
-    account_holder_type="business",
     iso_currency_code="USD",
     country="US",
 )
 
-batch = sdk.enrich_batch([transaction])
+batch = account_holder.enrich_batch([transaction])
 enriched_list = batch.wait_with_progress()
 print("BATCH", enriched_list.transactions[0].labels)
 
-enriched = sdk.enrich(transaction)
+enriched = account_holder.enrich(transaction)
 print("REALTIME:", enriched.labels)
 ```
 
