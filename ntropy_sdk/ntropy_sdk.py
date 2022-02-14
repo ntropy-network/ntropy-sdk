@@ -440,7 +440,10 @@ class SDK:
         progress=True,
         chunk_size=100000,
         poll_interval=10,
+        labeling=True,
     ):
         from ntropy_sdk.benchmark import enrich_dataframe
 
-        return enrich_dataframe(self, df, mapping, progress, chunk_size, poll_interval)
+        return enrich_dataframe(
+            self, df, mapping, progress, chunk_size, poll_interval, labeling=labeling
+        )
