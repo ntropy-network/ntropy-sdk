@@ -88,6 +88,7 @@ def enrich_dataframe(
     progress=True,
     chunk_size=100000,
     poll_interval=10,
+    labeling=True,
 ):
     if mapping is None:
         mapping = DEFAULT_MAPPING.copy()
@@ -135,7 +136,7 @@ def enrich_dataframe(
     outputs = []
     with tqdm(total=df.shape[0], desc="started") as progress:
         for txs in chunks:
-            b = sdk.enrich_batch(txs)
+            b = sdk.enrich_batch(txs, labeling=labeling)
             while b.timeout - time.time() > 0:
                 resp, status = b.poll()
                 if status == "started":
