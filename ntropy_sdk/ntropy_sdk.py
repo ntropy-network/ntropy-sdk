@@ -9,6 +9,7 @@ import enum
 from tqdm.auto import tqdm
 from typing import List, Dict
 from urllib.parse import urlencode
+from functools import partial
 
 
 DEFAULT_TIMEOUT = 10 * 60
@@ -386,10 +387,11 @@ class BatchGroup(Batch):
 
     def _enrich_batches(self):
         i = 0
-        enricher = lambda c: self._sdk._enrich_batch(c)
+        enricher = self._sdk._enrich_batch
         if self._account_holder_id:
-            enricher = lambda c: self._sdk._enrich_account_holder_transactions(
-                self._account_holder_id, c
+            enricher = partial(
+                self._sdk._enrich_account_holder_transactions,
+                self._account_holder_id
             )
         for chunk in self._chunks:
             self._batches.append((enricher(chunk), i, len(chunk)))
