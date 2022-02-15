@@ -30,7 +30,8 @@ $ ntropy-benchmark --api-key=$NTROPY_API_KEY --in-csv-file=testset.csv --out-csv
 ```python
 import os
 import uuid
-from ntropy_sdk.ntropy_sdk import SDK, AccountTransaction
+from datetime import datetime
+from ntropy_sdk.ntropy_sdk import SDK, AccountTransaction, AccountHolder
 
 sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
@@ -40,6 +41,7 @@ account_holder = AccountHolder(
     industry="SaaS",
     website="mycorp.com"
 )
+sdk.create_account_holder(account_holder)
 
 transaction = AccountTransaction(
     amount=1.0,
@@ -56,6 +58,9 @@ print("BATCH", enriched_list.transactions[0].labels)
 
 enriched = account_holder.enrich(transaction)
 print("REALTIME:", enriched.labels)
+
+balance = account_holder.get_metrics(['amount'], start=datetime.strptime("2021-12-01", "%Y-%m-%d"), end=datetime.strptime("2022-01-01", "%Y-%m-%d"))
+print("BALANCE:", balance['amount'])
 ```
 
 ## License:
