@@ -30,7 +30,7 @@ $ ntropy-benchmark --api-key=$NTROPY_API_KEY --in-csv-file=testset.csv --out-csv
 ```python
 import os
 import uuid
-from ntropy_sdk.ntropy_sdk import SDK, AccountHolderTransaction
+from ntropy_sdk.ntropy_sdk import SDK, AccountTransaction
 
 sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
@@ -41,7 +41,7 @@ account_holder = AccountHolder(
     website="mycorp.com"
 )
 
-transaction = AccountHolderTransaction(
+transaction = AccountTransaction(
     amount=1.0,
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
     date="2021-12-13",

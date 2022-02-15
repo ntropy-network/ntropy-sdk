@@ -25,7 +25,7 @@ class NtropyBatchError(Exception):
         self.errors = errors
 
 
-class AccountHolderTransaction:
+class AccountTransaction:
     _zero_amount_check = True
 
     required_fields = [
@@ -118,67 +118,65 @@ class AccountHolder:
         name: str = None,
         industry: str = None,
         website: str = None,
-        sdk=None,
     ):
-        self.id = id
         if not self.id:
             raise ValueError("id must be set")
-        self.type = type
+
         if not self.type:
             raise ValueError("type must be set")
+
+        self.id = id
+        self.type = type
         self.name = name
         self.industry = industry
         self.website = website
-        self.sdk = sdk
+        self._sdk = None
 
     def to_dict(self):
         out = {"id": self.id, "type": self.type}
-        for key, field in {
-            "name": self.name,
-            "industry": self.industry,
-            "website": self.website,
-        }.items():
-            if field:
-                out[key] = field
+        for key in ("name", "industry", "website"):
+            if (value := getattr(self, key)):
+                out[key] = value
+
         return out
 
     def enrich_batch(
         self,
-        transactions: List[AccountHolderTransaction],
+        transactions: List[AccountTransaction],
         labeling=True,
     ):
-        if not self.sdk:
+        if not self._sdk:
             raise ValueError(
-                "sdk is not set: either call SDK.create_account_holder or set_self.sdk first"
+                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self.sdk.enrich_account_holder_transactions(
+        return self._sdk.enrich_account_holder_transactions(
             self, transactions, labeling=labeling
         )
 
     def enrich(
         self,
-        transaction: AccountHolderTransaction,
+        transaction: AccountTransaction,
         labeling=True,
         latency_optimized=False,
     ):
-        if not self.sdk:
+        if not self._sdk:
             raise ValueError(
-                "sdk is not set: either call SDK.create_account_holder or set_self.sdk first"
+                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self.sdk.enrich_account_holder_transaction(
+        return self._sdk.enrich_account_holder_transaction(
             self, transaction, labeling=labeling, latency_optimized=latency_optimized
         )
 
     def get_metrics(self, metrics: List[str], start: date, end: date):
-        if not self.sdk:
+        if not self._sdk:
             raise ValueError(
-                "sdk is not set: either call SDK.create_account_holder or set_self.sdk first"
+                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self.sdk.get_account_holder_metrics(self, metrics, start, end)
+        return self._sdk.get_account_holder_metrics(self, metrics, start, end)
 
 
-class Transaction(AccountHolderTransaction):
-    required_fields = AccountHolderTransaction + [
+class Transaction(AccountTransaction):
+    required_fields = AccountTransaction.required_fields + [
         "account_holder_id",
         "account_holder_type",
     ]
@@ -363,7 +361,7 @@ class Batch:
 
 class BatchGroup(Batch):
     def __init__(
-        self, sdk, chunks, timeout=10 * 60 * 60, poll_interval=10, account_holder=None
+        self, sdk, chunks, timeout=10 * 60 * 60, poll_interval=10, account_holder_id=None
     ):
         self._chunks = chunks
         self._batches = []
@@ -374,16 +372,16 @@ class BatchGroup(Batch):
         self.num_transactions = sum([len(chunk) for chunk in chunks])
         self._results = [None] * self.num_transactions
         self._finished_num_transactions = 0
-        self._account_holder = account_holder
+        self._account_holder_id = account_holder_id
 
         self._enrich_batches()
 
     def _enrich_batches(self):
         i = 0
         enricher = lambda c: self._sdk._enrich_batch(c)
-        if self._account_holder:
-            enricher = lambda c: self._enrich_account_holder_transactions(
-                self._account_holder, c
+        if self._account_holder_id:
+            enricher = lambda c: self._sdk._enrich_account_holder_transactions(
+                self._account_holder_id, c
             )
         for chunk in self._chunks:
             self._batches.append((enricher(chunk), i, len(chunk)))
@@ -460,22 +458,22 @@ class SDK:
         url = "/v2/account-holder"
 
         self.retry_ratelimited_request("POST", url, account_holder.to_dict())
-        account_holder.sdk = self
+        account_holder._sdk = self
 
-    def enrich_account_holder_transaction(
+    def enrich_account_transaction(
         self,
-        account_holder: AccountHolder,
-        transaction: AccountHolderTransaction,
+        account_holder_id: str,
+        transaction: AccountTransaction,
         latency_optimized=False,
         labeling=True,
     ):
-        if not isinstance(account_holder, AccountHolder):
-            raise ValueError("account_holder should be of type AccountHolder")
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id should be of type string")
 
         params_str = urlencode(
             {"latency_optimized": latency_optimized, "labeling": labeling}
         )
-        url = f"/v2/account-holder/{account_holder.id}/transaction?" + params_str
+        url = f"/v2/account-holder/{account_holder_id}/transaction?" + params_str
 
         resp = self.retry_ratelimited_request("POST", url, transaction.to_dict())
 
@@ -483,36 +481,37 @@ class SDK:
 
     def enrich_account_holder_transactions(
         self,
-        account_holder: AccountHolder,
-        transactions: List[AccountHolderTransaction],
+        account_holder_id: str,
+        transactions: List[AccountTransaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
     ):
-        if not isinstance(account_holder, AccountHolder):
-            raise ValueError("account_holder should be of type AccountHolder")
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id should be of type string")
+
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
                 transactions[i : i + self.MAX_BATCH_SIZE]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
-            return BatchGroup(self, chunks, account_holder=account_holder)
+            return BatchGroup(self, chunks, account_holder_id=account_holder_id)
 
         return self._enrich_account_holder_transactions(
-            account_holder, transactions, timeout, poll_interval, labeling
+            account_holder_id, transactions, timeout, poll_interval, labeling
         )
 
     def _enrich_account_holder_transactions(
         self,
-        account_holder: AccountHolder,
-        transactions: List[AccountHolderTransaction],
+        account_holder_id: str,
+        transactions: List[AccountTransaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
     ):
         params_str = urlencode({"labeling": labeling})
-        url = f"/v2/account-holder/{account_holder.id}/transactions?" + params_str
+        url = f"/v2/account-holder/{account_holder_id}/transactions?" + params_str
 
         resp = self.retry_ratelimited_request(
             "POST", url, [transaction.to_dict() for transaction in transactions]
@@ -528,16 +527,16 @@ class SDK:
             timeout=timeout,
             poll_interval=poll_interval,
             num_transactions=len(transactions),
-            account_holder_id=self.account_holder_id,
+            account_holder_id=account_holder_id,
         )
 
     def get_account_holder_metrics(
-        self, account_holder: AccountHolder, metrics: List[str], start: date, end: date
+            self, account_holder_id: str, metrics: List[str], start: date, end: date
     ):
-        if not isinstance(account_holder, AccountHolder):
-            raise ValueError("account_holder should be of type AccountHolder")
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder should be of type string")
 
-        url = f"/v2/account-holder/{account_holder.id}/metrics"
+        url = f"/v2/account-holder/{account_holder_id}/metrics"
 
         payload = {
             "metrics": metrics,
@@ -545,8 +544,7 @@ class SDK:
             "end": end.strftime("%Y-%m-%d"),
         }
 
-        metrics = self.retry_ratelimited_request("POST", url, payload)
-        return metrics
+        return self.retry_ratelimited_request("POST", url, payload)
 
     def enrich(self, transaction: Transaction, latency_optimized=False, labeling=True):
         if not isinstance(transaction, Transaction):
