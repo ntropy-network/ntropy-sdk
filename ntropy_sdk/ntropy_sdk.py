@@ -80,8 +80,9 @@ class AccountTransaction:
         self.transaction_id = transaction_id
 
         _assert_type(account_holder_id, "account_holder_id", str)
+        self.account_holder_id = account_holder_id
 
-        _assert_type(amount, "amount", int)
+        _assert_type(amount, "amount", (int, float))
         if (amount == 0 and self._zero_amount_check) or amount < 0:
             raise ValueError(
                 "amount must be a positive number. For negative amounts, change the entry_type field."
@@ -116,9 +117,10 @@ class AccountTransaction:
 
         self.country = country
 
-        _assert_type(mcc, "mcc", int)
-        if mcc is not None and 1000 <= mcc <= 9999:
-            raise ValueError("mcc must be in the range of 1000-9999")
+        if mcc:
+            _assert_type(mcc, "mcc", int)
+            if 1000 <= mcc <= 9999:
+                raise ValueError("mcc must be in the range of 1000-9999")
 
         self.mcc = mcc
 
@@ -190,21 +192,20 @@ class AccountHolder:
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
         return self._sdk.enrich_account_transactions(
-            self.id, transactions, labeling=labeling
+            transactions, labeling=labeling
         )
 
     def enrich(
         self,
         transaction: AccountTransaction,
         labeling=True,
-        latency_optimized=False,
     ):
         if not self._sdk:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
         return self._sdk.enrich_account_transaction(
-            self.id, transaction, labeling=labeling, latency_optimized=latency_optimized
+            transaction, labeling=labeling
         )
 
     def get_metrics(self, metrics: List[str], start: date, end: date):
@@ -396,6 +397,7 @@ class BatchGroup(Batch):
         chunks,
         timeout=10 * 60 * 60,
         poll_interval=10,
+        ledger=False,
     ):
         self._chunks = chunks
         self._batches = []
@@ -406,13 +408,20 @@ class BatchGroup(Batch):
         self.num_transactions = sum([len(chunk) for chunk in chunks])
         self._results = [None] * self.num_transactions
         self._finished_num_transactions = 0
+        self._ledger = ledger
 
         self._enrich_batches()
 
     def _enrich_batches(self):
         i = 0
+
+        if self._ledger:
+            enricher = self._sdk._enrich_batch
+        else:
+            enricher = self._sdk._enrich_account_holder_transactions
+
         for chunk in self._chunks:
-            self._batches.append((self._sdk._enrich_batch(chunk), i, len(chunk)))
+            self._batches.append((enricher(chunk), i, len(chunk)))
             i += len(chunk)
             time.sleep(self._sdk.MAX_BATCH_SIZE / 1000)
 
@@ -520,7 +529,7 @@ class SDK:
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
-            return BatchGroup(self, chunks)
+            return BatchGroup(self, chunks, ledger=True)
 
         return self._enrich_account_holder_transactions(
             transactions, timeout, poll_interval, labeling
@@ -556,6 +565,8 @@ class SDK:
             if e.response.status_code == 404:
                 error = e.response.json()
                 raise ValueError(f"{error['detail']}: {error['missingIds']}")
+
+            raise
 
     def get_account_holder_metrics(
         self, account_holder_id: str, metrics: List[str], start: date, end: date
