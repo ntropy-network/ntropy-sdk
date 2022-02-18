@@ -6,6 +6,7 @@ import uuid
 import requests
 import logging
 import enum
+import re
 from tqdm.auto import tqdm
 from typing import List, Dict
 from urllib.parse import urlencode
@@ -14,6 +15,7 @@ from functools import partial
 
 DEFAULT_TIMEOUT = 10 * 60
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
+COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
 
 
 class NtropyError(Exception):
@@ -26,6 +28,13 @@ class NtropyBatchError(Exception):
         self.errors = errors
 
 
+def _assert_type(value, name, expected_type):
+    if not isinstance(value, expected_type):
+        raise TypeError(f"{name} should be of type {expected_type}")
+
+    return True
+
+
 class AccountTransaction:
     _zero_amount_check = True
 
@@ -36,9 +45,11 @@ class AccountTransaction:
         "entry_type",
         "iso_currency_code",
         "transaction_id",
+        "account_holder_id",
     ]
 
     fields = [
+        "account_holder_id",
         "transaction_id",
         "amount",
         "date",
@@ -56,34 +67,59 @@ class AccountTransaction:
         description,
         entry_type,
         iso_currency_code,
+        account_holder_id,
         country=None,
         transaction_id=None,
         mcc=None,
     ):
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
+        else:
+            _assert_type(transaction_id, "transaction_id", str)
 
         self.transaction_id = transaction_id
 
+        _assert_type(account_holder_id, "account_holder_id", str)
+
+        _assert_type(amount, "amount", int)
         if (amount == 0 and self._zero_amount_check) or amount < 0:
             raise ValueError(
                 "amount must be a positive number. For negative amounts, change the entry_type field."
             )
 
         self.amount = amount
+
         try:
+            _assert_type(date, "date", str)
             datetime.strptime(date, "%Y-%m-%d")
         except (ValueError, TypeError):
             raise ValueError("date must be of the format %Y-%m-%d")
+
         self.date = date
+
+        _assert_type(description, "description", str)
         self.description = description
 
+        _assert_type(entry_type, "entry_type", str)
         if entry_type not in ["debit", "credit", "outgoing", "incoming"]:
             raise ValueError("entry_type nust be one of 'incoming' or 'outgoing'")
 
         self.entry_type = entry_type
+
+        _assert_type(iso_currency_code, "iso_currency_code", str)
         self.iso_currency_code = iso_currency_code
+
+        if country is not None:
+            _assert_type(country, "country", str)
+            if not COUNTRY_REGEX.match(country):
+                raise ValueError("country should be in ISO-3611-2 format")
+
         self.country = country
+
+        _assert_type(mcc, "mcc", int)
+        if mcc is not None and 1000 <= mcc <= 9999:
+            raise ValueError("mcc must be in the range of 1000-9999")
+
         self.mcc = mcc
 
         for field in self.required_fields:
@@ -181,27 +217,22 @@ class AccountHolder:
 
 class Transaction(AccountTransaction):
     required_fields = AccountTransaction.required_fields + [
-        "account_holder_id",
         "account_holder_type",
     ]
 
-    def __init__(self, *args, account_holder_type, account_holder_id, **kwargs):
-        if not isinstance(account_holder_id, str):
-            raise ValueError("account_holder_id must be a string")
-
+    def __init__(self, *args, account_holder_type, **kwargs):
         if account_holder_type not in ACCOUNT_HOLDER_TYPES:
             raise ValueError(
                 "account_holder_type must be either consumer, business, freelance or unknown"
             )
 
         self.account_holder_type = account_holder_type
-        self.account_holder_id = account_holder_id
         super().__init__(*args, **kwargs)
 
     def to_dict(self):
         tx_dict = super().to_dict()
         account_holder = {
-            "id": self.account_holder_id,
+            "id": tx_dict.pop("account_holder_id"),
             "type": self.account_holder_type,
         }
 
@@ -305,23 +336,18 @@ class Batch:
         timeout=4 * 60 * 60,
         poll_interval=10,
         num_transactions=0,
-        account_holder_id=None,
     ):
         self.batch_id = batch_id
         self.timeout = time.time() + timeout
         self.poll_interval = poll_interval
-        self.account_holder_id = account_holder_id
         self.sdk = sdk
         self.num_transactions = num_transactions
 
     def __repr__(self):
-        return f"Batch(id={self.batch_id} account_holder_id={self.account_holder_id})"
+        return f"Batch(id={self.batch_id}"
 
     def poll(self):
-        if not self.account_holder_id:
-            url = f"/v2/enrich/batch/{self.batch_id}"
-        else:
-            url = f"/v2/account-holder/{self.account_holder_id}/batch/{self.batch_id}"
+        url = f"/v2/transactions/async/{self.batch_id}"
 
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status, results = json_resp.get("status"), json_resp.get("results", [])
@@ -370,7 +396,6 @@ class BatchGroup(Batch):
         chunks,
         timeout=10 * 60 * 60,
         poll_interval=10,
-        account_holder_id=None,
     ):
         self._chunks = chunks
         self._batches = []
@@ -381,20 +406,13 @@ class BatchGroup(Batch):
         self.num_transactions = sum([len(chunk) for chunk in chunks])
         self._results = [None] * self.num_transactions
         self._finished_num_transactions = 0
-        self._account_holder_id = account_holder_id
 
         self._enrich_batches()
 
     def _enrich_batches(self):
         i = 0
-        enricher = self._sdk._enrich_batch
-        if self._account_holder_id:
-            enricher = partial(
-                self._sdk._enrich_account_holder_transactions,
-                self._account_holder_id
-            )
         for chunk in self._chunks:
-            self._batches.append((enricher(chunk), i, len(chunk)))
+            self._batches.append((self._sdk._enrich_batch(chunk), i, len(chunk)))
             i += len(chunk)
             time.sleep(self._sdk.MAX_BATCH_SIZE / 1000)
 
@@ -472,73 +490,72 @@ class SDK:
 
     def enrich_account_transaction(
         self,
-        account_holder_id: str,
         transaction: AccountTransaction,
-        latency_optimized=False,
         labeling=True,
     ):
-        if not isinstance(account_holder_id, str):
-            raise ValueError("account_holder_id should be of type string")
-
         params_str = urlencode(
-            {"latency_optimized": latency_optimized, "labeling": labeling}
+            {"labeling": labeling}
         )
-        url = f"/v2/account-holder/{account_holder_id}/transaction?" + params_str
+        url = f"/v2/transactions/sync?" + params_str
 
-        resp = self.retry_ratelimited_request("POST", url, transaction.to_dict())
+        try:
+            resp = self.retry_ratelimited_request("POST", url, [transaction.to_dict()])
 
-        return EnrichedTransaction.from_dict(self, resp.json())
+            return EnrichedTransaction.from_dict(self, resp.json()[0])
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}: {error['missingIds']}")
 
     def enrich_account_transactions(
         self,
-        account_holder_id: str,
         transactions: List[AccountTransaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
     ):
-        if not isinstance(account_holder_id, str):
-            raise ValueError("account_holder_id should be of type string")
-
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
                 transactions[i : i + self.MAX_BATCH_SIZE]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
-            return BatchGroup(self, chunks, account_holder_id=account_holder_id)
+            return BatchGroup(self, chunks)
 
         return self._enrich_account_holder_transactions(
-            account_holder_id, transactions, timeout, poll_interval, labeling
+            transactions, timeout, poll_interval, labeling
         )
 
     def _enrich_account_holder_transactions(
         self,
-        account_holder_id: str,
         transactions: List[AccountTransaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
     ):
         params_str = urlencode({"labeling": labeling})
-        url = f"/v2/account-holder/{account_holder_id}/transactions?" + params_str
+        url = f"/v2/transactions/async?" + params_str
 
-        resp = self.retry_ratelimited_request(
-            "POST", url, [transaction.to_dict() for transaction in transactions]
-        )
-        batch_id = resp.json().get("id", "")
+        try:
+            resp = self.retry_ratelimited_request(
+                "POST", url, [transaction.to_dict() for transaction in transactions]
+            )
+            batch_id = resp.json().get("id", "")
 
-        if not batch_id:
-            raise ValueError("batch_id missing from response")
+            if not batch_id:
+                raise ValueError("batch_id missing from response")
 
-        return Batch(
-            self,
-            batch_id,
-            timeout=timeout,
-            poll_interval=poll_interval,
-            num_transactions=len(transactions),
-            account_holder_id=account_holder_id,
-        )
+            return Batch(
+                self,
+                batch_id,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                num_transactions=len(transactions),
+            )
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}: {error['missingIds']}")
 
     def get_account_holder_metrics(
         self, account_holder_id: str, metrics: List[str], start: date, end: date
@@ -546,7 +563,7 @@ class SDK:
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id should be of type string")
 
-        url = f"/v2/account-holder/{account_holder_id}/metrics"
+        url = f"/v2/account-holder/{account_holder_id}/query"
 
         payload = {
             "metrics": metrics,
