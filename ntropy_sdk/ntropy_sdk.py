@@ -7,6 +7,7 @@ import requests
 import logging
 import enum
 import re
+import math
 from tqdm.auto import tqdm
 from typing import List, Dict
 from urllib.parse import urlencode
@@ -31,6 +32,10 @@ class NtropyBatchError(Exception):
 def _assert_type(value, name, expected_type):
     if not isinstance(value, expected_type):
         raise TypeError(f"{name} should be of type {expected_type}")
+
+    if expected_type == float or (isinstance(expected_type, tuple) and float in expected_type):
+        if math.isnan(value):
+            raise ValueError(f"{name} value cannot be NaN")
 
     return True
 

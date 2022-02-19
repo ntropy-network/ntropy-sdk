@@ -1,6 +1,7 @@
 import os
 import pytest
 import uuid
+import math
 
 from tests import API_KEY
 from ntropy_sdk import (
@@ -94,6 +95,19 @@ def test_fields():
             "type": "consumer",
         },
     }
+
+    with pytest.raises(ValueError):
+        tx = Transaction(
+            amount=float('nan'),
+            description="TARGET T- 5800 20th St 11/30/19 17:32",
+            entry_type="debit",
+            date="2012-12-10",
+            account_holder_id="1",
+            account_holder_type="consumer",
+            iso_currency_code="USD",
+            transaction_id="one-two-three",
+            mcc=5432,
+        )
 
 
 def test_enrich(sdk):
