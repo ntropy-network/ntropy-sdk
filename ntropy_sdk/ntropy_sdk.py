@@ -119,7 +119,7 @@ class AccountTransaction:
 
         if mcc:
             _assert_type(mcc, "mcc", int)
-            if 1000 <= mcc <= 9999:
+            if not (1000 <= mcc <= 9999):
                 raise ValueError("mcc must be in the range of 1000-9999")
 
         self.mcc = mcc
