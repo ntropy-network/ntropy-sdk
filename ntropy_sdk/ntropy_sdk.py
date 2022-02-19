@@ -32,7 +32,9 @@ def _assert_type(value, name, expected_type):
     if not isinstance(value, expected_type):
         raise TypeError(f"{name} should be of type {expected_type}")
 
-    if expected_type == float or (isinstance(expected_type, tuple) and float in expected_type):
+    if expected_type == float or (
+        isinstance(expected_type, tuple) and float in expected_type
+    ):
         if math.isnan(value):
             raise ValueError(f"{name} value cannot be NaN")
 
@@ -454,7 +456,13 @@ class SDK:
         from ntropy_sdk.benchmark import enrich_dataframe
 
         return enrich_dataframe(
-            self, transactions, mapping = None, progress = True, chunk_size = self.MAX_BATCH_SIZE, poll_interval, labeling=labeling
+            self,
+            transactions,
+            mapping=None,
+            progress=True,
+            chunk_size=self.MAX_BATCH_SIZE,
+            poll_interval=poll_interval,
+            labeling=labeling,
         )
 
     @add_transactions.register
@@ -471,13 +479,9 @@ class SDK:
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
-            return BatchGroup(self, chunks).wait_with_progress() #, ledger=True)
+            return BatchGroup(self, chunks).wait_with_progress()
 
-        #return self._enrich_account_holder_transactions(
-        return self._add_transactions(
-            transactions, timeout, poll_interval, labeling
-        )
-
+        return self._add_transactions(transactions, timeout, poll_interval, labeling)
 
     def _add_transactions(
         self,
@@ -553,4 +557,3 @@ class SDK:
         url = f"/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
-
