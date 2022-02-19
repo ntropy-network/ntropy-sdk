@@ -1,9 +1,7 @@
-import time
 import sys
 import argparse
 import ast
 from typing import List, Dict
-from tqdm.auto import tqdm
 
 from ntropy_sdk import SDK, Transaction
 
@@ -115,16 +113,19 @@ def enrich_dataframe(
         )
 
     account_holders = {}
+
     def create_account_holder(row):
-        if row['account_holder_id'] not in account_holders:
-            account_holders[row['account_holder_id']] = True
-            sdk.create_account_holder(AccountHolder(
-                id=row['account_holder_id'],
-                type=row['account_holder_type'],
-                name=row.get('account_holder_name'),
-                industry=row.get('account_holder_industry'),
-                website=row.get('account_holder_website')
-            ))
+        if row["account_holder_id"] not in account_holders:
+            account_holders[row["account_holder_id"]] = True
+            sdk.create_account_holder(
+                AccountHolder(
+                    id=row["account_holder_id"],
+                    type=row["account_holder_type"],
+                    name=row.get("account_holder_name"),
+                    industry=row.get("account_holder_industry"),
+                    website=row.get("account_holder_website"),
+                )
+            )
 
     df.apply(create_account_holder, axis=1)
 
@@ -210,7 +211,7 @@ def benchmark(
     poll_interval=10,
 ):
     try:
-        import pandas
+        import pandas as pd
     except ImportError:
         print(
             "Pandas not found, please install ntropy-sdk with the benchmark extra"
@@ -226,11 +227,7 @@ def benchmark(
         )
         sys.exit(1)
     try:
-        from sklearn.metrics import (
-            f1_score,
-            accuracy_score,
-            precision_recall_fscore_support,
-        )
+        from sklearn.metrics import precision_recall_fscore_support
     except ImportError:
         print(
             "Scikit-learn not found, please install ntropy-sdk with the benchmark extra"
@@ -242,7 +239,7 @@ def benchmark(
         default_mapping.update(mapping)
     mapping = default_mapping
 
-    df = pandas.read_csv(in_csv_file)
+    df = pd.read_csv(in_csv_file)
     if drop_fields:
         df = df.drop(drop_fields, axis=1)
     if hardcode_fields:

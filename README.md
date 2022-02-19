@@ -20,7 +20,7 @@ sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
 for account_holder_type in ['business', 'consumer', 'freelance', 'unknown']:
   print("ACCOUNT HOLDER TYPE:", account_holder_type)
-  print(sdk.get_labels())
+  print(sdk.get_labels(account_holder_type))
 
 print("CHART of ACCOUNTS:", sdk.get_chart_of_accounts())
 
