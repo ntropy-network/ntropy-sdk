@@ -94,31 +94,14 @@ def enrich_dataframe(
         mapping = DEFAULT_MAPPING.copy()
 
     required_columns = [
-        "date",
-        "iso_currency_code",
         "amount",
-        "entry_type",
+        "date",
         "description",
+        "entry_type",
+        "iso_currency_code",
         "account_holder_id",
         "account_holder_type",
     ]
-
-    optional_columns = [
-        "transaction_id",
-        "date",
-    ]
-
-    def to_tx(row):
-        return Transaction(
-            amount=row["amount"],
-            date=row.get("date"),
-            description=row.get("description", ""),
-            entry_type=row["entry_type"],
-            iso_currency_code=row["iso_currency_code"],
-            transaction_id=row.get("transaction_id"),
-            account_holder_id=row["account_holder_id"],
-            account_holder_type=row["account_holder_type"],
-        )
 
     cols = set(df.columns)
     missing_cols = set(required_columns).difference(cols)
@@ -130,29 +113,36 @@ def enrich_dataframe(
             f"Overlapping columns {overlapping_cols} will be overwritten"
             "- consider overriding the mapping keyword argument, or move the existing columns to another column"
         )
-    txs = df.apply(to_tx, axis=1)
-    chunks = [txs[i : i + chunk_size] for i in range(0, len(txs), chunk_size)]
-    prev_chunks = 0
-    outputs = []
-    with tqdm(total=df.shape[0], desc="started") as progress:
-        for txs in chunks:
-            b = sdk.enrich_batch(txs, labeling=labeling)
-            while b.timeout - time.time() > 0:
-                resp, status = b.poll()
-                if status == "started":
-                    diff_n = resp.get("progress", 0) - (progress.n - prev_chunks)
-                    progress.update(diff_n)
-                    time.sleep(poll_interval)
-                    continue
-                progress.desc = status
-                diff_n = b.num_transactions - (progress.n - prev_chunks)
-                progress.update(diff_n)
-                for tx in resp.transactions:
-                    outputs.append(tx)
-                break
-            prev_chunks += b.num_transactions
 
-    df["_output_tx"] = outputs
+    account_holders = {}
+    def create_account_holder(row):
+        if row['account_holder_id'] not in account_holders:
+            account_holders[row['account_holder_id']] = True
+            sdk.create_account_holder(AccountHolder(
+                id=row['account_holder_id'],
+                type=row['account_holder_type'],
+                name=row.get('account_holder_name'),
+                industry=row.get('account_holder_industry'),
+                website=row.get('account_holder_website')
+            ))
+
+    df.apply(create_account_holder, axis=1)
+
+    def to_tx(row):
+        return Transaction(
+            amount=row["amount"],
+            date=row.get("date"),
+            description=row.get("description", ""),
+            entry_type=row["entry_type"],
+            iso_currency_code=row["iso_currency_code"],
+            account_holder_id=row["account_holder_id"],
+            country=row.get("country"),
+            transaction_id=row.get("transaction_id"),
+        )
+
+    txs = df.apply(to_tx, axis=1)
+
+    df["_output_tx"] = sdk.add_transactions(txs, labeling=labeling).transactions
 
     def get_tx_val(tx, v):
         sentinel = object()
