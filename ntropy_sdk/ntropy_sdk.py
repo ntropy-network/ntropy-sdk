@@ -466,7 +466,7 @@ class SDK:
     @add_transactions.register
     def _(
         self,
-        transactions: List[Transaction],
+        transactions: list,
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,

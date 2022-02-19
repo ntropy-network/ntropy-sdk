@@ -14,7 +14,7 @@ $ pip install --upgrade 'ntropy-sdk[benchmark]'
 import os
 import uuid
 from datetime import datetime
-from ntropy_sdk.ntropy_sdk import SDK, Transaction, AccountHolder
+from ntropy_sdk import SDK, Transaction, AccountHolder
 
 sdk = SDK(os.getenv("NTROPY_API_KEY"))
 
