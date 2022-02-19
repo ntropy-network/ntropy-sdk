@@ -463,10 +463,10 @@ class SDK:
             labeling=labeling,
         )
 
-    @add_transactions.register
+    @add_transactions.register(list)
     def _(
         self,
-        transactions: list,
+        transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
@@ -498,17 +498,18 @@ class SDK:
 
             resp = self.retry_ratelimited_request(
                 "POST", url, [transaction.to_dict() for transaction in transactions]
-            ).json()
+            )
 
             if is_sync:
-                status, results = resp.get("status"), resp.get("results", [])
 
-                if status == "error":
-                    raise NtropyBatchError(f"Batch failed: {results}", errors=results)
+                if resp.status_code != 200:
+                    raise NtropyBatchError(f"Batch failed: {results}", errors=resp.json())
 
-                return EnrichedTransactionList.from_list(self.sdk, results)
+                return EnrichedTransactionList.from_list(self, resp.json())
+
             else:
-                batch_id = resp.get("id", "")
+                r = resp.json()
+                batch_id = r.get("id", "")
 
                 if not batch_id:
                     raise ValueError("batch_id missing from response")
