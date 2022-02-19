@@ -50,6 +50,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="4.0.0rc1",
+    version="4.1.0",
     zip_safe=False,
 )
