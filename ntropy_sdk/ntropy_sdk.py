@@ -1,17 +1,15 @@
 import time
-import sys
 import csv
 from datetime import datetime, date
 import uuid
 import requests
 import logging
-import enum
 import re
 import math
 from tqdm.auto import tqdm
-from typing import List, Dict
+from typing import List
 from urllib.parse import urlencode
-from functools import partial, singledispatchmethod
+from functools import singledispatchmethod
 
 DEFAULT_TIMEOUT = 10 * 60
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
@@ -384,7 +382,7 @@ class BatchGroup(Batch):
                 if status == "finished":
                     self._pending_batches.remove((batch, offset, size))
                     self._finished_num_transactions += batch.num_transactions
-                    self._results[offset : offset + size] = resp.transactions
+                    self._results[offset:(offset + size)] = resp.transactions
                 else:
                     pending_progress += resp.get("progress", 0)
                     break
@@ -475,7 +473,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i : i + self.MAX_BATCH_SIZE]
+                transactions[i:(i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
@@ -490,7 +488,7 @@ class SDK:
         poll_interval=10,
         labeling=True,
     ):
-        if_sync = len(transactions) <= self.MAX_SYNC_BATCH
+        is_sync = len(transactions) <= self.MAX_SYNC_BATCH
 
         params_str = urlencode({"labeling": labeling})
 
@@ -554,6 +552,6 @@ class SDK:
         return resp.json()
 
     def get_chart_of_accounts(self):
-        url = f"/v2/chart-of-accounts"
+        url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
