@@ -191,9 +191,7 @@ class AccountHolder:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self._sdk.enrich_account_transactions(
-            transactions, labeling=labeling
-        )
+        return self._sdk.enrich_account_transactions(transactions, labeling=labeling)
 
     def enrich(
         self,
@@ -204,9 +202,7 @@ class AccountHolder:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self._sdk.enrich_account_transaction(
-            transaction, labeling=labeling
-        )
+        return self._sdk.enrich_account_transaction(transaction, labeling=labeling)
 
     def get_metrics(self, metrics: List[str], start: date, end: date):
         if not self._sdk:
@@ -416,9 +412,9 @@ class BatchGroup(Batch):
         i = 0
 
         if self._ledger:
-            enricher = self._sdk._enrich_batch
-        else:
             enricher = self._sdk._enrich_account_holder_transactions
+        else:
+            enricher = self._sdk._enrich_batch
 
         for chunk in self._chunks:
             self._batches.append((enricher(chunk), i, len(chunk)))
@@ -502,9 +498,7 @@ class SDK:
         transaction: AccountTransaction,
         labeling=True,
     ):
-        params_str = urlencode(
-            {"labeling": labeling}
-        )
+        params_str = urlencode({"labeling": labeling})
         url = f"/v2/transactions/sync?" + params_str
 
         try:
