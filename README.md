@@ -46,6 +46,7 @@ sdk.create_account_holder(account_holder)
 transaction = AccountTransaction(
     amount=1.0,
     description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
+    account_holder_id=account_holder.id,
     date="2021-12-13",
     entry_type="outgoing",
     iso_currency_code="USD",

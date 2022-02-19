@@ -1,8 +1,16 @@
 import os
 import pytest
+import uuid
+import math
 
 from tests import API_KEY
-from ntropy_sdk import SDK, Transaction, EnrichedTransaction
+from ntropy_sdk import (
+    SDK,
+    Transaction,
+    AccountTransaction,
+    EnrichedTransaction,
+    AccountHolder,
+)
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 
 
@@ -88,6 +96,19 @@ def test_fields():
         },
     }
 
+    with pytest.raises(ValueError):
+        tx = Transaction(
+            amount=float('nan'),
+            description="TARGET T- 5800 20th St 11/30/19 17:32",
+            entry_type="debit",
+            date="2012-12-10",
+            account_holder_id="1",
+            account_holder_type="consumer",
+            iso_currency_code="USD",
+            transaction_id="one-two-three",
+            mcc=5432,
+        )
+
 
 def test_enrich(sdk):
     consumer_tx = Transaction(
@@ -156,6 +177,35 @@ def test_enrich_huge_batch(sdk):
     sdk.MAX_BATCH_SIZE = 4
 
     batch = sdk.enrich_batch(txs, labeling=False)
+    result = batch.wait_with_progress()
+
+    assert len(result.transactions) == len(txs)
+
+    for i, enriched_tx in enumerate(result.transactions):
+        assert isinstance(enriched_tx, EnrichedTransaction)
+        assert enriched_tx.merchant is not None
+        assert enriched_tx.transaction_id == txs[i].transaction_id
+
+
+def test_enrich_huge_ledger_batch(sdk):
+    account_holder = AccountHolder(
+        id=str(uuid.uuid4()), type="business", industry="SaaS", website="mycorp.com"
+    )
+    sdk.create_account_holder(account_holder)
+
+    tx = AccountTransaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id=account_holder.id,
+        iso_currency_code="USD",
+    )
+
+    txs = [tx] * 10
+    sdk.MAX_BATCH_SIZE = 4
+
+    batch = sdk.enrich_account_transactions(txs, labeling=False)
     result = batch.wait_with_progress()
 
     assert len(result.transactions) == len(txs)
