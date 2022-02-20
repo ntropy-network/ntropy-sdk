@@ -53,8 +53,24 @@ print("QUERY:", query['amount'])
 
 import pandas as pd
 
-df = pd.DataFrame(data = [[12046.15, '2021-12-13', "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15", 'outgoing', 'USD', 'US', str(uuid.uuid4()), 'business', "Ntropy Network Inc.", "fintech", "ntropy.com"]], columns = ["amount", "date", "description", "entry_type", "iso_currency_code", "country", "account_holder_id", "account_holder_type", "account_holder_name", "account_holder_industry", "account_holder_website"]
-)
+df = pd.DataFrame(data = [[12046.15, '2021-12-13', "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15", 'outgoing', 'USD', 'US', str(uuid.uuid4()), 'business', "Ntropy Network Inc.", "fintech", "ntropy.com"]], columns = ["amount", "date", "description", "entry_type", "iso_currency_code", "country", "account_holder_id", "account_holder_type", "account_holder_name", "account_holder_industry", "account_holder_website"])
+
+account_holders = {}
+
+def create_account_holder(row):
+    if row["account_holder_id"] not in account_holders:
+        account_holders[row["account_holder_id"]] = True
+        self.create_account_holder(
+            AccountHolder(
+                id=row["account_holder_id"],
+                type=row["account_holder_type"],
+                name=row.get("account_holder_name"),
+                industry=row.get("account_holder_industry"),
+                website=row.get("account_holder_website"),
+            )
+        )
+
+df.apply(create_account_holder, axis=1)
 
 enriched_df = sdk.add_transactions(df)
 print("ENRICHED:", enriched_df)
