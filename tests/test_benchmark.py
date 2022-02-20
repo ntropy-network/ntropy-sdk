@@ -12,7 +12,7 @@ from ntropy_sdk.benchmark import main
 TRANSACTIONS = [
     {
         "": "0",
-        "account_holder_id": "6039c4ac1c63e9c7",
+        "account_holder_id": str(uuid.uuid4()),
         "account_holder_type": "business",
         "description": "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
         "date": "2021-12-12",
@@ -24,7 +24,7 @@ TRANSACTIONS = [
     },
     {
         "": "1",
-        "account_holder_id": "601343505fd633",
+        "account_holder_id": str(uuid.uuid4()),
         "account_holder_type": "consumer",
         "date": "2021-12-12",
         "description": "TARGET T- 5800 20th St 11/30/19 17:32",
