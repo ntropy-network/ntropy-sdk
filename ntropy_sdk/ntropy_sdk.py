@@ -487,7 +487,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i : (i + self.MAX_BATCH_SIZE)]
+                transactions[i:(i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
@@ -523,7 +523,7 @@ class SDK:
 
                 if resp.status_code != 200:
                     raise NtropyBatchError(
-                        f"Batch failed: {results}", errors=resp.json()
+                        "Batch failed", errors=resp.json()
                     )
 
                 return EnrichedTransactionList.from_list(self, resp.json())

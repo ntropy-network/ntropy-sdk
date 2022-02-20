@@ -3,7 +3,7 @@ import argparse
 import ast
 from typing import List, Dict
 
-from ntropy_sdk import SDK, Transaction, AccountHolder
+from ntropy_sdk import SDK
 
 
 def limited_type(field, min, max):
