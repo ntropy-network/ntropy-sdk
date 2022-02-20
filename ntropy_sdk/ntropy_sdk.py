@@ -1,18 +1,15 @@
 import time
-import sys
 import csv
 from datetime import datetime, date
 import uuid
 import requests
 import logging
-import enum
 import re
 import math
 from tqdm.auto import tqdm
-from typing import List, Dict
+from typing import List
 from urllib.parse import urlencode
-from functools import partial
-
+from functools import singledispatchmethod
 
 DEFAULT_TIMEOUT = 10 * 60
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
@@ -33,14 +30,16 @@ def _assert_type(value, name, expected_type):
     if not isinstance(value, expected_type):
         raise TypeError(f"{name} should be of type {expected_type}")
 
-    if expected_type == float or (isinstance(expected_type, tuple) and float in expected_type):
+    if expected_type == float or (
+        isinstance(expected_type, tuple) and float in expected_type
+    ):
         if math.isnan(value):
             raise ValueError(f"{name} value cannot be NaN")
 
     return True
 
 
-class AccountTransaction:
+class Transaction:
     _zero_amount_check = True
 
     required_fields = [
@@ -169,6 +168,9 @@ class AccountHolder:
         if not type:
             raise ValueError("type must be set")
 
+        if type not in ACCOUNT_HOLDER_TYPES:
+            raise ValueError("type is not valid")
+
         self.id = id
         self.type = type
         self.name = name
@@ -187,59 +189,12 @@ class AccountHolder:
 
         return out
 
-    def enrich_batch(
-        self,
-        transactions: List[AccountTransaction],
-        labeling=True,
-    ):
-        if not self._sdk:
-            raise ValueError(
-                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
-            )
-        return self._sdk.enrich_account_transactions(transactions, labeling=labeling)
-
-    def enrich(
-        self,
-        transaction: AccountTransaction,
-        labeling=True,
-    ):
-        if not self._sdk:
-            raise ValueError(
-                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
-            )
-        return self._sdk.enrich_account_transaction(transaction, labeling=labeling)
-
     def get_metrics(self, metrics: List[str], start: date, end: date):
         if not self._sdk:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
         return self._sdk.get_account_holder_metrics(self.id, metrics, start, end)
-
-
-class Transaction(AccountTransaction):
-    required_fields = AccountTransaction.required_fields + [
-        "account_holder_type",
-    ]
-
-    def __init__(self, *args, account_holder_type, **kwargs):
-        if account_holder_type not in ACCOUNT_HOLDER_TYPES:
-            raise ValueError(
-                "account_holder_type must be either consumer, business, freelance or unknown"
-            )
-
-        self.account_holder_type = account_holder_type
-        super().__init__(*args, **kwargs)
-
-    def to_dict(self):
-        tx_dict = super().to_dict()
-        account_holder = {
-            "id": tx_dict.pop("account_holder_id"),
-            "type": self.account_holder_type,
-        }
-
-        tx_dict["account_holder"] = account_holder
-        return tx_dict
 
 
 class EnrichedTransaction:
@@ -391,75 +346,24 @@ class Batch:
             raise NtropyError("Batch wait timeout")
 
 
-class BatchGroup(Batch):
-    def __init__(
-        self,
-        sdk,
-        chunks,
-        timeout=10 * 60 * 60,
-        poll_interval=10,
-        ledger=False,
-    ):
-        self._chunks = chunks
-        self._batches = []
-        self._pending_batches = []
-        self._sdk = sdk
-        self.timeout = time.time() + timeout
-        self.poll_interval = poll_interval
-        self.num_transactions = sum([len(chunk) for chunk in chunks])
-        self._results = [None] * self.num_transactions
-        self._finished_num_transactions = 0
-        self._ledger = ledger
-
-        self._enrich_batches()
-
-    def _enrich_batches(self):
-        i = 0
-
-        if self._ledger:
-            enricher = self._sdk._enrich_account_holder_transactions
-        else:
-            enricher = self._sdk._enrich_batch
-
-        for chunk in self._chunks:
-            self._batches.append((enricher(chunk), i, len(chunk)))
-            i += len(chunk)
-            time.sleep(self._sdk.MAX_BATCH_SIZE / 1000)
-
-        self._pending_batches = self._batches.copy()
-
-    def poll(self):
-        if self._pending_batches:
-            pending_progress = 0
-            for (batch, offset, size) in self._pending_batches:
-                resp, status = batch.poll()
-
-                if status == "finished":
-                    self._pending_batches.remove((batch, offset, size))
-                    self._finished_num_transactions += batch.num_transactions
-                    self._results[offset : offset + size] = resp.transactions
-                else:
-                    pending_progress += resp.get("progress", 0)
-                    break
-
-            return {
-                "progress": pending_progress + self._finished_num_transactions
-            }, "started"
-        else:
-            return EnrichedTransactionList(self._results), "finished"
-
-    def __repr__(self):
-        return f"BatchGroup({repr(self._batches)})"
-
-
 class SDK:
     MAX_BATCH_SIZE = 100000
+    MAX_SYNC_BATCH = 4000
+    DEFAULT_MAPPING = {
+        "merchant": "merchant",
+        "website": "website",
+        "labels": "labels",
+        "logo": "logo",
+        "location": "location",
+        "person": "person",
+        # the entire enriched transaction object is at _output_tx
+    }
 
     def __init__(self, token: str, timeout: int = DEFAULT_TIMEOUT):
         if not token:
             raise NtropyError("API Token must be set")
 
-        self.base_url = "https://api.ntropy.network"
+        self.base_url = "https://api.ntropy.com"
         self.retries = 10
         self.token = token
         self.session = requests.Session()
@@ -498,68 +402,142 @@ class SDK:
         self.retry_ratelimited_request("POST", url, account_holder.to_dict())
         account_holder.set_sdk(self)
 
-    def enrich_account_transaction(
+    @singledispatchmethod
+    def add_transactions(
         self,
-        transaction: AccountTransaction,
+        df,
+        mapping=None,
+        poll_interval=10,
         labeling=True,
     ):
-        params_str = urlencode({"labeling": labeling})
-        url = f"/v2/transactions/sync?" + params_str
-
         try:
-            resp = self.retry_ratelimited_request("POST", url, [transaction.to_dict()])
+            import pandas as pd
+        except ImportError:
+            # If here, the input data is not a dataframe, or import would succeed
+            raise ValueError(
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+            )
 
-            return EnrichedTransaction.from_dict(self, resp.json()[0])
-        except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                error = e.response.json()
-                raise ValueError(f"{error['detail']}: {error['missingIds']}")
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Transactions object needs to be a pandas dataframe.")
 
-    def enrich_account_transactions(
+        if mapping is None:
+            mapping = self.DEFAULT_MAPPING.copy()
+
+        required_columns = [
+            "amount",
+            "date",
+            "description",
+            "entry_type",
+            "iso_currency_code",
+            "account_holder_id",
+            "account_holder_type",
+        ]
+
+        cols = set(df.columns)
+        missing_cols = set(required_columns).difference(cols)
+        if missing_cols:
+            raise KeyError(f"Missing columns {missing_cols}")
+        overlapping_cols = set(mapping.values()).intersection(cols)
+        if overlapping_cols:
+            raise KeyError(
+                f"Overlapping columns {overlapping_cols} will be overwritten"
+                "- consider overriding the mapping keyword argument, or move the existing columns to another column"
+            )
+
+        def to_tx(row):
+            return Transaction(
+                amount=row["amount"],
+                date=row.get("date"),
+                description=row.get("description", ""),
+                entry_type=row["entry_type"],
+                iso_currency_code=row["iso_currency_code"],
+                account_holder_id=row["account_holder_id"],
+                country=row.get("country"),
+                transaction_id=row.get("transaction_id"),
+            )
+
+        txs = df.apply(to_tx, axis=1).to_list()
+
+        df["_output_tx"] = self.add_transactions(txs, labeling=labeling)
+
+        def get_tx_val(tx, v):
+            sentinel = object()
+            output = getattr(tx, v, tx.kwargs.get(v, sentinel))
+            if output == sentinel:
+                raise KeyError(f"invalid mapping: {v} not in {tx}")
+            return output
+
+        for k, v in mapping.items():
+            df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
+        df = df.drop(["_output_tx"], axis=1)
+        return df
+
+    @add_transactions.register(list)
+    def _(
         self,
-        transactions: List[AccountTransaction],
+        transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i : i + self.MAX_BATCH_SIZE]
+                transactions[i : (i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
-            return BatchGroup(self, chunks, ledger=True)
+            arr = []
+            for chunk in chunks:
+                arr += self._add_transactions(chunk)
+                time.sleep(self.MAX_BATCH_SIZE / 1000)
 
-        return self._enrich_account_holder_transactions(
-            transactions, timeout, poll_interval, labeling
-        )
+            return arr
 
-    def _enrich_account_holder_transactions(
+        return self._add_transactions(transactions, timeout, poll_interval, labeling)
+
+    def _add_transactions(
         self,
-        transactions: List[AccountTransaction],
+        transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
     ):
+        is_sync = len(transactions) <= self.MAX_SYNC_BATCH
+
         params_str = urlencode({"labeling": labeling})
-        url = f"/v2/transactions/async?" + params_str
 
         try:
+
+            url = f"/v2/transactions/{'sync' if is_sync else 'async'}?" + params_str
+
             resp = self.retry_ratelimited_request(
                 "POST", url, [transaction.to_dict() for transaction in transactions]
             )
-            batch_id = resp.json().get("id", "")
 
-            if not batch_id:
-                raise ValueError("batch_id missing from response")
+            if is_sync:
 
-            return Batch(
-                self,
-                batch_id,
-                timeout=timeout,
-                poll_interval=poll_interval,
-                num_transactions=len(transactions),
-            )
+                if resp.status_code != 200:
+                    raise NtropyBatchError("Batch failed", errors=resp.json())
+
+                return EnrichedTransactionList.from_list(self, resp.json())
+
+            else:
+
+                r = resp.json()
+                batch_id = r.get("id", "")
+
+                if not batch_id:
+                    raise ValueError("batch_id missing from response")
+
+                return Batch(
+                    self,
+                    batch_id,
+                    timeout=timeout,
+                    poll_interval=poll_interval,
+                    num_transactions=len(transactions),
+                ).wait_with_progress()
+
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 error = e.response.json()
@@ -584,63 +562,6 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
 
-    def enrich(self, transaction: Transaction, latency_optimized=False, labeling=True):
-        if not isinstance(transaction, Transaction):
-            raise ValueError("transaction should be of type Transaction")
-
-        params_str = urlencode(
-            {"latency_optimized": latency_optimized, "labeling": labeling}
-        )
-        url = "/v2/enrich?" + params_str
-
-        resp = self.retry_ratelimited_request("POST", url, transaction.to_dict())
-
-        return EnrichedTransaction.from_dict(self, resp.json())
-
-    def enrich_batch(
-        self,
-        transactions: List[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        labeling=True,
-    ):
-        if len(transactions) > self.MAX_BATCH_SIZE:
-            chunks = [
-                transactions[i : i + self.MAX_BATCH_SIZE]
-                for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
-            ]
-
-            return BatchGroup(self, chunks)
-
-        return self._enrich_batch(transactions, timeout, poll_interval, labeling)
-
-    def _enrich_batch(
-        self,
-        transactions: List[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        labeling=True,
-    ):
-        url = "/v2/enrich/batch"
-
-        if not labeling:
-            url += "?labeling=false"
-
-        resp = self.retry_ratelimited_request(
-            "POST", url, [transaction.to_dict() for transaction in transactions]
-        )
-        batch_id = resp.json().get("id", "")
-
-        if not batch_id:
-            raise ValueError("batch_id missing from response")
-        return Batch(
-            self,
-            batch_id,
-            timeout=timeout,
-            poll_interval=poll_interval,
-            num_transactions=len(transactions),
-        )
-
     def get_labels(self, account_holder_type: str):
         assert account_holder_type in ACCOUNT_HOLDER_TYPES
         url = f"/v2/labels/hierarchy/{account_holder_type}"
@@ -648,21 +569,6 @@ class SDK:
         return resp.json()
 
     def get_chart_of_accounts(self):
-        url = f"/v2/chart-of-accounts"
+        url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
-
-    def enrich_dataframe(
-        self,
-        df,
-        mapping=None,
-        progress=True,
-        chunk_size=100000,
-        poll_interval=10,
-        labeling=True,
-    ):
-        from ntropy_sdk.benchmark import enrich_dataframe
-
-        return enrich_dataframe(
-            self, df, mapping, progress, chunk_size, poll_interval, labeling=labeling
-        )

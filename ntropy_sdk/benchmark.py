@@ -1,11 +1,9 @@
-import time
 import sys
 import argparse
 import ast
 from typing import List, Dict
-from tqdm.auto import tqdm
 
-from ntropy_sdk import SDK, Transaction
+from ntropy_sdk import SDK
 
 
 def limited_type(field, min, max):
@@ -23,7 +21,7 @@ def limited_type(field, min, max):
 parser = argparse.ArgumentParser(description="Benchmark the results of a CSV")
 parser.add_argument("--api-key", required=True, type=str, help="api key to use")
 parser.add_argument(
-    "--api-url", type=str, default="https://api.ntropy.network", help="API url"
+    "--api-url", type=str, default="https://api.ntropy.com", help="API url"
 )
 parser.add_argument(
     "--in-csv-file",
@@ -81,92 +79,6 @@ parser.add_argument(
 )
 
 
-def enrich_dataframe(
-    sdk,
-    df,
-    mapping=None,
-    progress=True,
-    chunk_size=100000,
-    poll_interval=10,
-    labeling=True,
-):
-    if mapping is None:
-        mapping = DEFAULT_MAPPING.copy()
-
-    required_columns = [
-        "date",
-        "iso_currency_code",
-        "amount",
-        "entry_type",
-        "description",
-        "account_holder_id",
-        "account_holder_type",
-    ]
-
-    optional_columns = [
-        "transaction_id",
-        "date",
-    ]
-
-    def to_tx(row):
-        return Transaction(
-            amount=row["amount"],
-            date=row.get("date"),
-            description=row.get("description", ""),
-            entry_type=row["entry_type"],
-            iso_currency_code=row["iso_currency_code"],
-            transaction_id=row.get("transaction_id"),
-            account_holder_id=row["account_holder_id"],
-            account_holder_type=row["account_holder_type"],
-        )
-
-    cols = set(df.columns)
-    missing_cols = set(required_columns).difference(cols)
-    if missing_cols:
-        raise KeyError(f"Missing columns {missing_cols}")
-    overlapping_cols = set(mapping.values()).intersection(cols)
-    if overlapping_cols:
-        raise KeyError(
-            f"Overlapping columns {overlapping_cols} will be overwritten"
-            "- consider overriding the mapping keyword argument, or move the existing columns to another column"
-        )
-    txs = df.apply(to_tx, axis=1)
-    chunks = [txs[i : i + chunk_size] for i in range(0, len(txs), chunk_size)]
-    prev_chunks = 0
-    outputs = []
-    with tqdm(total=df.shape[0], desc="started") as progress:
-        for txs in chunks:
-            b = sdk.enrich_batch(txs, labeling=labeling)
-            while b.timeout - time.time() > 0:
-                resp, status = b.poll()
-                if status == "started":
-                    diff_n = resp.get("progress", 0) - (progress.n - prev_chunks)
-                    progress.update(diff_n)
-                    time.sleep(poll_interval)
-                    continue
-                progress.desc = status
-                diff_n = b.num_transactions - (progress.n - prev_chunks)
-                progress.update(diff_n)
-                for tx in resp.transactions:
-                    outputs.append(tx)
-                break
-            prev_chunks += b.num_transactions
-
-    df["_output_tx"] = outputs
-
-    def get_tx_val(tx, v):
-        sentinel = object()
-        output = getattr(tx, v, tx.kwargs.get(v, sentinel))
-        if output == sentinel:
-            raise KeyError(f"invalid mapping: {v} not in {tx}")
-        return output
-
-    for k, v in mapping.items():
-        df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
-    df = df.drop(["_output_tx"], axis=1)
-    return df
-
-
 def _get_nodes(x, prefix=""):
     """
     Args:
@@ -190,17 +102,6 @@ def _get_nodes(x, prefix=""):
     return list(set(res))
 
 
-DEFAULT_MAPPING = {
-    "merchant": "merchant",
-    "website": "website",
-    "labels": "labels",
-    "logo": "logo",
-    "location": "location",
-    "person": "person",
-    # the entire enriched transaction object is at _output_tx
-}
-
-
 def _node2branch(branch):
     if isinstance(branch, str):
         branch = branch.split(" - ")
@@ -216,11 +117,10 @@ def benchmark(
     ground_truth_merchant_field=None,
     ground_truth_label_field=None,
     mapping=None,
-    chunk_size=100000,
     poll_interval=10,
 ):
     try:
-        import pandas
+        import pandas as pd
     except ImportError:
         print(
             "Pandas not found, please install ntropy-sdk with the benchmark extra"
@@ -236,31 +136,25 @@ def benchmark(
         )
         sys.exit(1)
     try:
-        from sklearn.metrics import (
-            f1_score,
-            accuracy_score,
-            precision_recall_fscore_support,
-        )
+        from sklearn.metrics import precision_recall_fscore_support
     except ImportError:
         print(
             "Scikit-learn not found, please install ntropy-sdk with the benchmark extra"
             " (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
         )
         sys.exit(1)
-    default_mapping = DEFAULT_MAPPING.copy()
+    default_mapping = sdk.DEFAULT_MAPPING.copy()
     if mapping is not None:
         default_mapping.update(mapping)
     mapping = default_mapping
 
-    df = pandas.read_csv(in_csv_file)
+    df = pd.read_csv(in_csv_file)
     if drop_fields:
         df = df.drop(drop_fields, axis=1)
     if hardcode_fields:
         for a, b in hardcode_fields.items():
             df[a] = b
-    df = enrich_dataframe(
-        sdk, df, mapping=mapping, chunk_size=chunk_size, poll_interval=poll_interval
-    )
+    df = sdk.add_transactions(df, mapping=mapping, poll_interval=poll_interval)
     if ground_truth_merchant_field:
         correct_merchants = df[ground_truth_merchant_field]
         predicted_merchants = df[mapping["merchant"]]
@@ -333,6 +227,5 @@ def main():
         mapping=ast.literal_eval(args.field_mapping) if args.field_mapping else None,
         ground_truth_merchant_field=args.ground_truth_merchant_field,
         ground_truth_label_field=args.ground_truth_label_field,
-        chunk_size=args.max_batch_size,
         poll_interval=args.poll_interval,
     )

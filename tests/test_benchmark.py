@@ -1,19 +1,18 @@
-import sys
+import uuid
 import tempfile
 import pytest
-import csv
 import pandas as pd
 
 from tests import API_KEY
 
-from ntropy_sdk import SDK
-from ntropy_sdk.benchmark import main
+from ntropy_sdk import SDK, AccountHolder
 
 
 TRANSACTIONS = [
     {
         "": "0",
-        "account_id": "6039c4ac1c63e9c7",
+        "account_holder_id": str(uuid.uuid4()),
+        "account_holder_type": "business",
         "description": "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
         "date": "2021-12-12",
         "amount": "2687",
@@ -24,7 +23,8 @@ TRANSACTIONS = [
     },
     {
         "": "1",
-        "account_id": "601343505fd633",
+        "account_holder_id": str(uuid.uuid4()),
+        "account_holder_type": "consumer",
         "date": "2021-12-12",
         "description": "TARGET T- 5800 20th St 11/30/19 17:32",
         "amount": "22.5",
@@ -52,40 +52,24 @@ def sdk():
 def test_enrich_dataframe(sdk, data_set_file):
     with open(data_set_file) as f:
         df = pd.read_csv(f)
-        df["iso_currency_code"] = "USD"
-        df["account_holder_id"] = "1"
-        df["account_holder_type"] = "business"
-        del df["labels"]
 
-        sdk.enrich_dataframe(df)
+    account_holders = {}
 
+    def create_account_holder(row):
+        if row["account_holder_id"] not in account_holders:
+            account_holders[row["account_holder_id"]] = True
+            sdk.create_account_holder(
+                AccountHolder(
+                    id=row["account_holder_id"],
+                    type=row["account_holder_type"],
+                    name=row.get("account_holder_name"),
+                    industry=row.get("account_holder_industry"),
+                    website=row.get("account_holder_website"),
+                )
+            )
 
-def test_command_line(data_set_file):
-    with tempfile.NamedTemporaryFile() as output_file:
-        sys.argv = [
-            "ntropy-benchmark",
-            "--api-key",
-            API_KEY,
-            "--api-url",
-            "https://api.ntropy.network",
-            "--in-csv-file",
-            data_set_file,
-            "--out-csv-file",
-            output_file.name,
-            "--hardcoded-field",
-            '{"account_holder_type": "business", "iso_currency_code":"USD", "account_holder_id": "1"}',
-            "--poll-interval",
-            "1",
-            "--ground-truth-label-field",
-            "labels",
-            "--field-mapping",
-            '{"labels": "predicted_labels"}',
-            "--max-batch-size",
-            "200",
-        ]
+    df.apply(create_account_holder, axis=1)
 
-        main()
+    del df["labels"]
 
-        result = pd.read_csv(output_file)
-
-        assert result.shape[0] == len(TRANSACTIONS)
+    sdk.add_transactions(df)
