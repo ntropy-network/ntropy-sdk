@@ -410,8 +410,13 @@ class SDK:
         poll_interval=10,
         labeling=True,
     ):
-
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError:
+            # If here, the input data is not a dataframe, or import would succeed
+            raise ValueError(
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+            )
 
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Transactions object needs to be a pandas dataframe.")
