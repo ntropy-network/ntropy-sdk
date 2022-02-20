@@ -154,9 +154,7 @@ def benchmark(
     if hardcode_fields:
         for a, b in hardcode_fields.items():
             df[a] = b
-    df = sdk.add_transactions(
-        df, mapping=mapping, poll_interval=poll_interval
-    )
+    df = sdk.add_transactions(df, mapping=mapping, poll_interval=poll_interval)
     if ground_truth_merchant_field:
         correct_merchants = df[ground_truth_merchant_field]
         predicted_merchants = df[mapping["merchant"]]

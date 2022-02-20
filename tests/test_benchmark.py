@@ -6,7 +6,7 @@ import pandas as pd
 
 from tests import API_KEY
 
-from ntropy_sdk import SDK
+from ntropy_sdk import SDK, AccountHolder
 from ntropy_sdk.benchmark import main
 
 
@@ -56,6 +56,7 @@ def test_enrich_dataframe(sdk, data_set_file):
         df = pd.read_csv(f)
 
     account_holders = {}
+
     def create_account_holder(row):
         if row["account_holder_id"] not in account_holders:
             account_holders[row["account_holder_id"]] = True
@@ -68,6 +69,7 @@ def test_enrich_dataframe(sdk, data_set_file):
                     website=row.get("account_holder_website"),
                 )
             )
+
     df.apply(create_account_holder, axis=1)
 
     del df["labels"]
@@ -88,7 +90,11 @@ def test_command_line(data_set_file):
             "--out-csv-file",
             output_file.name,
             "--hardcoded-field",
-            '{'+'"account_holder_type": "business", "iso_currency_code":"USD", "account_holder_id": "{0}"'.format(str(uuid.uuid4()))+'}',
+            "{"
+            + '"account_holder_type": "business", "iso_currency_code":"USD", "account_holder_id": "{0}"'.format(
+                str(uuid.uuid4())
+            )
+            + "}",
             "--poll-interval",
             "1",
             "--ground-truth-label-field",

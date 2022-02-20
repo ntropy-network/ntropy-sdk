@@ -412,6 +412,7 @@ class SDK:
     ):
 
         import pandas as pd
+
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Transactions object needs to be a pandas dataframe.")
 
