@@ -117,7 +117,6 @@ def benchmark(
     ground_truth_merchant_field=None,
     ground_truth_label_field=None,
     mapping=None,
-    chunk_size=100000,
     poll_interval=10,
 ):
     try:
@@ -156,7 +155,7 @@ def benchmark(
         for a, b in hardcode_fields.items():
             df[a] = b
     df = sdk.add_transactions(
-        df, mapping=mapping, chunk_size=chunk_size, poll_interval=poll_interval
+        df, mapping=mapping, poll_interval=poll_interval
     )
     if ground_truth_merchant_field:
         correct_merchants = df[ground_truth_merchant_field]
@@ -230,6 +229,5 @@ def main():
         mapping=ast.literal_eval(args.field_mapping) if args.field_mapping else None,
         ground_truth_merchant_field=args.ground_truth_merchant_field,
         ground_truth_label_field=args.ground_truth_label_field,
-        chunk_size=args.max_batch_size,
         poll_interval=args.poll_interval,
     )
