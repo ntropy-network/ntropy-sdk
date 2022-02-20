@@ -21,7 +21,7 @@ def limited_type(field, min, max):
 parser = argparse.ArgumentParser(description="Benchmark the results of a CSV")
 parser.add_argument("--api-key", required=True, type=str, help="api key to use")
 parser.add_argument(
-    "--api-url", type=str, default="https://api.ntropy.network", help="API url"
+    "--api-url", type=str, default="https://api.ntropy.com", help="API url"
 )
 parser.add_argument(
     "--in-csv-file",
