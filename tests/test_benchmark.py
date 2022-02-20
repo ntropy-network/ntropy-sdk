@@ -1,4 +1,3 @@
-import sys
 import uuid
 import tempfile
 import pytest
@@ -7,7 +6,6 @@ import pandas as pd
 from tests import API_KEY
 
 from ntropy_sdk import SDK, AccountHolder
-from ntropy_sdk.benchmark import main
 
 
 TRANSACTIONS = [
@@ -75,34 +73,3 @@ def test_enrich_dataframe(sdk, data_set_file):
     del df["labels"]
 
     sdk.add_transactions(df)
-
-
-def test_command_line(data_set_file):
-    with tempfile.NamedTemporaryFile() as output_file:
-        sys.argv = [
-            "ntropy-benchmark",
-            "--api-key",
-            API_KEY,
-            "--api-url",
-            "https://api.ntropy.com",
-            "--in-csv-file",
-            data_set_file,
-            "--out-csv-file",
-            output_file.name,
-            "--hardcoded-field",
-            "{" + '"account_holder_type": "business", "iso_currency_code":"USD", "account_holder_id": "{0}"'.format(str(uuid.uuid4())) + "}",
-            "--poll-interval",
-            "1",
-            "--ground-truth-label-field",
-            "labels",
-            "--field-mapping",
-            '{"labels": "predicted_labels"}',
-            "--max-batch-size",
-            "200",
-        ]
-
-        main()
-
-        result = pd.read_csv(output_file)
-
-        assert result.shape[0] == len(TRANSACTIONS)
