@@ -225,4 +225,4 @@ def test_readme():
         os.path.join(os.path.dirname(__file__), "..", "README.md")
     ).read()
     readme_data = readme_file.split("```python")[1].split("```")[0]
-    exec(readme_data)
+    exec(readme_data, globals())
