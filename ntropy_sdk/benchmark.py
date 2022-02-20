@@ -102,7 +102,6 @@ def _get_nodes(x, prefix=""):
     return list(set(res))
 
 
-
 def _node2branch(branch):
     if isinstance(branch, str):
         branch = branch.split(" - ")

@@ -342,6 +342,7 @@ class Batch:
                 return resp
             raise NtropyError("Batch wait timeout")
 
+
 class SDK:
     MAX_BATCH_SIZE = 100000
     MAX_SYNC_BATCH = 4000
@@ -476,7 +477,6 @@ class SDK:
         df = df.drop(["_output_tx"], axis=1)
         return df
 
-
     @add_transactions.register(list)
     def _(
         self,
@@ -487,7 +487,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i:(i + self.MAX_BATCH_SIZE)]
+                transactions[i : (i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
@@ -521,16 +521,14 @@ class SDK:
 
             if is_sync:
 
-                print('sync')
-
                 if resp.status_code != 200:
-                    raise NtropyBatchError(f"Batch failed: {results}", errors=resp.json())
+                    raise NtropyBatchError(
+                        f"Batch failed: {results}", errors=resp.json()
+                    )
 
                 return EnrichedTransactionList.from_list(self, resp.json())
 
             else:
-
-                print('async')
 
                 r = resp.json()
                 batch_id = r.get("id", "")
