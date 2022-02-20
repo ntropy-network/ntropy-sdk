@@ -342,64 +342,18 @@ class Batch:
                 return resp
             raise NtropyError("Batch wait timeout")
 
-
-class BatchGroup(Batch):
-    def __init__(
-        self,
-        sdk,
-        chunks,
-        timeout=10 * 60 * 60,
-        poll_interval=10,
-    ):
-        self._chunks = chunks
-        self._batches = []
-        self._pending_batches = []
-        self._sdk = sdk
-        self.timeout = time.time() + timeout
-        self.poll_interval = poll_interval
-        self.num_transactions = sum([len(chunk) for chunk in chunks])
-        self._results = [None] * self.num_transactions
-        self._finished_num_transactions = 0
-
-        self._enrich_batches()
-
-    def _enrich_batches(self):
-        i = 0
-
-        for chunk in self._chunks:
-            self._batches.append((self._sdk._add_transactions(chunk), i, len(chunk)))
-            i += len(chunk)
-            time.sleep(self._sdk.MAX_BATCH_SIZE / 1000)
-
-        self._pending_batches = self._batches.copy()
-
-    def poll(self):
-        if self._pending_batches:
-            pending_progress = 0
-            for (batch, offset, size) in self._pending_batches:
-                resp, status = batch.poll()
-
-                if status == "finished":
-                    self._pending_batches.remove((batch, offset, size))
-                    self._finished_num_transactions += batch.num_transactions
-                    self._results[offset:(offset + size)] = resp.transactions
-                else:
-                    pending_progress += resp.get("progress", 0)
-                    break
-
-            return {
-                "progress": pending_progress + self._finished_num_transactions
-            }, "started"
-        else:
-            return EnrichedTransactionList(self._results), "finished"
-
-    def __repr__(self):
-        return f"BatchGroup({repr(self._batches)})"
-
-
 class SDK:
     MAX_BATCH_SIZE = 100000
     MAX_SYNC_BATCH = 4000
+    DEFAULT_MAPPING = {
+        "merchant": "merchant",
+        "website": "website",
+        "labels": "labels",
+        "logo": "logo",
+        "location": "location",
+        "person": "person",
+        # the entire enriched transaction object is at _output_tx
+    }
 
     def __init__(self, token: str, timeout: int = DEFAULT_TIMEOUT):
         if not token:
@@ -447,21 +401,81 @@ class SDK:
     @singledispatchmethod
     def add_transactions(
         self,
-        transactions,
+        df,
+        mapping=None,
         poll_interval=10,
         labeling=True,
     ):
-        from ntropy_sdk.benchmark import enrich_dataframe
 
-        return enrich_dataframe(
-            self,
-            transactions,
-            mapping=None,
-            progress=True,
-            chunk_size=self.MAX_BATCH_SIZE,
-            poll_interval=poll_interval,
-            labeling=labeling,
-        )
+        if mapping is None:
+            mapping = self.DEFAULT_MAPPING.copy()
+
+        required_columns = [
+            "amount",
+            "date",
+            "description",
+            "entry_type",
+            "iso_currency_code",
+            "account_holder_id",
+            "account_holder_type",
+        ]
+
+        cols = set(df.columns)
+        missing_cols = set(required_columns).difference(cols)
+        if missing_cols:
+            raise KeyError(f"Missing columns {missing_cols}")
+        overlapping_cols = set(mapping.values()).intersection(cols)
+        if overlapping_cols:
+            raise KeyError(
+                f"Overlapping columns {overlapping_cols} will be overwritten"
+                "- consider overriding the mapping keyword argument, or move the existing columns to another column"
+            )
+
+        account_holders = {}
+
+        def create_account_holder(row):
+            if row["account_holder_id"] not in account_holders:
+                account_holders[row["account_holder_id"]] = True
+                self.create_account_holder(
+                    AccountHolder(
+                        id=row["account_holder_id"],
+                        type=row["account_holder_type"],
+                        name=row.get("account_holder_name"),
+                        industry=row.get("account_holder_industry"),
+                        website=row.get("account_holder_website"),
+                    )
+                )
+
+        df.apply(create_account_holder, axis=1)
+
+        def to_tx(row):
+            return Transaction(
+                amount=row["amount"],
+                date=row.get("date"),
+                description=row.get("description", ""),
+                entry_type=row["entry_type"],
+                iso_currency_code=row["iso_currency_code"],
+                account_holder_id=row["account_holder_id"],
+                country=row.get("country"),
+                transaction_id=row.get("transaction_id"),
+            )
+
+        txs = df.apply(to_tx, axis=1).to_list()
+
+        df["_output_tx"] = self.add_transactions(txs, labeling=labeling)
+
+        def get_tx_val(tx, v):
+            sentinel = object()
+            output = getattr(tx, v, tx.kwargs.get(v, sentinel))
+            if output == sentinel:
+                raise KeyError(f"invalid mapping: {v} not in {tx}")
+            return output
+
+        for k, v in mapping.items():
+            df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
+        df = df.drop(["_output_tx"], axis=1)
+        return df
+
 
     @add_transactions.register(list)
     def _(
@@ -477,7 +491,12 @@ class SDK:
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
-            return BatchGroup(self, chunks).wait_with_progress()
+            arr = []
+            for chunk in chunks:
+                arr += self._add_transactions(chunk)
+                time.sleep(self.MAX_BATCH_SIZE / 1000)
+
+            return arr
 
         return self._add_transactions(transactions, timeout, poll_interval, labeling)
 
@@ -502,12 +521,17 @@ class SDK:
 
             if is_sync:
 
+                print('sync')
+
                 if resp.status_code != 200:
                     raise NtropyBatchError(f"Batch failed: {results}", errors=resp.json())
 
                 return EnrichedTransactionList.from_list(self, resp.json())
 
             else:
+
+                print('async')
+
                 r = resp.json()
                 batch_id = r.get("id", "")
 

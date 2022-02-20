@@ -79,85 +79,6 @@ parser.add_argument(
 )
 
 
-def enrich_dataframe(
-    sdk,
-    df,
-    mapping=None,
-    progress=True,
-    chunk_size=100000,
-    poll_interval=10,
-    labeling=True,
-):
-    if mapping is None:
-        mapping = DEFAULT_MAPPING.copy()
-
-    required_columns = [
-        "amount",
-        "date",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-        "account_holder_id",
-        "account_holder_type",
-    ]
-
-    cols = set(df.columns)
-    missing_cols = set(required_columns).difference(cols)
-    if missing_cols:
-        raise KeyError(f"Missing columns {missing_cols}")
-    overlapping_cols = set(mapping.values()).intersection(cols)
-    if overlapping_cols:
-        raise KeyError(
-            f"Overlapping columns {overlapping_cols} will be overwritten"
-            "- consider overriding the mapping keyword argument, or move the existing columns to another column"
-        )
-
-    account_holders = {}
-
-    def create_account_holder(row):
-        if row["account_holder_id"] not in account_holders:
-            account_holders[row["account_holder_id"]] = True
-            sdk.create_account_holder(
-                AccountHolder(
-                    id=row["account_holder_id"],
-                    type=row["account_holder_type"],
-                    name=row.get("account_holder_name"),
-                    industry=row.get("account_holder_industry"),
-                    website=row.get("account_holder_website"),
-                )
-            )
-
-    df.apply(create_account_holder, axis=1)
-
-    def to_tx(row):
-        return Transaction(
-            amount=row["amount"],
-            date=row.get("date"),
-            description=row.get("description", ""),
-            entry_type=row["entry_type"],
-            iso_currency_code=row["iso_currency_code"],
-            account_holder_id=row["account_holder_id"],
-            country=row.get("country"),
-            transaction_id=row.get("transaction_id"),
-        )
-
-    txs = df.apply(to_tx, axis=1)
-
-    df["_output_tx"] = sdk.add_transactions(txs, labeling=labeling).transactions
-
-    def get_tx_val(tx, v):
-        sentinel = object()
-        output = getattr(tx, v, tx.kwargs.get(v, sentinel))
-        if output == sentinel:
-            raise KeyError(f"invalid mapping: {v} not in {tx}")
-        return output
-
-    for k, v in mapping.items():
-        df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
-    df = df.drop(["_output_tx"], axis=1)
-    return df
-
-
 def _get_nodes(x, prefix=""):
     """
     Args:
@@ -180,16 +101,6 @@ def _get_nodes(x, prefix=""):
                 q.append((v, prefix + k + " - "))
     return list(set(res))
 
-
-DEFAULT_MAPPING = {
-    "merchant": "merchant",
-    "website": "website",
-    "labels": "labels",
-    "logo": "logo",
-    "location": "location",
-    "person": "person",
-    # the entire enriched transaction object is at _output_tx
-}
 
 
 def _node2branch(branch):
@@ -234,7 +145,7 @@ def benchmark(
             " (e.g. pip install 'ntropy-sdk[benchamrk]') to use the benchmarking functionality"
         )
         sys.exit(1)
-    default_mapping = DEFAULT_MAPPING.copy()
+    default_mapping = sdk.DEFAULT_MAPPING.copy()
     if mapping is not None:
         default_mapping.update(mapping)
     mapping = default_mapping
@@ -245,8 +156,8 @@ def benchmark(
     if hardcode_fields:
         for a, b in hardcode_fields.items():
             df[a] = b
-    df = enrich_dataframe(
-        sdk, df, mapping=mapping, chunk_size=chunk_size, poll_interval=poll_interval
+    df = sdk.add_transactions(
+        df, mapping=mapping, chunk_size=chunk_size, poll_interval=poll_interval
     )
     if ground_truth_merchant_field:
         correct_merchants = df[ground_truth_merchant_field]
