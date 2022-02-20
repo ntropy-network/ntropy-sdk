@@ -60,7 +60,7 @@ account_holders = {}
 def create_account_holder(row):
     if row["account_holder_id"] not in account_holders:
         account_holders[row["account_holder_id"]] = True
-        self.create_account_holder(
+        sdk.create_account_holder(
             AccountHolder(
                 id=row["account_holder_id"],
                 type=row["account_holder_type"],

@@ -54,9 +54,25 @@ def sdk():
 def test_enrich_dataframe(sdk, data_set_file):
     with open(data_set_file) as f:
         df = pd.read_csv(f)
-        del df["labels"]
 
-        sdk.add_transactions(df)
+    account_holders = {}
+    def create_account_holder(row):
+        if row["account_holder_id"] not in account_holders:
+            account_holders[row["account_holder_id"]] = True
+            sdk.create_account_holder(
+                AccountHolder(
+                    id=row["account_holder_id"],
+                    type=row["account_holder_type"],
+                    name=row.get("account_holder_name"),
+                    industry=row.get("account_holder_industry"),
+                    website=row.get("account_holder_website"),
+                )
+            )
+    df.apply(create_account_holder, axis=1)
+
+    del df["labels"]
+
+    sdk.add_transactions(df)
 
 
 def test_command_line(data_set_file):
