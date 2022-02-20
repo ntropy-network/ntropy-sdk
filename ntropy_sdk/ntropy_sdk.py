@@ -168,6 +168,9 @@ class AccountHolder:
         if not type:
             raise ValueError("type must be set")
 
+        if type not in ACCOUNT_HOLDER_TYPES:
+            raise ValueError("type is not valid")
+
         self.id = id
         self.type = type
         self.name = name
