@@ -1,7 +1,6 @@
 import sys
 import tempfile
 import pytest
-import csv
 import pandas as pd
 
 from tests import API_KEY
