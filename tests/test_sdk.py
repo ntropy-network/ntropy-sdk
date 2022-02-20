@@ -7,7 +7,6 @@ from tests import API_KEY
 from ntropy_sdk import (
     SDK,
     Transaction,
-    AccountTransaction,
     EnrichedTransaction,
     AccountHolder,
 )
