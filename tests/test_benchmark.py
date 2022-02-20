@@ -91,10 +91,7 @@ def test_command_line(data_set_file):
             output_file.name,
             "--hardcoded-field",
             "{"
-            + '"account_holder_type": "business", "iso_currency_code":"USD", "account_holder_id": "{0}"'.format(
-                str(uuid.uuid4())
-            )
-            + "}",
+            + '"account_holder_type": "business", "iso_currency_code":"USD", "account_holder_id": "{0}"'.format(str(uuid.uuid4())) + "}",
             "--poll-interval",
             "1",
             "--ground-truth-label-field",
