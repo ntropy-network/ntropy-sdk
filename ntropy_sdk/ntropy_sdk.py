@@ -231,18 +231,6 @@ class EnrichedTransaction:
         self,
         **kwargs,
     ):
-        supported_fields = [
-            "logo",
-            "website",
-            "merchant",
-            "location",
-            "person",
-            "labels",
-        ]
-        excess_fields = set(kwargs.keys()) - set(supported_fields)
-        if excess_fields:
-            raise ValueError(f"Unexpected keys supplied to report: {excess_fields}")
-
         return self.sdk.retry_ratelimited_request(
             "POST", "/v2/report", {"transaction_id": self.transaction_id, **kwargs}
         )
