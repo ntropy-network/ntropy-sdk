@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from functools import singledispatchmethod
 
 DEFAULT_TIMEOUT = 10 * 60
+DEFAULT_WITH_PROGRESS = True
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
 
@@ -305,7 +306,13 @@ class Batch:
 
         return json_resp, status
 
-    def wait(self, poll_interval=None):
+    def wait(self, with_progress=DEFAULT_WITH_PROGRESS, poll_interval=None):
+        if with_progress:
+            self._wait_with_progress(poll_interval=poll_interval)
+        else:
+            self._wait(poll_interval=poll_interval)
+
+    def _wait(self, poll_interval=None):
         if not poll_interval:
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
@@ -316,7 +323,7 @@ class Batch:
             return resp
         raise NtropyError("Batch wait timeout")
 
-    def wait_with_progress(self, poll_interval=None):
+    def _wait_with_progress(self, poll_interval=None):
         if not poll_interval:
             poll_interval = self.poll_interval
         with tqdm(total=self.num_transactions, desc="started") as progress:
@@ -347,7 +354,13 @@ class SDK:
         # the entire enriched transaction object is at _output_tx
     }
 
-    def __init__(self, token: str, timeout: int = DEFAULT_TIMEOUT):
+    def __init__(
+        self,
+        token: str,
+        timeout: int = DEFAULT_TIMEOUT,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        force_async: bool = False,
+    ):
         if not token:
             raise NtropyError("API Token must be set")
 
@@ -357,6 +370,8 @@ class SDK:
         self.session = requests.Session()
         self.logger = logging.getLogger("Ntropy-SDK")
         self._timeout = timeout
+        self._with_progress = with_progress
+        self._force_async = force_async
 
     def retry_ratelimited_request(self, method: str, url: str, payload: object):
         for i in range(self.retries):
@@ -396,6 +411,7 @@ class SDK:
         df,
         mapping=None,
         poll_interval=10,
+        with_progress=None,
         labeling=True,
     ):
         try:
@@ -447,7 +463,12 @@ class SDK:
 
         txs = df.apply(to_tx, axis=1).to_list()
 
-        df["_output_tx"] = self.add_transactions(txs, labeling=labeling)
+        df["_output_tx"] = self.add_transactions(
+            txs,
+            labeling=labeling,
+            poll_interval=poll_interval,
+            with_progress=with_progress,
+        )
 
         def get_tx_val(tx, v):
             sentinel = object()
@@ -467,6 +488,7 @@ class SDK:
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
+        with_progress=None,
         labeling=True,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
@@ -482,16 +504,19 @@ class SDK:
 
             return arr
 
-        return self._add_transactions(transactions, timeout, poll_interval, labeling)
+        return self._add_transactions(
+            transactions, timeout, poll_interval, with_progress, labeling
+        )
 
     def _add_transactions(
         self,
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
+        with_progress=None,
         labeling=True,
     ):
-        is_sync = len(transactions) <= self.MAX_SYNC_BATCH
+        is_sync = (len(transactions) <= self.MAX_SYNC_BATCH) and not self._force_async
 
         params_str = urlencode({"labeling": labeling})
 
@@ -499,9 +524,8 @@ class SDK:
 
             url = f"/v2/transactions/{'sync' if is_sync else 'async'}?" + params_str
 
-            resp = self.retry_ratelimited_request(
-                "POST", url, [transaction.to_dict() for transaction in transactions]
-            )
+            data = [transaction.to_dict() for transaction in transactions]
+            resp = self.retry_ratelimited_request("POST", url, data)
 
             if is_sync:
 
@@ -518,13 +542,15 @@ class SDK:
                 if not batch_id:
                     raise ValueError("batch_id missing from response")
 
+                with_progress = with_progress or self._with_progress
+
                 return Batch(
                     self,
                     batch_id,
                     timeout=timeout,
                     poll_interval=poll_interval,
                     num_transactions=len(transactions),
-                ).wait_with_progress()
+                ).wait(with_progress=with_progress)
 
         except requests.HTTPError as e:
             if e.response.status_code == 404:
