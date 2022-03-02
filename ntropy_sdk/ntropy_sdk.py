@@ -359,7 +359,6 @@ class SDK:
         token: str,
         timeout: int = DEFAULT_TIMEOUT,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        force_async: bool = False,
     ):
         if not token:
             raise NtropyError("API Token must be set")
@@ -371,7 +370,6 @@ class SDK:
         self.logger = logging.getLogger("Ntropy-SDK")
         self._timeout = timeout
         self._with_progress = with_progress
-        self._force_async = force_async
 
     def retry_ratelimited_request(self, method: str, url: str, payload: object):
         for i in range(self.retries):
@@ -516,7 +514,7 @@ class SDK:
         with_progress=None,
         labeling=True,
     ):
-        is_sync = (len(transactions) <= self.MAX_SYNC_BATCH) and not self._force_async
+        is_sync = len(transactions) <= self.MAX_SYNC_BATCH
 
         params_str = urlencode({"labeling": labeling})
 
