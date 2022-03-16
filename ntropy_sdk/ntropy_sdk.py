@@ -55,6 +55,7 @@ class Transaction:
 
     fields = [
         "account_holder_id",
+        "account_holder_type",
         "transaction_id",
         "amount",
         "date",
