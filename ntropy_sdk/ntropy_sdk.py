@@ -500,7 +500,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i : (i + self.MAX_BATCH_SIZE)]
+                transactions[i:(i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
@@ -566,7 +566,7 @@ class SDK:
 
             raise
 
-    def get_account_holder_metrics(self, account_holder_id: str):
+    def get_account_holder(self, account_holder_id: str):
         url = f"/v2/account-holder/{account_holder_id}"
         try:
             response = self.retry_ratelimited_request("GET", url).json()
