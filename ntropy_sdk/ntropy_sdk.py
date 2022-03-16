@@ -420,6 +420,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
+        create_account_holders=False,
     ):
         try:
             import pandas as pd
@@ -473,6 +474,7 @@ class SDK:
         df["_output_tx"] = self.add_transactions(
             txs,
             labeling=labeling,
+            create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             with_progress=with_progress,
         )
@@ -497,10 +499,11 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
+        create_account_holders=False,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i:(i + self.MAX_BATCH_SIZE)]
+                transactions[i : (i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 
@@ -512,7 +515,12 @@ class SDK:
             return arr
 
         return self._add_transactions(
-            transactions, timeout, poll_interval, with_progress, labeling
+            transactions,
+            timeout,
+            poll_interval,
+            with_progress,
+            labeling,
+            create_account_holders,
         )
 
     def _add_transactions(
@@ -522,10 +530,13 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
+        create_account_holders=False,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
 
-        params_str = urlencode({"labeling": labeling})
+        params_str = urlencode(
+            {"labeling": labeling, "create_account_holders": create_account_holders}
+        )
 
         try:
 
