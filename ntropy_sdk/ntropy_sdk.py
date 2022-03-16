@@ -95,7 +95,7 @@ class Transaction:
                 raise ValueError(
                     f"account_holder_type must be one of {ACCOUNT_HOLDER_TYPES}"
                 )
-            self.account_holder_type = account_holder_type
+        self.account_holder_type = account_holder_type
 
         _assert_type(amount, "amount", (int, float))
         if (amount == 0 and self._zero_amount_check) or amount < 0:
