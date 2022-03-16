@@ -574,9 +574,6 @@ class SDK:
             if e.response.status_code == 404:
                 error = e.response.json()
                 raise ValueError(f"{error['detail']}: {error['missingIds']}")
-            elif e.response.status_code == 400:
-                error = e.response.json()
-                raise ValueError(error["detail"])
 
             raise
 
