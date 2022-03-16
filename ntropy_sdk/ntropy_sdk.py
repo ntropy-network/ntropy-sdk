@@ -580,7 +580,7 @@ class SDK:
     def get_account_holder(self, account_holder_id: str):
         url = f"/v2/account-holder/{account_holder_id}"
         try:
-            response = self.retry_ratelimited_request("GET", url).json()
+            response = self.retry_ratelimited_request("GET", url, None).json()
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 error = e.response.json()
