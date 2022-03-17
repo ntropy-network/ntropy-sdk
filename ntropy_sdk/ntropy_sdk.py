@@ -55,6 +55,7 @@ class Transaction:
 
     fields = [
         "account_holder_id",
+        "account_holder_type",
         "transaction_id",
         "amount",
         "date",
@@ -73,6 +74,7 @@ class Transaction:
         entry_type,
         iso_currency_code,
         account_holder_id,
+        account_holder_type=None,
         country=None,
         transaction_id=None,
         mcc=None,
@@ -86,6 +88,14 @@ class Transaction:
 
         _assert_type(account_holder_id, "account_holder_id", str)
         self.account_holder_id = account_holder_id
+
+        if account_holder_type is not None:
+            _assert_type(account_holder_type, "account_holder_type", str)
+            if account_holder_type not in ACCOUNT_HOLDER_TYPES:
+                raise ValueError(
+                    f"account_holder_type must be one of {ACCOUNT_HOLDER_TYPES}"
+                )
+        self.account_holder_type = account_holder_type
 
         _assert_type(amount, "amount", (int, float))
         if (amount == 0 and self._zero_amount_check) or amount < 0:
@@ -413,6 +423,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
+        create_account_holders=False,
     ):
         try:
             import pandas as pd
@@ -466,6 +477,7 @@ class SDK:
         df["_output_tx"] = self.add_transactions(
             txs,
             labeling=labeling,
+            create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             with_progress=with_progress,
         )
@@ -490,6 +502,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
+        create_account_holders=False,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
@@ -505,7 +518,12 @@ class SDK:
             return arr
 
         return self._add_transactions(
-            transactions, timeout, poll_interval, with_progress, labeling
+            transactions,
+            timeout,
+            poll_interval,
+            with_progress,
+            labeling,
+            create_account_holders,
         )
 
     def _add_transactions(
@@ -515,10 +533,13 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
+        create_account_holders=False,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
 
-        params_str = urlencode({"labeling": labeling})
+        params_str = urlencode(
+            {"labeling": labeling, "create_account_holders": create_account_holders}
+        )
 
         try:
 
@@ -558,6 +579,18 @@ class SDK:
                 raise ValueError(f"{error['detail']}: {error['missingIds']}")
 
             raise
+
+    def get_account_holder(self, account_holder_id: str):
+        url = f"/v2/account-holder/{account_holder_id}"
+        try:
+            response = self.retry_ratelimited_request("GET", url, None).json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        return response
 
     def get_account_holder_metrics(
         self, account_holder_id: str, metrics: List[str], start: date, end: date
