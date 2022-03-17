@@ -221,6 +221,7 @@ class EnrichedTransaction:
         website=None,
         chart_of_accounts=None,
         recurrence=None,
+        confidence=None,
         **kwargs,
     ):
         self.sdk = sdk
@@ -234,6 +235,7 @@ class EnrichedTransaction:
         self.kwargs = kwargs
         self.chart_of_accounts = chart_of_accounts
         self.recurrence = recurrence
+        self.confidence = confidence
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
