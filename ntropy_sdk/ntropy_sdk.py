@@ -318,9 +318,9 @@ class Batch:
 
     def wait(self, with_progress=DEFAULT_WITH_PROGRESS, poll_interval=None):
         if with_progress:
-            self._wait_with_progress(poll_interval=poll_interval)
+            return self._wait_with_progress(poll_interval=poll_interval)
         else:
-            self._wait(poll_interval=poll_interval)
+            return self._wait(poll_interval=poll_interval)
 
     def _wait(self, poll_interval=None):
         if not poll_interval:
