@@ -168,7 +168,7 @@ train_labels = transactions_df['label']
 
 The model interfaces provided in `ntropy_sdk.models package` are fully scikit-learn compatible (`Estimator` and `Classifier`). Each model will run in Ntropy's servers and not locally.
 
-A model is initialized with a unique name. Instantiating a model with the same name will refer to the same stored model and now allow training if the model is already trained. If you intend to train the model again (overriding current stored model with that name) you can set `allow_retrain` to True when creating the model.
+A model is initialized with a unique name. Instantiating a model with the same name will refer to the same stored model and not allow training if the model is already trained. If you intend to train the model again (overriding current stored model with that name) you can set `allow_retrain` to True when creating the model.
 
 To train a model the process is the same as a scikit-learn classifier:
 
