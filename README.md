@@ -123,6 +123,33 @@ This custom model makes use of Ntropy's advanced model and provides additional c
 Currently the SDK supports the following models:
 - FewShotClassifier (requires at least 16 transactions per label): model suited for relatively low amount of data that supports one label per transaction.
 
+If you're familiar with using scikit-learn, the usage for Ntropy models will be familiar. A full example:
+
+```python
+import pandas as pd
+from ntropy_sdk.models import FewShotClassifier
+
+train_df = pd.read_csv('labeled_transactions.csv')
+train_labels = transactions_df['label']
+
+test_df = pd.read_csv('test_set_transactions.csv')
+test_labels = test_set['label']
+
+model = FewShotClassifier('classifier-example')
+model = model.fit(train_df, train_labels)
+
+print(model.score(test_df, test_labels))
+
+from sklearn.model_selection import cross_validate
+print(cross_validate(model, train_df, train_labels))
+
+import pickle
+with open('model.pkl', 'wb') as fp:
+    pickle.dump(model)
+```
+
+In the following sections we will go into more detail for each part of model usage.
+
 ### Loading data
 
 To train a custom model you need to load a set of labeled transactions. Each transaction must have the following information: `amount`, `description`, `iso_currency_code`, `account_holder_type`, `entry_type` and the ground truth label
