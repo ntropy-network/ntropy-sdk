@@ -18,13 +18,13 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         sync: bool = True,
         poll_interval: int = 10,
         labels_only: bool = True,
-        _sdk: SDK = None,
+        sdk: SDK = None,
     ):
         self.name = name
         self.sync = sync
         self.poll_interval = poll_interval
         self.labels_only = labels_only
-        self._sdk = _sdk
+        self._sdk = sdk
 
         if not self._sdk:
             # attempt initialization from environment variable
