@@ -71,14 +71,15 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         uniform_txs = []
         for tx in txs:
             if isinstance(tx, Transaction):
-                tx = tx.to_dict()     
+                tx = tx.to_dict()
             elif not isinstance(tx, dict):
                 raise ValueError(f"Unsupported type for transaction: {type(tx)}")
             uniform_txs.append(tx)
         return uniform_txs
 
-
-    def fit(self, X: List[Union[dict, Transaction]], y: List[str]) -> "FewShotClassifier":
+    def fit(
+        self, X: List[Union[dict, Transaction]], y: List[str]
+    ) -> "FewShotClassifier":
         url = f"/v2/models/{self.name}"
 
         X = self._process_transactions(X)
@@ -104,11 +105,16 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
 
         X = self._process_transactions(X)
 
-        r = self.sdk.retry_ratelimited_request(
-            "POST",
-            url,
-            payload=X,
-        )
+        try:
+            r = self.sdk.retry_ratelimited_request(
+                "POST",
+                url,
+                payload=X,
+            )
+        except HTTPError as e:
+            if e.response.status == 404:
+                raise RuntimeError(e.response.json()["detail"])
+            raise
 
         y = r.json()
 
@@ -123,7 +129,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         y_pred = self.predict(X)
         return f1_score(y, y_pred, average="micro")
 
-    def get_params(self, deep: bool=True) -> dict:
+    def get_params(self, deep: bool = True) -> dict:
         return {
             "name": self.name,
             "sync": self.sync,
