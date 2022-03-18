@@ -117,11 +117,11 @@ print("ENRICHED:", enriched_df)
 ## Models usage:
 
 Using the SDK you can train and run a custom model for transaction classification.
-This custom model makes use of Ntropy's advanced model and provides additional capabilities for customization based on user provided labeled data.
+This custom model makes use of Ntropy's advanced base models and provides additional capabilities for customization based on user provided labeled data.
 
 
 Currently the SDK supports the following models:
-- FewShotClassifier (requires at least 16 transactions per label): model suited for relatively low amount of data that supports one label per transaction.
+- FewShotClassifier (requires at least 32 transactions per label): model suited for relatively low amount of data that supports one label per transaction.
 
 If you're familiar with using scikit-learn, the usage for Ntropy models will be familiar. A full example:
 
