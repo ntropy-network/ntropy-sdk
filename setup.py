@@ -10,7 +10,7 @@ with open("README.md") as readme_file:
 requirements = ["requests", "tqdm"]
 
 EXTRAS_REQUIRE = {
-    "benchmark": ["pandas", "scikit-learn", "numpy"],
+    "models": ["pandas", "scikit-learn", "numpy"],
 }
 
 setup_requirements = []

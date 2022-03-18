@@ -1,11 +1,14 @@
+import os
 import time
 import csv
-from datetime import datetime, date
 import uuid
 import requests
 import logging
 import re
 import math
+
+from datetime import datetime, date
+from typing import Optional
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
@@ -15,6 +18,7 @@ DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_WITH_PROGRESS = True
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
+ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
 class NtropyError(Exception):
@@ -368,12 +372,16 @@ class SDK:
 
     def __init__(
         self,
-        token: str,
+        token: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
     ):
         if not token:
-            raise NtropyError("API Token must be set")
+            if ENV_NTROPY_API_TOKEN not in os.environ:
+                raise NtropyError(
+                    "API Token must be passed as an argument or set in the env. variable NTROPY_API_TOKEN"
+                )
+            token = os.environ[ENV_NTROPY_API_TOKEN]
 
         self.base_url = "https://api.ntropy.com"
         self.retries = 10
@@ -619,3 +627,8 @@ class SDK:
         url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
+
+    def list_models(self):
+        url = "/v2/models"
+        r = self.retry_ratelimited_request("GET", url, None).json()
+        return r
