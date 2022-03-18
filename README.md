@@ -10,24 +10,24 @@ The Ntropy API provides transaction enrichment and categorization, ledger and me
 $ pip install --upgrade 'ntropy-sdk[benchmark]'
 ```
 
-## Enrichment usage:
+## SDK initialization:
 
 You can initialize the SDK by passing an API token to the constructor, or using the environment variable `NTROPY_API_KEY`
 
 ```python
-import os
-import uuid
-from datetime import datetime
 from ntropy_sdk import SDK, Transaction, AccountHolder
 
 # initialize from environment variable NTROPY_API_KEY
 sdk = SDK()
 
+# or provide the token on initialization
+sdk = SDK("my-ntropy-api-token")
 ```
 
 The SDK contains methods to explore the available labels and chart of accounts:
 
 ```python
+
 for account_holder_type in ['business', 'consumer', 'freelance', 'unknown']:
   print("ACCOUNT HOLDER TYPE:", account_holder_type)
   print(sdk.get_labels(account_holder_type))
@@ -35,6 +35,8 @@ for account_holder_type in ['business', 'consumer', 'freelance', 'unknown']:
 print("CHART of ACCOUNTS:", sdk.get_chart_of_accounts())
 
 ```
+
+## Enrichment usage:
 
 In order to enrich a transaction it must be associated with an account holder. An account holder represents an entity (business, freelancer or consumer) that can be uniquely identified and holds the account associated with the transaction:
 
@@ -44,6 +46,11 @@ In order to enrich a transaction it must be associated with an account holder. A
 Account holders provide important context for understanding transactions.
 
 ```python
+
+import os
+import uuid
+from datetime import datetime
+
 account_holder = AccountHolder(
     id=str(uuid.uuid4()),
     type="business",
@@ -106,6 +113,94 @@ enriched_df = sdk.add_transactions(df)
 print("ENRICHED:", enriched_df)
 
 ```
+
+## Models usage:
+
+Using the SDK you can train and run a custom model for transaction classification.
+This custom model makes use of Ntropy's advanced model and provides additional capabilities for customization based on user provided labeled data.
+
+
+Currently the SDK supports the following models:
+- FewShotClassifier (requires at least 16 transactions per label): model suited for relatively low amount of data that supports one label per transaction.
+
+To train a custom model you need to load a set of labeled transactions. Each transaction must have the following information: `amount`, `description`, `iso_currency_code`, `account_holder_type`, `entry_type` and the ground truth label
+
+Assuming they are stored in a csv:
+
+```python
+
+# csv with columns ["amount", "description", "iso_currency_code", "account_holder_type", "entry_type", "label"]
+train_df = pd.read_csv('labeled_transactions.csv')
+train_labels = transactions_df['label']
+
+```
+
+The model interfaces provided in `ntropy_sdk.models package` are fully scikit-learn compatible (`Estimator` and `Classifier`). Each model will run in Ntropy's servers and not locally.
+
+A model is initialized with a unique name. Instantiating a model with the same name will refer to the same stored model and now allow training if the model is already trained. If you intend to train the model again (overriding current stored model with that name) you can set `allow_retrain` to True when creating the model.
+
+To train a model the process is the same as a scikit-learn classifier:
+
+```python
+
+from ntropy_sdk.models import FewShotClassifier
+
+# you can skip providing the sdk as long as you have the NTROPY_API_KEY environment variable set
+model = FewShotClassifier('example-classifier', allow_retrain=True, sdk=sdk)
+
+# or you can set the sdk later
+model.set_sdk(sdk)
+
+model.fit(train_df, train_labels)
+```
+
+The model can then be used to predict the label of unlabeled transactions:
+
+```python
+
+new_transactions = pd.read_csv('new_transactions.csv')
+labels = model.predict(new_transactions)
+```
+
+By default you can score the model using a micro-averaged F1 score:
+
+```python
+test_df = pd.read_csv('test_set_transactions.csv')
+test_labels = test_set['label']
+print(model.score(test_df, test_labels))
+```
+
+You can also use the tools from scikit-learn and other compatible libraries for classifiers, such as cross_validate. However, you need to set `allow_retrain` to True when using methods that fit the model multiple times.
+
+```python
+from sklearn.model_selection import cross_validate
+
+print(cross_validate(model, train_df, train_labels))
+```
+
+To save and load a trained model, you can use the same method as for any other scikit-learn model:
+
+```python
+import pickle
+
+with open('model.pkl', 'wb') as fp:
+    pickle.dump(model, fp)
+
+with open('model.pkl', 'rb') as fp:
+    loaded_model = pickle.load(fp)
+
+output_labels = loaded_model.predict(test_set)
+```
+
+Or alternatively you can just create the model with the same name:
+
+```python
+
+# after the example-classifier was trained
+trained_model = FewShotClassifier('example-classifier', sdk=sdk)
+output_labels = trained_model(test_set)
+```
+
 
 ## License:
 Free software: MIT license
