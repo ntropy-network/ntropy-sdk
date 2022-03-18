@@ -1,7 +1,7 @@
 # Ntropy SDK
 
 This repository hosts the SDK for the Ntropy API.
-The Ntropy API provides transaction enrichment and categorization, ledger and metrics accounting and 
+The Ntropy API provides transaction enrichment and categorization, account ledger, metrics and custom model training.
 
 
 ## Installation:
