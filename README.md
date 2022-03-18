@@ -123,6 +123,8 @@ This custom model makes use of Ntropy's advanced model and provides additional c
 Currently the SDK supports the following models:
 - FewShotClassifier (requires at least 16 transactions per label): model suited for relatively low amount of data that supports one label per transaction.
 
+### Loading data
+
 To train a custom model you need to load a set of labeled transactions. Each transaction must have the following information: `amount`, `description`, `iso_currency_code`, `account_holder_type`, `entry_type` and the ground truth label
 
 Assuming they are stored in a csv:
@@ -134,6 +136,8 @@ train_df = pd.read_csv('labeled_transactions.csv')
 train_labels = transactions_df['label']
 
 ```
+
+### Initialization and fitting
 
 The model interfaces provided in `ntropy_sdk.models package` are fully scikit-learn compatible (`Estimator` and `Classifier`). Each model will run in Ntropy's servers and not locally.
 
@@ -153,6 +157,8 @@ model.set_sdk(sdk)
 
 model.fit(train_df, train_labels)
 ```
+
+### Prediction and scoring
 
 The model can then be used to predict the label of unlabeled transactions:
 
@@ -177,6 +183,8 @@ from sklearn.model_selection import cross_validate
 
 print(cross_validate(model, train_df, train_labels))
 ```
+
+### Saving and loading
 
 To save and load a trained model, you can use the same method as for any other scikit-learn model:
 
