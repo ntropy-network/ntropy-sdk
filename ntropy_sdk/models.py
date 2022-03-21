@@ -1,5 +1,6 @@
-from multiprocessing.sharedctypes import Value
+import pandas as pd
 import time
+
 from requests import HTTPError
 from urllib.parse import urlencode
 from typing import List, Union, Any, Dict
@@ -10,6 +11,8 @@ from sklearn.metrics import f1_score
 
 from ntropy_sdk import SDK, NtropyError, Transaction
 from tqdm.auto import tqdm
+
+TransactionList = Union[List[Union[dict, Transaction]], pd.DataFrame]
 
 
 class FewShotClassifier(BaseEstimator, ClassifierMixin):
@@ -72,19 +75,24 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         return status["status"] == "ready"
 
     @staticmethod
-    def _process_transactions(txs: List[Union[Transaction, dict]]) -> List[dict]:
+    def _process_transactions(txs: TransactionList, as_dict: bool = True) -> List[dict]:
+        if isinstance(txs, pd.DataFrame):
+            txs = txs.to_dict(orient="records")
+
         uniform_txs = []
         for tx in txs:
-            if isinstance(tx, Transaction):
-                tx = tx.to_dict()
-            elif not isinstance(tx, dict):
+            if not (isinstance(tx, dict) or isinstance(tx, Transaction)):
                 raise ValueError(f"Unsupported type for transaction: {type(tx)}")
+
+            if isinstance(tx, Transaction) and as_dict:
+                tx = tx.to_dict()
+            if isinstance(tx, dict) and not as_dict:
+                tx = Transaction.from_dict(tx)
+
             uniform_txs.append(tx)
         return uniform_txs
 
-    def fit(
-        self, X: List[Union[dict, Transaction]], y: List[str]
-    ) -> "FewShotClassifier":
+    def fit(self, X: TransactionList, y: List[str]) -> "FewShotClassifier":
         url = f"/v2/models/{self.name}"
 
         X = self._process_transactions(X)
@@ -110,36 +118,20 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def predict(self, X: List[Union[dict, Transaction]]) -> List[str]:
+    def predict(self, X: TransactionList) -> List[str]:
         if not self.is_ready():
             raise ValueError("Model is not ready for predictions yet")
 
-        params_str = urlencode({"model_name": self.name})
-        url = f"/v2/transactions/sync?" + params_str
+        y = self.sdk.add_transactions(
+            X, model=self.name, poll_interval=self.poll_interval
+        )
 
-        X = self._process_transactions(X)
-
-        try:
-            r = self.sdk.retry_ratelimited_request(
-                "POST",
-                url,
-                payload=X,
-            )
-        except HTTPError as e:
-            if e.response.status == 404:
-                raise RuntimeError(e.response.json()["detail"])
-            raise
-
-        y = r.json()
-
-        if "status" in y and y["status"] != 200:
-            raise RuntimeError(y["detail"])
         if self.labels_only:
-            return [tx["labels"] for tx in y]
+            return [tx.labels for tx in y]
 
         return y
 
-    def score(self, X: List[Union[dict, Transaction]], y: List[str]) -> float:
+    def score(self, X: TransactionList, y: List[str]) -> float:
         y_pred = self.predict(X)
         return f1_score(y, y_pred, average="micro")
 
@@ -147,7 +139,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         return {
             "name": self.name,
             "sync": self.sync,
-            "refresh_rate": self.poll_interval,
+            "poll_interval": self.poll_interval,
             "labels_only": self.labels_only,
         }
 

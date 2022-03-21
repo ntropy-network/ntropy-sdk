@@ -158,6 +158,10 @@ class Transaction:
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
 
+    @classmethod
+    def from_dict(cls, val: dict):
+        return cls(**val)
+
     def to_dict(self):
         tx_dict = {}
         for field in self.fields:
@@ -437,6 +441,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=False,
+        model=None,
     ):
         try:
             import pandas as pd
@@ -493,6 +498,7 @@ class SDK:
             create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             with_progress=with_progress,
+            model=model,
         )
 
         def get_tx_val(tx, v):
@@ -516,6 +522,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=False,
+        model=None,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
@@ -537,6 +544,7 @@ class SDK:
             with_progress,
             labeling,
             create_account_holders,
+            model,
         )
 
     def _add_transactions(
@@ -547,12 +555,18 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=False,
+        model=None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
 
-        params_str = urlencode(
-            {"labeling": labeling, "create_account_holders": create_account_holders}
-        )
+        params = {
+            "labeling": labeling,
+            "create_account_holders": create_account_holders,
+        }
+        if model is not None:
+            params["model_name"] = model
+
+        params_str = urlencode(params)
 
         try:
 
