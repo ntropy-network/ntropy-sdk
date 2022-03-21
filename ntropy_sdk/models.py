@@ -22,12 +22,14 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         sync: bool = True,
         poll_interval: int = 10,
         labels_only: bool = True,
+        progress_bar: bool = True,
         sdk: SDK = None,
     ):
         self.name = name
         self.sync = sync
         self.poll_interval = poll_interval
         self.labels_only = labels_only
+        self.progress_bar = progress_bar
         self._sdk = sdk
 
         if not self._sdk:
@@ -104,17 +106,26 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         ).json()
 
         if self.sync:
-            with tqdm(total=100, desc="starting") as pbar:
-                ready = False
-                while not ready:
+            if self.progress_bar:
+                with tqdm(total=100, desc="starting") as pbar:
+                    ready = False
+                    while not ready:
+                        status = self.status()
+                        ready = status["status"] == "ready"
+                        diff_n = status["progress"] - pbar.n
+                        pbar.update(int(diff_n))
+                        pbar.desc = status["status"]
+                        if ready:
+                            break
+                        time.sleep(self.poll_interval)
+            else:
+                status = self.status()
+                while not status["status"] == "ready":
                     status = self.status()
-                    ready = status["status"] == "ready"
-                    diff_n = status["progress"] - pbar.n
-                    pbar.update(int(diff_n))
-                    pbar.desc = status["status"]
-                    if ready:
-                        break
-                    time.sleep(self.poll_interval)
+
+                    if status["status"] == "error":
+                        # TODO: improve information
+                        raise RuntimeError("Unexpected error while training the model")
 
         return self
 
