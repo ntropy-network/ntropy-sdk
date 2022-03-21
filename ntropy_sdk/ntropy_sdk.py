@@ -410,7 +410,12 @@ class SDK:
                     retry_after = 1
                 time.sleep(retry_after)
                 continue
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except requests.HTTPError as e:
+                if e.response.headers.get("content-type") == "application/json":
+                    raise NtropyError(e.response.json()) from e
+                raise
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 

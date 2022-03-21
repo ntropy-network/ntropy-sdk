@@ -2,13 +2,14 @@ from multiprocessing.sharedctypes import Value
 import time
 from requests import HTTPError
 from urllib.parse import urlencode
-from typing import List, Union, Any
+from typing import List, Union, Any, Dict
 
 from sklearn.base import BaseEstimator
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import f1_score
 
 from ntropy_sdk import SDK, NtropyError, Transaction
+from tqdm.auto import tqdm
 
 
 class FewShotClassifier(BaseEstimator, ClassifierMixin):
@@ -51,7 +52,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         ).json()
         return status
 
-    def is_ready(self) -> bool:
+    def status(self) -> Dict:
         try:
             status = self.get_status()
         except HTTPError as e:
@@ -64,6 +65,10 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         if status["status"] == "error":
             raise RuntimeError("Model training failed with an internal error")
 
+        return status
+
+    def is_ready(self) -> bool:
+        status = self.status()
         return status["status"] == "ready"
 
     @staticmethod
@@ -91,8 +96,17 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         ).json()
 
         if self.sync:
-            while not self.is_ready():
-                time.sleep(self.poll_interval)
+            with tqdm(total=100, desc="starting") as pbar:
+                ready = False
+                while not ready:
+                    status = self.status()
+                    ready = status["status"] == "ready"
+                    diff_n = status["progress"] - pbar.n
+                    pbar.update(int(diff_n))
+                    pbar.desc = status["status"]
+                    if ready:
+                        break
+                    time.sleep(self.poll_interval)
 
         return self
 
