@@ -5,9 +5,10 @@ from requests import HTTPError
 from urllib.parse import urlencode
 from typing import List, Union, Any, Dict
 
-from sklearn.base import BaseEstimator
-from sklearn.base import ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import f1_score
+from sklearn.utils.validation import check_is_fitted, check_X_y
+from sklearn.utils.multiclass import unique_labels
 
 from ntropy_sdk import SDK, NtropyError, Transaction
 from tqdm.auto import tqdm
@@ -76,6 +77,9 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         status = self.status()
         return status["status"] == "ready"
 
+    def __sklearn_is_fitted__(self):
+        return self.is_ready()
+    
     @staticmethod
     def _process_transactions(txs: TransactionList, as_dict: bool = True) -> List[dict]:
         if isinstance(txs, pd.DataFrame):
@@ -130,8 +134,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X: TransactionList) -> List[str]:
-        if not self.is_ready():
-            raise ValueError("Model is not ready for predictions yet")
+        check_is_fitted(self)
 
         y = self.sdk.add_transactions(
             X, model=self.name, poll_interval=self.poll_interval
