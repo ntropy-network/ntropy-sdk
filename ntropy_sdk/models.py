@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 
+from typing import Optional
 from requests import HTTPError
 from urllib.parse import urlencode
 from typing import List, Union, Any, Dict
@@ -16,7 +17,7 @@ from tqdm.auto import tqdm
 TransactionList = Union[List[Union[dict, Transaction]], pd.DataFrame]
 
 
-class FewShotClassifier(BaseEstimator, ClassifierMixin):
+class BaseModel(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
         name: str,
@@ -32,6 +33,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
         self.labels_only = labels_only
         self.progress_bar = progress_bar
         self._sdk = sdk
+        self.params = {}
 
         if not self._sdk:
             # attempt initialization from environment variable
@@ -39,6 +41,10 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
                 self._sdk = SDK()
             except NtropyError:
                 pass
+
+    @property
+    def model_type(self):
+        raise NotImplementedError("BaseModel cannot be used to train directly")
 
     @property
     def sdk(self):
@@ -79,7 +85,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
 
     def __sklearn_is_fitted__(self):
         return self.is_ready()
-    
+
     @staticmethod
     def _process_transactions(txs: TransactionList, as_dict: bool = True) -> List[dict]:
         if isinstance(txs, pd.DataFrame):
@@ -98,15 +104,22 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
             uniform_txs.append(tx)
         return uniform_txs
 
-    def fit(self, X: TransactionList, y: List[str]) -> "FewShotClassifier":
+    def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
         url = f"/v2/models/{self.name}"
+        self.params = params
 
         X = self._process_transactions(X)
         for tx, label in zip(X, y):
             tx["label"] = label
 
         self.sdk.retry_ratelimited_request(
-            "POST", url, payload={"transactions": X, "model_type": "FewShotClassifier"}
+            "POST",
+            url,
+            payload={
+                "transactions": X,
+                "model_type": self.model_type,
+                "params": params,
+            },
         ).json()
 
         if self.sync:
@@ -136,6 +149,7 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
     def predict(self, X: TransactionList) -> List[str]:
         check_is_fitted(self)
 
+        X = self._process_transactions(X, as_dict=False)
         y = self.sdk.add_transactions(
             X, model=self.name, poll_interval=self.poll_interval
         )
@@ -155,9 +169,42 @@ class FewShotClassifier(BaseEstimator, ClassifierMixin):
             "sync": self.sync,
             "poll_interval": self.poll_interval,
             "labels_only": self.labels_only,
+            "params": self.params,
         }
 
-    def set_params(self, **parameters: Any) -> "FewShotClassifier":
+    def set_params(self, **parameters: Any) -> "BaseModel":
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
+
+
+class SmallClassifier(BaseModel):
+    model_type = "SmallClassifier"
+
+
+class LargeClassifier(BaseModel):
+    model_type = "LargeClassifier"
+
+    def fit(
+        self,
+        X: TransactionList,
+        y: List[str],
+        X_val: Optional[TransactionList] = None,
+        y_val: Optional[List[str]] = None,
+        n_epochs: int = 10,
+        early_stopping: int = 0,
+        n_splits: Optional[int] = None,
+        seed: int = 42,
+        lr=1e-2,
+    ) -> "LargeClassifier":
+        super().fit(
+            X,
+            y,
+            X_val=X_val,
+            y_val=y_val,
+            n_epochs=n_epochs,
+            early_stopping=early_stopping,
+            n_splits=n_splits,
+            seed=seed,
+            lr=lr,
+        )
