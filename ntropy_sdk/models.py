@@ -195,7 +195,6 @@ class LargeClassifier(BaseModel):
         early_stopping: int = 0,
         n_splits: Optional[int] = None,
         seed: int = 42,
-        lr=1e-2,
     ) -> "LargeClassifier":
         super().fit(
             X,
@@ -206,5 +205,4 @@ class LargeClassifier(BaseModel):
             early_stopping=early_stopping,
             n_splits=n_splits,
             seed=seed,
-            lr=lr,
         )
