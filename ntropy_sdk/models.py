@@ -182,6 +182,21 @@ class SmallClassifier(BaseModel):
     model_type = "SmallClassifier"
 
 
+class CoolClassifier(BaseModel):
+    model_type = "CoolClassifier"
+
+    def fit(
+        self,
+        X: TransactionList,
+        y: List[str],
+        n_epoch: int=2,
+    ):
+        super().fit(X, y, n_epoch=n_epoch)
+
+class UncoolClassifier(BaseModel):
+    model_type = "UncoolClassifier"
+
+
 class LargeClassifier(BaseModel):
     model_type = "LargeClassifier"
 
