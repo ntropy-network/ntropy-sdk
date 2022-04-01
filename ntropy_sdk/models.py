@@ -178,46 +178,14 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return self
 
 
-class SmallClassifier(BaseModel):
-    model_type = "SmallClassifier"
-
-
-class CoolClassifier(BaseModel):
-    model_type = "CoolClassifier"
+class CustomTransactionClassifier(BaseModel):
+    model_type = "CustomTransactionClassifier"
 
     def fit(
         self,
         X: TransactionList,
         y: List[str],
-        n_epoch: int=2,
+        n_epochs: int=2,
+        random_state: int=42,
     ):
-        super().fit(X, y, n_epoch=n_epoch)
-
-class UncoolClassifier(BaseModel):
-    model_type = "UncoolClassifier"
-
-
-class LargeClassifier(BaseModel):
-    model_type = "LargeClassifier"
-
-    def fit(
-        self,
-        X: TransactionList,
-        y: List[str],
-        X_val: Optional[TransactionList] = None,
-        y_val: Optional[List[str]] = None,
-        n_epochs: int = 10,
-        early_stopping: int = 0,
-        n_splits: Optional[int] = None,
-        seed: int = 42,
-    ) -> "LargeClassifier":
-        super().fit(
-            X,
-            y,
-            X_val=X_val,
-            y_val=y_val,
-            n_epochs=n_epochs,
-            early_stopping=early_stopping,
-            n_splits=n_splits,
-            seed=seed,
-        )
+        super().fit(X, y, n_epochs=n_epochs, random_state=random_state)
