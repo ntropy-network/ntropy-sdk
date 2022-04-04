@@ -144,6 +144,8 @@ class BaseModel(BaseEstimator, ClassifierMixin):
                         # TODO: improve information
                         raise RuntimeError("Unexpected error while training the model")
 
+                    time.sleep(self.poll_interval)
+
         return self
 
     def predict(self, X: TransactionList) -> List[str]:
