@@ -61,7 +61,7 @@ account_holder = AccountHolder(
 sdk.create_account_holder(account_holder)
 ```
 
-A new transaction can then be associated with the created account holder and enriched. Not all attributes are mandatory, but if known should be provided, to aid the enrichment:
+A new transaction can then be associated with the created account holder and enriched:
 
 ```python
 transaction = Transaction(
@@ -119,15 +119,11 @@ print("ENRICHED:", enriched_df)
 Using the SDK you can train and run a custom model for transaction classification.
 This custom model makes use of Ntropy's advanced base models and provides additional capabilities for customization based on user provided labeled data.
 
-
-Currently the SDK supports the following models:
-- FewShotClassifier (requires at least 32 transactions per label): model suited for relatively low amount of data that supports one label per transaction.
-
 If you're familiar with using scikit-learn, the usage for Ntropy models will be familiar. A full example:
 
 ```python
 import pandas as pd
-from ntropy_sdk.models import FewShotClassifier
+from ntropy_sdk.models import CustomTransactionClassifier
 
 train_df = pd.read_csv('labeled_transactions.csv')
 train_labels = transactions_df['label']
@@ -135,7 +131,7 @@ train_labels = transactions_df['label']
 test_df = pd.read_csv('test_set_transactions.csv')
 test_labels = test_set['label']
 
-model = FewShotClassifier('classifier-example')
+model = CustomTransactionClassifier('classifier-example')
 model = model.fit(train_df, train_labels)
 
 print(model.score(test_df, test_labels))
@@ -174,10 +170,10 @@ To train a model the process is the same as a scikit-learn classifier:
 
 ```python
 
-from ntropy_sdk.models import FewShotClassifier
+from ntropy_sdk.models import CustomTransactionClassifier
 
 # you can skip providing the sdk as long as you have the NTROPY_API_KEY environment variable set
-model = FewShotClassifier('example-classifier', allow_retrain=True, sdk=sdk)
+model = CustomTransactionClassifier('example-classifier', allow_retrain=True, sdk=sdk)
 
 # or you can set the sdk later
 model.set_sdk(sdk)
@@ -185,9 +181,11 @@ model.set_sdk(sdk)
 model.fit(train_df, train_labels)
 ```
 
+Training data can be provided as a dataframe, list of dictionaries or list of `ntropy_sdk.Transactions` as long as the required information is provided.
+
 ### Prediction and scoring
 
-The model can then be used to predict the label of unlabeled transactions:
+The model can then be used to predict the label of new transactions:
 
 ```python
 
@@ -232,7 +230,7 @@ Or alternatively you can just create the model with the same name:
 ```python
 
 # after the example-classifier was trained
-trained_model = FewShotClassifier('example-classifier', sdk=sdk)
+trained_model = CustomTransactionClassifier('example-classifier', sdk=sdk)
 output_labels = trained_model(test_set)
 ```
 
