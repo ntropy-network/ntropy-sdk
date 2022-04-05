@@ -230,6 +230,7 @@ class EnrichedTransaction:
         chart_of_accounts=None,
         recurrence=None,
         confidence=None,
+        transaction_type=None,
         **kwargs,
     ):
         self.sdk = sdk
@@ -244,6 +245,7 @@ class EnrichedTransaction:
         self.chart_of_accounts = chart_of_accounts
         self.recurrence = recurrence
         self.confidence = confidence
+        self.transaction_type = transaction_type
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -271,6 +273,8 @@ class EnrichedTransaction:
             "website": self.website,
             "chart_of_accounts": self.chart_of_accounts,
             "recurrence": self.recurrence,
+            "confidence": self.confidence,
+            "transaction_type": self.transaction_type,
         }
 
 
@@ -395,7 +399,7 @@ class SDK:
         self._timeout = timeout
         self._with_progress = with_progress
 
-    def retry_ratelimited_request(self, method: str, url: str, payload: object):
+    def retry_ratelimited_request(self, method: str, url: str, payload: object, log_level=logging.DEBUG):
         for i in range(self.retries):
             resp = self.session.request(
                 method,
@@ -405,13 +409,14 @@ class SDK:
                 timeout=self._timeout,
             )
             if resp.status_code == 429:
-                self.logger.debug("Retrying due to ratelimit")
                 try:
                     retry_after = int(resp.headers.get("retry-after", "1"))
                 except ValueError:
                     retry_after = 1
                 if retry_after <= 0:
                     retry_after = 1
+
+                self.logger.log(log_level, "Retrying in %s seconds due to ratelimit", retry_after)
                 time.sleep(retry_after)
                 continue
             try:

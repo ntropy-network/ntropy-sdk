@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import time
 
@@ -100,8 +101,8 @@ class BaseModel(BaseEstimator, ClassifierMixin):
                 tx = tx.to_dict()
             if isinstance(tx, dict) and not as_dict:
                 tx = Transaction.from_dict(tx)
-
-            uniform_txs.append(tx)
+            
+            uniform_txs.append(dict(tx))
         return uniform_txs
 
     def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
@@ -120,6 +121,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
                 "model_type": self.model_type,
                 "params": params,
             },
+            log_level=logging.WARNING,
         ).json()
 
         if self.sync:
