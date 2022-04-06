@@ -10,7 +10,7 @@ with open("README.md") as readme_file:
 requirements = ["requests", "tqdm"]
 
 EXTRAS_REQUIRE = {
-    "benchmark": ["pandas", "scikit-learn", "numpy"],
+    "models": ["pandas", "scikit-learn", "numpy"],
 }
 
 setup_requirements = []
@@ -48,6 +48,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="4.3.0",
+    version="4.4.0",
     zip_safe=False,
 )

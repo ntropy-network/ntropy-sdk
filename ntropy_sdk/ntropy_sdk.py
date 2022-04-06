@@ -1,11 +1,14 @@
+import os
 import time
 import csv
-from datetime import datetime, date
 import uuid
 import requests
 import logging
 import re
 import math
+
+from datetime import datetime, date
+from typing import Optional
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
@@ -15,6 +18,7 @@ DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_WITH_PROGRESS = True
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
+ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
 class NtropyError(Exception):
@@ -50,7 +54,6 @@ class Transaction:
         "entry_type",
         "iso_currency_code",
         "transaction_id",
-        "account_holder_id",
     ]
 
     fields = [
@@ -73,7 +76,7 @@ class Transaction:
         description,
         entry_type,
         iso_currency_code,
-        account_holder_id,
+        account_holder_id=None,
         account_holder_type=None,
         country=None,
         transaction_id=None,
@@ -86,7 +89,8 @@ class Transaction:
 
         self.transaction_id = transaction_id
 
-        _assert_type(account_holder_id, "account_holder_id", str)
+        if account_holder_id is not None:
+            _assert_type(account_holder_id, "account_holder_id", str)
         self.account_holder_id = account_holder_id
 
         if account_holder_type is not None:
@@ -153,6 +157,10 @@ class Transaction:
 
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
+
+    @classmethod
+    def from_dict(cls, val: dict):
+        return cls(**val)
 
     def to_dict(self):
         tx_dict = {}
@@ -222,6 +230,7 @@ class EnrichedTransaction:
         chart_of_accounts=None,
         recurrence=None,
         confidence=None,
+        transaction_type=None,
         **kwargs,
     ):
         self.sdk = sdk
@@ -236,6 +245,7 @@ class EnrichedTransaction:
         self.chart_of_accounts = chart_of_accounts
         self.recurrence = recurrence
         self.confidence = confidence
+        self.transaction_type = transaction_type
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -263,6 +273,8 @@ class EnrichedTransaction:
             "website": self.website,
             "chart_of_accounts": self.chart_of_accounts,
             "recurrence": self.recurrence,
+            "confidence": self.confidence,
+            "transaction_type": self.transaction_type,
         }
 
 
@@ -368,12 +380,16 @@ class SDK:
 
     def __init__(
         self,
-        token: str,
+        token: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
     ):
         if not token:
-            raise NtropyError("API Token must be set")
+            if ENV_NTROPY_API_TOKEN not in os.environ:
+                raise NtropyError(
+                    "API Token must be passed as an argument or set in the env. variable NTROPY_API_TOKEN"
+                )
+            token = os.environ[ENV_NTROPY_API_TOKEN]
 
         self.base_url = "https://api.ntropy.com"
         self.retries = 10
@@ -383,7 +399,9 @@ class SDK:
         self._timeout = timeout
         self._with_progress = with_progress
 
-    def retry_ratelimited_request(self, method: str, url: str, payload: object):
+    def retry_ratelimited_request(
+        self, method: str, url: str, payload: object, log_level=logging.DEBUG
+    ):
         for i in range(self.retries):
             resp = self.session.request(
                 method,
@@ -393,16 +411,24 @@ class SDK:
                 timeout=self._timeout,
             )
             if resp.status_code == 429:
-                self.logger.debug("Retrying due to ratelimit")
                 try:
                     retry_after = int(resp.headers.get("retry-after", "1"))
                 except ValueError:
                     retry_after = 1
                 if retry_after <= 0:
                     retry_after = 1
+
+                self.logger.log(
+                    log_level, "Retrying in %s seconds due to ratelimit", retry_after
+                )
                 time.sleep(retry_after)
                 continue
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except requests.HTTPError as e:
+                if e.response.headers.get("content-type") == "application/json":
+                    raise NtropyError(e.response.json()) from e
+                raise
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
@@ -424,6 +450,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=False,
+        model=None,
     ):
         try:
             import pandas as pd
@@ -468,6 +495,7 @@ class SDK:
                 entry_type=row["entry_type"],
                 iso_currency_code=row["iso_currency_code"],
                 account_holder_id=row["account_holder_id"],
+                account_holder_type=row["account_holder_type"],
                 country=row.get("country"),
                 transaction_id=row.get("transaction_id"),
             )
@@ -480,6 +508,7 @@ class SDK:
             create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             with_progress=with_progress,
+            model=model,
         )
 
         def get_tx_val(tx, v):
@@ -503,6 +532,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=False,
+        model=None,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
@@ -524,6 +554,7 @@ class SDK:
             with_progress,
             labeling,
             create_account_holders,
+            model,
         )
 
     def _add_transactions(
@@ -534,12 +565,18 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=False,
+        model=None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
 
-        params_str = urlencode(
-            {"labeling": labeling, "create_account_holders": create_account_holders}
-        )
+        params = {
+            "labeling": labeling,
+            "create_account_holders": create_account_holders,
+        }
+        if model is not None:
+            params["model_name"] = model
+
+        params_str = urlencode(params)
 
         try:
 
@@ -619,3 +656,8 @@ class SDK:
         url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
+
+    def list_models(self):
+        url = "/v2/models"
+        r = self.retry_ratelimited_request("GET", url, None).json()
+        return r
