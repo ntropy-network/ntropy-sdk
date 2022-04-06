@@ -2,15 +2,12 @@ import logging
 import pandas as pd
 import time
 
-from typing import Optional
 from requests import HTTPError
-from urllib.parse import urlencode
 from typing import List, Union, Any, Dict
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import f1_score
-from sklearn.utils.validation import check_is_fitted, check_X_y
-from sklearn.utils.multiclass import unique_labels
+from sklearn.exceptions import NotFittedError
 
 from ntropy_sdk import SDK, NtropyError, Transaction
 from tqdm.auto import tqdm
@@ -84,8 +81,9 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         status = self.status()
         return status["status"] == "ready"
 
-    def __sklearn_is_fitted__(self):
-        return self.is_ready()
+    def check_is_fitted(self):
+        if not self.is_ready():
+            raise NotFittedError()
 
     @staticmethod
     def _process_transactions(txs: TransactionList, as_dict: bool = True) -> List[dict]:
@@ -154,7 +152,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X: TransactionList) -> List[str]:
-        check_is_fitted(self)
+        self.check_is_fitted()
 
         X = self._process_transactions(X, as_dict=False)
         y = self.sdk.add_transactions(
