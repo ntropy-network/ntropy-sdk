@@ -613,7 +613,7 @@ class SDK:
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 error = e.response.json()
-                raise ValueError(f"{error['detail']}: {error['missingIds']}")
+                raise ValueError(f"{error['detail']}")
 
             raise
 
