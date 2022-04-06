@@ -102,7 +102,10 @@ class BaseModel(BaseEstimator, ClassifierMixin):
             if isinstance(tx, dict) and not as_dict:
                 tx = Transaction.from_dict(tx)
 
-            uniform_txs.append(dict(tx))
+            if as_dict:
+                tx = tx.copy()
+
+            uniform_txs.append(tx)
         return uniform_txs
 
     def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
