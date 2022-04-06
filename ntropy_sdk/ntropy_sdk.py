@@ -54,7 +54,6 @@ class Transaction:
         "entry_type",
         "iso_currency_code",
         "transaction_id",
-        "account_holder_id",
     ]
 
     fields = [
@@ -77,7 +76,7 @@ class Transaction:
         description,
         entry_type,
         iso_currency_code,
-        account_holder_id,
+        account_holder_id=None,
         account_holder_type=None,
         country=None,
         transaction_id=None,
@@ -90,7 +89,8 @@ class Transaction:
 
         self.transaction_id = transaction_id
 
-        _assert_type(account_holder_id, "account_holder_id", str)
+        if account_holder_id is not None:
+            _assert_type(account_holder_id, "account_holder_id", str)
         self.account_holder_id = account_holder_id
 
         if account_holder_type is not None:
@@ -399,7 +399,9 @@ class SDK:
         self._timeout = timeout
         self._with_progress = with_progress
 
-    def retry_ratelimited_request(self, method: str, url: str, payload: object, log_level=logging.DEBUG):
+    def retry_ratelimited_request(
+        self, method: str, url: str, payload: object, log_level=logging.DEBUG
+    ):
         for i in range(self.retries):
             resp = self.session.request(
                 method,
@@ -416,7 +418,9 @@ class SDK:
                 if retry_after <= 0:
                     retry_after = 1
 
-                self.logger.log(log_level, "Retrying in %s seconds due to ratelimit", retry_after)
+                self.logger.log(
+                    log_level, "Retrying in %s seconds due to ratelimit", retry_after
+                )
                 time.sleep(retry_after)
                 continue
             try:
@@ -491,6 +495,7 @@ class SDK:
                 entry_type=row["entry_type"],
                 iso_currency_code=row["iso_currency_code"],
                 account_holder_id=row["account_holder_id"],
+                account_holder_type=row["account_holder_type"],
                 country=row.get("country"),
                 transaction_id=row.get("transaction_id"),
             )

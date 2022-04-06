@@ -101,7 +101,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
                 tx = tx.to_dict()
             if isinstance(tx, dict) and not as_dict:
                 tx = Transaction.from_dict(tx)
-            
+
             uniform_txs.append(dict(tx))
         return uniform_txs
 
@@ -189,7 +189,7 @@ class CustomTransactionClassifier(BaseModel):
         self,
         X: TransactionList,
         y: List[str],
-        n_epochs: int=2,
-        random_state: int=42,
+        n_epochs: int = 2,
+        random_state: int = 42,
     ):
         super().fit(X, y, n_epochs=n_epochs, random_state=random_state)
