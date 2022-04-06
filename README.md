@@ -17,10 +17,8 @@ You can initialize the SDK by passing an API token to the constructor, or using 
 ```python
 from ntropy_sdk import SDK, Transaction, AccountHolder
 
-# initialize from environment variable NTROPY_API_KEY
-sdk = SDK()
 
-# or provide the token on initialization
+# provide the token on initialization
 sdk = SDK("my-ntropy-api-token")
 ```
 
@@ -84,7 +82,7 @@ enriched_transactions = sdk.add_transactions(transaction_list)
 print("ENRICHED:", enriched_transactions)
 ```
 
-A transaction can also be submitted without associating it to an account holder by just providing the `account_holder_type`. If no `account_holder_type` and `account_holder_id` is provided for a transaction, labeling will not be done for that transaction.
+A transaction can also be submitted without associating it to an account holder by just providing the `account_holder_type`. If no `account_holder_type` and `account_holder_id` is provided for a transaction, the `labels` field of the enriched transaction will only contain the label "missing account holder information".
 
 ```python
 transaction = Transaction(
@@ -232,21 +230,7 @@ print(cross_validate(model, train_df, train_labels))
 
 ### Saving and loading
 
-To save and load a trained model, you can use the same method as for any other scikit-learn model:
-
-```python
-import pickle
-
-with open('model.pkl', 'wb') as fp:
-    pickle.dump(model, fp)
-
-with open('model.pkl', 'rb') as fp:
-    loaded_model = pickle.load(fp)
-
-output_labels = loaded_model.predict(test_set)
-```
-
-Or alternatively you can just create the model with the same name:
+The SDK models can be stored in pickled format. However, the models are referenced by the provided name. If you instantiate a model with the same name as a previously trained model you will efectively load the previous model:
 
 ```python
 
@@ -254,6 +238,8 @@ Or alternatively you can just create the model with the same name:
 trained_model = CustomTransactionClassifier('example-classifier', sdk=sdk)
 output_labels = trained_model(test_set)
 ```
+
+Serializing the model (i.e., pickling) will mainly store the name of the model for later.
 
 
 ## License:
