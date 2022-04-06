@@ -79,6 +79,9 @@ class BaseModel(BaseEstimator, ClassifierMixin):
 
     def is_ready(self) -> bool:
         status = self.status()
+        if isinstance(status, bool):
+            return False
+
         return status["status"] == "ready"
 
     def check_is_fitted(self):
