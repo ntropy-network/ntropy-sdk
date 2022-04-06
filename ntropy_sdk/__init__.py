@@ -1,4 +1,4 @@
-__version__ = "4.4.0rc7"
+__version__ = "4.4.0rc8"
 
 from ntropy_sdk.ntropy_sdk import (
     AccountHolder,
