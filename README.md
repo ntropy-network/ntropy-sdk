@@ -38,12 +38,12 @@ print("CHART of ACCOUNTS:", sdk.get_chart_of_accounts())
 
 ## Enrichment usage:
 
-In order to enrich a transaction it must be associated with an account holder. An account holder represents an entity (business, freelancer or consumer) that can be uniquely identified and holds the account associated with the transaction:
+A transaction can be associated with an account holder. An account holder represents an entity (business, freelancer or consumer) that can be uniquely identified and holds the account associated with the transaction:
 
 - In an outgoing (debit) transaction, the account holder is the sender and the merchant is the receiver.
 - In an incoming (credit) transaction, the account holder is the receiver and the merchant is the sender.
 
-Account holders provide important context for understanding transactions.
+Account holders provide important context for understanding transactions and allow additional operations such as extracting metrics for account holders over time.
 
 ```python
 
@@ -75,9 +75,30 @@ transaction = Transaction(
 )
 
 transaction_list = [transaction]
-
 enriched_transactions = sdk.add_transactions(transaction_list)
+
+# Alternatively, you can provide both account_holder_id and account_holder_type, and set create_account_holders to True
+# The account holders are then dinamically created if they don't exist during the add_transactions API call
+# enriched_transactions = sdk.add_transactions(transaction_list, create_account_holders=True)
+
 print("ENRICHED:", enriched_transactions)
+```
+
+A transaction can also be submitted without associating it to an account holder by just providing the `account_holder_type`. If no `account_holder_type` and `account_holder_id` is provided for a transaction, labeling will not be done for that transaction.
+
+```python
+transaction = Transaction(
+    amount=12046.15,
+    date="2021-12-13",
+    description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S: Crd15",
+    entry_type="outgoing",
+    iso_currency_code="USD",
+    account_holder_type="consumer",
+    country="US",
+)
+
+transaction_list = [transaction]
+enriched_transactions = sdk.add_transactions(transaction_list)
 ```
 
 The API can be queried for specific stats regarding account holders such as the total amount in transactions in a time interval:
@@ -117,7 +138,7 @@ print("ENRICHED:", enriched_df)
 ## Models usage:
 
 Using the SDK you can train and run a custom model for transaction classification.
-This custom model makes use of Ntropy's advanced base models and provides additional capabilities for customization based on user provided labeled data.
+This custom model makes use of Ntropy's advanced base models and provides additional capabilities for customization and fine-tuning based on user provided labeled data.
 
 If you're familiar with using scikit-learn, the usage for Ntropy models will be familiar. A full example:
 
@@ -181,7 +202,7 @@ model.set_sdk(sdk)
 model.fit(train_df, train_labels)
 ```
 
-Training data can be provided as a dataframe, list of dictionaries or list of `ntropy_sdk.Transactions` as long as the required information is provided.
+Training data can be provided as a dataframe, list of dictionaries or list of `ntropy_sdk.Transactions` as long as the required information is provided. You must provide at least 16 examples for each label during training, and the API curently supports fine-tuning on at most 8000 transactions.
 
 ### Prediction and scoring
 
