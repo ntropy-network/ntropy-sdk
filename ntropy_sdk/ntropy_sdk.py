@@ -438,7 +438,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
-        create_account_holders=False,
+        create_account_holders=True,
         model=None,
     ):
         try:
@@ -520,7 +520,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
-        create_account_holders=False,
+        create_account_holders=True,
         model=None,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
@@ -553,7 +553,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
-        create_account_holders=False,
+        create_account_holders=True,
         model=None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
