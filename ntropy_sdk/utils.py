@@ -16,6 +16,7 @@ def assert_type(value, name, expected_type):
 
 
 # Ported from CPython implementation, starting from Python 3.8.0
+# https://github.com/python/cpython/blob/main/Lib/functools.py
 class singledispatchmethod:
     """Single-dispatch generic method descriptor.
     Supports wrapping existing descriptors and handles non-descriptor
