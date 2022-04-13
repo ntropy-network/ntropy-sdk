@@ -191,7 +191,8 @@ class AccountHolder:
     def to_dict(self):
         out = {"id": self.id, "type": self.type}
         for key in ("name", "industry", "website"):
-            if value := getattr(self, key):
+            value = getattr(self, key, None)
+            if value is not None:
                 out[key] = value
 
         return out

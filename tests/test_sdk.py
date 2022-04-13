@@ -16,7 +16,8 @@ from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 def sdk():
     sdk = SDK(API_KEY)
 
-    if url := os.environ.get("NTROPY_API_URL"):
+    url = os.environ.get("NTROPY_API_URL")
+    if url is not None:
         sdk.base_url = url
 
     return sdk
