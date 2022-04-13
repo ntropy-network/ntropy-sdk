@@ -5,14 +5,14 @@ import uuid
 import requests
 import logging
 import re
-import math
 
 from datetime import datetime, date
 from typing import Optional
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
-from functools import singledispatchmethod
+from ntropy_sdk.utils import singledispatchmethod, assert_type
+
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_WITH_PROGRESS = True
@@ -29,19 +29,6 @@ class NtropyBatchError(Exception):
     def __init__(self, message, errors=None):
         super().__init__(message)
         self.errors = errors
-
-
-def _assert_type(value, name, expected_type):
-    if not isinstance(value, expected_type):
-        raise TypeError(f"{name} should be of type {expected_type}")
-
-    if expected_type == float or (
-        isinstance(expected_type, tuple) and float in expected_type
-    ):
-        if math.isnan(value):
-            raise ValueError(f"{name} value cannot be NaN")
-
-    return True
 
 
 class Transaction:
@@ -85,23 +72,23 @@ class Transaction:
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
         else:
-            _assert_type(transaction_id, "transaction_id", str)
+            assert_type(transaction_id, "transaction_id", str)
 
         self.transaction_id = transaction_id
 
         if account_holder_id is not None:
-            _assert_type(account_holder_id, "account_holder_id", str)
+            assert_type(account_holder_id, "account_holder_id", str)
         self.account_holder_id = account_holder_id
 
         if account_holder_type is not None:
-            _assert_type(account_holder_type, "account_holder_type", str)
+            assert_type(account_holder_type, "account_holder_type", str)
             if account_holder_type not in ACCOUNT_HOLDER_TYPES:
                 raise ValueError(
                     f"account_holder_type must be one of {ACCOUNT_HOLDER_TYPES}"
                 )
         self.account_holder_type = account_holder_type
 
-        _assert_type(amount, "amount", (int, float))
+        assert_type(amount, "amount", (int, float))
         if (amount == 0 and self._zero_amount_check) or amount < 0:
             raise ValueError(
                 "amount must be a positive number. For negative amounts, change the entry_type field."
@@ -110,34 +97,34 @@ class Transaction:
         self.amount = amount
 
         try:
-            _assert_type(date, "date", str)
+            assert_type(date, "date", str)
             datetime.strptime(date, "%Y-%m-%d")
         except (ValueError, TypeError):
             raise ValueError("date must be of the format %Y-%m-%d")
 
         self.date = date
 
-        _assert_type(description, "description", str)
+        assert_type(description, "description", str)
         self.description = description
 
-        _assert_type(entry_type, "entry_type", str)
+        assert_type(entry_type, "entry_type", str)
         if entry_type not in ["debit", "credit", "outgoing", "incoming"]:
             raise ValueError("entry_type nust be one of 'incoming' or 'outgoing'")
 
         self.entry_type = entry_type
 
-        _assert_type(iso_currency_code, "iso_currency_code", str)
+        assert_type(iso_currency_code, "iso_currency_code", str)
         self.iso_currency_code = iso_currency_code
 
         if country is not None:
-            _assert_type(country, "country", str)
+            assert_type(country, "country", str)
             if not COUNTRY_REGEX.match(country):
                 raise ValueError("country should be in ISO-3611-2 format")
 
         self.country = country
 
         if mcc:
-            _assert_type(mcc, "mcc", int)
+            assert_type(mcc, "mcc", int)
             if not (1000 <= mcc <= 9999):
                 raise ValueError("mcc must be in the range of 1000-9999")
 
@@ -203,7 +190,8 @@ class AccountHolder:
     def to_dict(self):
         out = {"id": self.id, "type": self.type}
         for key in ("name", "industry", "website"):
-            if value := getattr(self, key):
+            value = getattr(self, key, None)
+            if value is not None:
                 out[key] = value
 
         return out
@@ -449,7 +437,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
-        create_account_holders=False,
+        create_account_holders=True,
         model=None,
     ):
         try:
@@ -531,7 +519,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
-        create_account_holders=False,
+        create_account_holders=True,
         model=None,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
@@ -564,7 +552,7 @@ class SDK:
         poll_interval=10,
         with_progress=None,
         labeling=True,
-        create_account_holders=False,
+        create_account_holders=True,
         model=None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH

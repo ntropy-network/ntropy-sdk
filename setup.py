@@ -20,14 +20,14 @@ test_requirements = []
 setup(
     author="David Buchmann",
     author_email="david@ntropy.com",
-    python_requires=">=3.8",
+    python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.6",
     ],
     description="SDK for the Ntropy API",
     entry_points={
@@ -48,6 +48,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="4.4.1",
+    version="4.4.2",
     zip_safe=False,
 )
