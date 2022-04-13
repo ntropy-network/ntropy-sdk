@@ -2,8 +2,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [4.4.1] - 2022-04-13
 
+- Extended support for older Python versions starting from 3.6 and upwards
+- Set default value for `create_account_holders` in `add_transactions` to `True`
 
 ## [4.4.0] - 2022-04-06
 ### Added
