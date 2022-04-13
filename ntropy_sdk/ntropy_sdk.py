@@ -31,7 +31,6 @@ class NtropyBatchError(Exception):
         self.errors = errors
 
 
-
 class Transaction:
     _zero_amount_check = True
 
