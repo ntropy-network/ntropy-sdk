@@ -177,7 +177,6 @@ class BaseModel(BaseEstimator, ClassifierMixin):
             "sync": self.sync,
             "poll_interval": self.poll_interval,
             "labels_only": self.labels_only,
-            "params": self.params,
         }
 
     def set_params(self, **parameters: Any) -> "BaseModel":
