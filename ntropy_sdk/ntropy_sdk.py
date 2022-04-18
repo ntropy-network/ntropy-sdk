@@ -375,7 +375,7 @@ class SDK:
         if not token:
             if ENV_NTROPY_API_TOKEN not in os.environ:
                 raise NtropyError(
-                    "API Token must be passed as an argument or set in the env. variable NTROPY_API_TOKEN"
+                    f"API Token must be passed as an argument or set in the env. variable {ENV_NTROPY_API_TOKEN}"
                 )
             token = os.environ[ENV_NTROPY_API_TOKEN]
 
@@ -439,6 +439,7 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model=None,
+        inplace=False,
     ):
         try:
             import pandas as pd
@@ -450,6 +451,9 @@ class SDK:
 
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Transactions object needs to be a pandas dataframe.")
+
+        if not inplace:
+            df = df.copy()
 
         if mapping is None:
             mapping = self.DEFAULT_MAPPING.copy()
@@ -521,6 +525,7 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model=None,
+        inplace=False,
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [

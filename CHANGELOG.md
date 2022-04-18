@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [4.4.1] - 2022-04-13
 
+- Added `inplace` flag for `add_transactions` that is used when passing a dataframe to ensure if the input dataframe is modified or not
 - Extended support for older Python versions starting from 3.6 and upwards
 - Set default value for `create_account_holders` in `add_transactions` to `True`
 

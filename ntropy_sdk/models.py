@@ -195,4 +195,4 @@ class CustomTransactionClassifier(BaseModel):
         n_epochs: int = 2,
         random_state: int = 42,
     ):
-        super().fit(X, y, n_epochs=n_epochs, random_state=random_state)
+        return super().fit(X, y, n_epochs=n_epochs, random_state=random_state)
