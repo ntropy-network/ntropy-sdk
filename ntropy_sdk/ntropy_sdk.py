@@ -5,6 +5,7 @@ import uuid
 import requests
 import logging
 import re
+import warnings
 
 from datetime import datetime, date
 from typing import Optional
@@ -474,10 +475,9 @@ class SDK:
             raise KeyError(f"Missing columns {missing_cols}")
         overlapping_cols = set(mapping.values()).intersection(cols)
         if overlapping_cols:
-            raise KeyError(
-                f"Overlapping columns {overlapping_cols} will be overwritten"
-                "- consider overriding the mapping keyword argument, or move the existing columns to another column"
-            )
+            msg = f"Overlapping columns {overlapping_cols} will be overwritten"
+            msg += " - consider overriding the mapping keyword argument, or move the existing columns to another column."
+            warnings.warn(msg)
 
         def to_tx(row):
             return Transaction(
