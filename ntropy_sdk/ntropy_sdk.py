@@ -375,7 +375,7 @@ class SDK:
         if not token:
             if ENV_NTROPY_API_TOKEN not in os.environ:
                 raise NtropyError(
-                    "API Token must be passed as an argument or set in the env. variable NTROPY_API_TOKEN"
+                    f"API Token must be passed as an argument or set in the env. variable {ENV_NTROPY_API_TOKEN}"
                 )
             token = os.environ[ENV_NTROPY_API_TOKEN]
 
