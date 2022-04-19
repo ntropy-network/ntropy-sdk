@@ -471,12 +471,6 @@ class SDK:
         missing_cols = set(required_columns).difference(cols)
         if missing_cols:
             raise KeyError(f"Missing columns {missing_cols}")
-        overlapping_cols = set(mapping.values()).intersection(cols)
-        if overlapping_cols:
-            raise KeyError(
-                f"Overlapping columns {overlapping_cols} will be overwritten"
-                "- consider overriding the mapping keyword argument, or move the existing columns to another column"
-            )
 
         if not inplace:
             # Only copy needed columns
@@ -484,6 +478,14 @@ class SDK:
                 set(required_columns + optional_columns).intersection(cols)
             )
             df = df[provided_cols].copy()
+        else:
+            overlapping_cols = set(mapping.values()).intersection(cols)
+            if overlapping_cols:
+                raise KeyError(
+                    f"Overlapping columns {overlapping_cols} will be overwritten"
+                    "- consider using inplace=False, overriding the mapping keyword "
+                    "argument, or move the existing columns to another column"
+                )
 
         def to_tx(row):
             return Transaction(

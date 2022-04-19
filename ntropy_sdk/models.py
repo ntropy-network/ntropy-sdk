@@ -101,7 +101,12 @@ class BaseModel(BaseEstimator, ClassifierMixin):
             if isinstance(tx, Transaction) and as_dict:
                 tx = tx.to_dict()
             if isinstance(tx, dict) and not as_dict:
-                tx = Transaction.from_dict(tx)
+                filtered_tx = {}
+                for field in Transaction.fields:
+                    if field in tx:
+                        filtered_tx[field] = tx[field]
+
+                tx = Transaction.from_dict(filtered_tx)
 
             if as_dict:
                 tx = tx.copy()
