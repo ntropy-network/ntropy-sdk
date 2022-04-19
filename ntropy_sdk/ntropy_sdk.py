@@ -452,9 +452,6 @@ class SDK:
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Transactions object needs to be a pandas dataframe.")
 
-        if not inplace:
-            df = df.copy()
-
         if mapping is None:
             mapping = self.DEFAULT_MAPPING.copy()
 
@@ -468,6 +465,8 @@ class SDK:
             "account_holder_type",
         ]
 
+        optional_columns = ["country", "mcc", "transaction_id"]
+
         cols = set(df.columns)
         missing_cols = set(required_columns).difference(cols)
         if missing_cols:
@@ -478,6 +477,13 @@ class SDK:
                 f"Overlapping columns {overlapping_cols} will be overwritten"
                 "- consider overriding the mapping keyword argument, or move the existing columns to another column"
             )
+
+        if not inplace:
+            # Only copy needed columns
+            provided_cols = list(
+                set(required_columns + optional_columns).intersection(cols)
+            )
+            df = df[provided_cols].copy()
 
         def to_tx(row):
             return Transaction(
