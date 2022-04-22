@@ -7,7 +7,7 @@ The Ntropy API provides transaction enrichment and categorization, account ledge
 ## Installation:
 
 ```bash
-$ pip install --upgrade 'ntropy-sdk[benchmark]'
+$ pip install --upgrade 'ntropy-sdk'
 ```
 
 ## SDK initialization:
