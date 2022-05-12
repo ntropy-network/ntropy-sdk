@@ -390,14 +390,20 @@ class SDK:
     def retry_ratelimited_request(
         self, method: str, url: str, payload: object, log_level=logging.DEBUG
     ):
-        for i in range(self.retries):
-            resp = self.session.request(
-                method,
-                self.base_url + url,
-                json=payload,
-                headers={"X-API-Key": self.token},
-                timeout=self._timeout,
-            )
+        for _ in range(self.retries):
+            try:
+                resp = self.session.request(
+                    method,
+                    self.base_url + url,
+                    json=payload,
+                    headers={"X-API-Key": self.token},
+                    timeout=self._timeout,
+                )
+            except requests.ConnectionError:
+                # Rebuild session on connection error and retry
+                self.session = requests.Session()
+                continue
+
             if resp.status_code == 429:
                 try:
                     retry_after = int(resp.headers.get("retry-after", "1"))

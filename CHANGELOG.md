@@ -2,6 +2,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unmerged] 
+
+- Correctly handle ConnectionError when acessing API. Retry request by creating a new requests Session.
+
+## [4.4.21] - 2022-04-13
+- Updated documentation
+
 ## [4.4.1] - 2022-04-13
 
 - Added `inplace` flag for `add_transactions` that is used when passing a dataframe to ensure if the input dataframe is modified or not
