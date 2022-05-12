@@ -11,7 +11,9 @@ from typing import Optional
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
+
 from ntropy_sdk.utils import singledispatchmethod, assert_type
+from ntropy_sdk import __version__
 
 
 DEFAULT_TIMEOUT = 10 * 60
@@ -396,7 +398,10 @@ class SDK:
                     method,
                     self.base_url + url,
                     json=payload,
-                    headers={"X-API-Key": self.token},
+                    headers={
+                        "X-API-Key": self.token,
+                        "User-Agent": f"ntropy-sdk/{__version__}",
+                    },
                     timeout=self._timeout,
                 )
             except requests.ConnectionError:
