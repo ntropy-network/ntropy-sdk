@@ -400,7 +400,7 @@ class SDK:
                     json=payload,
                     headers={
                         "X-API-Key": self.token,
-                        "X-SDK-Version": __version__,
+                        "User-Agent": f"ntropy-sdk/{__version__}",
                     },
                     timeout=self._timeout,
                 )
