@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [Unmerged] 
 
 - Correctly handle ConnectionError when acessing API for expired HTTP sessions. Requests are retried by creating a new requests Session.
+- Disabled zero amount check by default
+- Account holder id is no longer mandatory for enrichments using dataframes
+- Added missing mcc field when using dataframes
 
 ## [4.4.21] - 2022-04-13
 - Updated documentation
