@@ -40,7 +40,7 @@ def test_account_holder_type():
         create_account_holder("not_valid")
 
 
-def tsest_account_holder_type_or_id(sdk):
+def test_account_holder_type_or_id(sdk):
     id_tx = Transaction(
         amount=24.56,
         description="TARGET T- 5800 20th St 11/30/19 17:32",
