@@ -1,6 +1,7 @@
 import os
 import pytest
 import uuid
+import pandas as pd
 
 from tests import API_KEY
 from ntropy_sdk import (
@@ -37,6 +38,89 @@ def test_account_holder_type():
         assert account_holder.type == t
     with pytest.raises(ValueError):
         create_account_holder("not_valid")
+
+
+def tsest_account_holder_type_or_id(sdk):
+    id_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+    enriched = sdk.add_transactions([id_tx])[0]
+    assert "missing account holder information" not in enriched.labels
+
+    type_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+    enriched = sdk.add_transactions([type_tx])[0]
+    assert "missing account holder information" not in enriched.labels
+
+    invalid_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+
+    enriched = sdk.add_transactions([invalid_tx])[0]
+    assert "missing account holder information" in enriched.labels
+
+
+def test_account_holder_type_or_id_pandas(sdk):
+    account_holder = AccountHolder(
+        id=str(uuid.uuid4()), type="business", industry="fintech", website="ntropy.com"
+    )
+    sdk.create_account_holder(account_holder)
+
+    df = pd.DataFrame(
+        data={
+            "amount": [26],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_id": [account_holder.id],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    enriched = sdk.add_transactions(df)
+    assert "missing account holder information" not in enriched.labels[0]
+
+    df = pd.DataFrame(
+        {
+            "amount": [27],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_type": ["business"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    enriched = sdk.add_transactions(df)
+    assert "missing account holder information" not in enriched.labels[0]
+
+    df = pd.DataFrame(
+        {
+            "amount": [28],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    enriched = sdk.add_transactions(df)
+    assert "missing account holder information" in enriched.labels[0]
 
 
 def test_bad_date():
