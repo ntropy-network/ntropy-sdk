@@ -472,11 +472,15 @@ class SDK:
             "description",
             "entry_type",
             "iso_currency_code",
+        ]
+
+        optional_columns = [
+            "country",
+            "mcc",
+            "transaction_id",
             "account_holder_id",
             "account_holder_type",
         ]
-
-        optional_columns = ["country", "mcc", "transaction_id"]
 
         cols = set(df.columns)
         missing_cols = set(required_columns).difference(cols)
@@ -505,8 +509,8 @@ class SDK:
                 description=row.get("description", ""),
                 entry_type=row["entry_type"],
                 iso_currency_code=row["iso_currency_code"],
-                account_holder_id=row["account_holder_id"],
-                account_holder_type=row["account_holder_type"],
+                account_holder_id=row.get("account_holder_id"),
+                account_holder_type=row.get("account_holder_type"),
                 country=row.get("country"),
                 transaction_id=row.get("transaction_id"),
             )
