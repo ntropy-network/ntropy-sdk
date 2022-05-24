@@ -511,6 +511,7 @@ class SDK:
                 iso_currency_code=row["iso_currency_code"],
                 account_holder_id=row.get("account_holder_id"),
                 account_holder_type=row.get("account_holder_type"),
+                mcc=row.get("mcc"),
                 country=row.get("country"),
                 transaction_id=row.get("transaction_id"),
             )
