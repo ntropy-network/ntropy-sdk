@@ -214,6 +214,7 @@ class EnrichedTransaction:
         location=None,
         logo=None,
         merchant=None,
+        merchant_id=None,
         person=None,
         transaction_id=None,
         website=None,
@@ -231,6 +232,7 @@ class EnrichedTransaction:
         self.person = person
         self.transaction_id = transaction_id
         self.website = website
+        self.merchant_id = merchant_id
         self.kwargs = kwargs
         self.chart_of_accounts = chart_of_accounts
         self.recurrence = recurrence
@@ -258,6 +260,7 @@ class EnrichedTransaction:
             "location": self.location,
             "logo": self.logo,
             "merchant": self.merchant,
+            "merchant_id": self.merchant_id,
             "person": self.person,
             "transaction_id": self.transaction_id,
             "website": self.website,
@@ -360,6 +363,7 @@ class SDK:
     MAX_SYNC_BATCH = 4000
     DEFAULT_MAPPING = {
         "merchant": "merchant",
+        "merchant_id": "merchant_id",
         "website": "website",
         "labels": "labels",
         "logo": "logo",
