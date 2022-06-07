@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Disabled zero amount check by default
 - Account holder id is no longer mandatory for enrichments using dataframes
 - Added missing mcc field when using dataframes
+- Added `unique_merchant_id` field
 
 ## [4.4.21] - 2022-04-13
 - Updated documentation
