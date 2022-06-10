@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
 
+
+## [4.5.0] – 2022-06-10 
 - Correctly handle ConnectionError when acessing API for expired HTTP sessions. Requests are retried by creating a new requests Session.
 - Disabled zero amount check by default
 - Account holder id is no longer mandatory for enrichments using dataframes
