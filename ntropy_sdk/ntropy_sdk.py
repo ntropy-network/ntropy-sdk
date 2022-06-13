@@ -5,6 +5,7 @@ import uuid
 import requests
 import logging
 import re
+import sys
 
 from datetime import datetime, date
 from typing import Optional
@@ -17,7 +18,7 @@ from ntropy_sdk import __version__
 
 
 DEFAULT_TIMEOUT = 10 * 60
-DEFAULT_WITH_PROGRESS = True
+DEFAULT_WITH_PROGRESS = hasattr(sys, 'ps1')
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
