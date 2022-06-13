@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
-
+- Progress bar enabled by default for only interactive mode
 
 ## [4.5.0] – 2022-06-10 
 - Correctly handle ConnectionError when acessing API for expired HTTP sessions. Requests are retried by creating a new requests Session.
