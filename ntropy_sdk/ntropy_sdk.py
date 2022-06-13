@@ -35,7 +35,6 @@ class NtropyBatchError(Exception):
 
 
 class Transaction:
-    _zero_amount_check = True
 
     required_fields = [
         "amount",
@@ -92,9 +91,9 @@ class Transaction:
         self.account_holder_type = account_holder_type
 
         assert_type(amount, "amount", (int, float))
-        if (amount == 0 and self._zero_amount_check) or amount < 0:
+        if amount < 0:
             raise ValueError(
-                "amount must be a positive number. For negative amounts, change the entry_type field."
+                "amount must be a nonnegative number. For negative amounts, change the entry_type field."
             )
 
         self.amount = amount
@@ -136,14 +135,6 @@ class Transaction:
         for field in self.required_fields:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} should be set")
-
-    @classmethod
-    def disable_zero_amount_check(cls):
-        cls._zero_amount_check = False
-
-    @classmethod
-    def enable_zero_amount_check(cls):
-        cls._zero_amount_check = True
 
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"

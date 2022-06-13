@@ -251,32 +251,11 @@ def test_transaction_zero_amount():
         "iso_currency_code": "USD",
     }
 
-    testcases = [
-        (0, True, True),
-        (0, False, False),
-        (-1, True, True),
-        (-1, False, True),
-        (1, False, False),
-        (1, True, False),
-    ]
-    for amount, enabled, should_raise in testcases:
-        print("Testcase:", amount, enabled, should_raise)
+    Transaction(amount=0, **vals)
+    Transaction(amount=1, **vals)
 
-        if enabled:
-            Transaction.enable_zero_amount_check()
-        else:
-            Transaction.disable_zero_amount_check()
-
-        if should_raise:
-            with pytest.raises(ValueError):
-                Transaction(amount=amount, **vals)
-        else:
-            Transaction(
-                amount=amount,
-                **vals,
-            )
-
-    Transaction.enable_zero_amount_check()
+    with pytest.raises(ValueError):
+        Transaction(amount=-1, **vals)
 
 
 def test_transaction_entry_type():
