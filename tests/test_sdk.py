@@ -240,6 +240,7 @@ def test_chart_of_accounts(sdk):
     coa = sdk.get_chart_of_accounts()
     assert isinstance(coa, dict)
 
+
 def test_transaction_zero_amount():
     vals = {
         "description": "foo",
@@ -252,9 +253,10 @@ def test_transaction_zero_amount():
 
     Transaction(amount=0, **vals)
     Transaction(amount=1, **vals)
-    
+
     with pytest.raises(ValueError):
         Transaction(amount=-1, **vals)
+
 
 def test_transaction_entry_type():
     for et in ["incoming", "outgoing", "debit", "credit"]:
