@@ -18,7 +18,7 @@ from ntropy_sdk import __version__
 
 
 DEFAULT_TIMEOUT = 10 * 60
-DEFAULT_WITH_PROGRESS = hasattr(sys, 'ps1')
+DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
@@ -640,7 +640,7 @@ class SDK:
                 raise ValueError(f"{error['detail']}")
             raise
 
-        return response
+        return AccountHolder(**response)
 
     def get_account_holder_metrics(
         self, account_holder_id: str, metrics: List[str], start: date, end: date
