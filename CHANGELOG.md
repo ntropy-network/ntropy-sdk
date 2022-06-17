@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
+
+
+## [4.6.0] – 2022-06-16
 - Allow zero amount transactions, removed flag
 - Progress bar enabled by default for only interactive mode
 
