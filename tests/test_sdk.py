@@ -40,6 +40,23 @@ def test_account_holder_type():
         create_account_holder("not_valid")
 
 
+def test_get_account_holder(sdk):
+    account_holder = AccountHolder(
+        id=str(uuid.uuid4()),
+        type="business",
+        industry="fintech",
+        website="ntropy.com",
+    )
+
+    sdk.create_account_holder(account_holder)
+    account_holder2 = sdk.get_account_holder(account_holder.id)
+
+    assert isinstance(account_holder2, AccountHolder)
+    assert account_holder2.type == "business"
+    assert account_holder2.industry == "fintech"
+    assert account_holder2.website == "ntropy.com"
+
+
 def test_account_holder_type_or_id(sdk):
     id_tx = Transaction(
         amount=24.56,
