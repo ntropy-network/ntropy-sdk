@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
 - Update get_account_holder to return an AccountHolder object
+- Fix EnrichedTransaction report system
 
 ## [4.6.0] – 2022-06-16
 - Allow zero amount transactions, removed flag
