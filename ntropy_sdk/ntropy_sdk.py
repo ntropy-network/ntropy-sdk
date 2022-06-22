@@ -236,10 +236,14 @@ class EnrichedTransaction:
 
     def report(
         self,
-        **kwargs,
+        notes:str=None
     ):
+        # only send non-empty fields
+        payload = {k: v for k, v in self.to_dict().items() if v is not None}
+        if notes:
+            payload["notes"] = notes
         return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", {"transaction_id": self.transaction_id, **kwargs}
+            "POST", "/v2/report", payload
         )
 
     @classmethod
