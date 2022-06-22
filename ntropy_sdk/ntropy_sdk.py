@@ -234,17 +234,12 @@ class EnrichedTransaction:
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
 
-    def report(
-        self,
-        notes:str=None
-    ):
+    def report(self, notes: str = None):
         # only send non-empty fields
         payload = {k: v for k, v in self.to_dict().items() if v is not None}
         if notes:
             payload["notes"] = notes
-        return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", payload
-        )
+        return self.sdk.retry_ratelimited_request("POST", "/v2/report", payload)
 
     @classmethod
     def from_dict(cls, sdk, val: dict):
