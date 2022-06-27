@@ -296,7 +296,7 @@ class AccountHolder:
 
         Parameters
         ----------
-        metrics : list of str
+        metrics : List[str]
             A list of metrics to query for.
         start : date
             A start date range.
@@ -339,7 +339,7 @@ class EnrichedTransaction:
         ----------
         sdk : SDK
             An SDK to use with the EnrichedTransaction.
-        labels : list of str, optional
+        labels : List[str], optional
             Label for the transaction.
         location : str, optional
             Location of the merchant.
@@ -355,7 +355,7 @@ class EnrichedTransaction:
             Unique transaction identifier.
         website : str, optional
             Website of the merchant.
-        chart_of_accounts : list of str, optional
+        chart_of_accounts : List[str], optional
             Label from the standard chart-of-accounts hierarchy.
         recurrence: {"one off", "recurring"}, optional
             Indicates if the Transaction is recurring.
@@ -448,7 +448,7 @@ class EnrichedTransactionList(list):
     def __init__(self, transactions: List[EnrichedTransaction]):
         """Parameters
         ----------
-        transactions : list of EnrichedTransaction
+        transactions : List[EnrichedTransaction]
             A list of EnrichedTransaction objects.
         """
 
@@ -479,7 +479,7 @@ class EnrichedTransactionList(list):
 
         Parameters
         ----------
-        vals : list of dict
+        vals : List[dict]
             A list of dictionaries representing EnrichedTransaction fields.
 
         Returns
@@ -772,7 +772,7 @@ class SDK:
         except ImportError:
             # If here, the input data is not a dataframe, or import would succeed
             raise ValueError(
-                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for its `df` parameter, you supplied a '{type(df)}'"
             )
 
         if not isinstance(df, pd.DataFrame):
@@ -867,7 +867,7 @@ class SDK:
 
         Parameters
         ----------
-        transactions : list of Transaction
+        transactions : List[Transaction]
             The list containing the Transaction objects.
         timeout : int, optional
             Timeout for enriching the transactions.
@@ -1080,7 +1080,7 @@ class SDK:
         ----------
         account_holder_id : str
             The unique identifier for the account holder.
-        metrics : list of str
+        metrics : List[str]
             A list of metrics to query for.
         start : date
             A start date range.
