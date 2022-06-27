@@ -25,10 +25,14 @@ ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
 class NtropyError(Exception):
+    """An expected error returned from the server-side"""
+
     pass
 
 
 class NtropyBatchError(Exception):
+    """One or more errors in one or more transactions of a submitted transaction batch"""
+
     def __init__(self, message, errors=None):
         super().__init__(message)
         self.errors = errors
@@ -732,12 +736,12 @@ class SDK:
     def df_to_transaction_list(
         self,
         df,
-        mapping=None,
+        mapping: dict = None,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
         labeling: bool = True,
         create_account_holders: bool = True,
-        model=None,
+        model_name: str = None,
         inplace: bool = False,
     ):
         """Enriches a pandas dataframe of Transactions.
@@ -748,7 +752,8 @@ class SDK:
             The dataframe containing the Transactions. At minimum, the dataframe
             must contain the columns specified in the Transaction class.
         mapping
-            TODO: fill out
+            A mapping from the column names of the provided dataframe and the
+            expected column names
         poll_interval : int, optional
             The interval between consecutive polling retries.
         with_progress : bool, optional
@@ -756,8 +761,9 @@ class SDK:
             progress is displayed only in interactive mode.
         labeling: bool, optional
             True if the enriched transactions should be labeled; False otherwise.
-        model
-            TODO: fill out
+        model_name: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler
         inplace : bool, optional
             Enrich the dataframe inplace.
         """
@@ -820,7 +826,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=True,
-        model=None,
+        model_name=None,
         inplace=False,
     ):
         txs = self.df_to_transaction_list(df, mapping, inplace)
@@ -830,7 +836,7 @@ class SDK:
             create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             with_progress=with_progress,
-            model=model,
+            model_name=model_name,
         )
 
         def get_tx_val(tx, v):
@@ -851,10 +857,10 @@ class SDK:
         transactions: List[Transaction],
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        with_progress=DEFAULT_WITH_PROGRESS,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
         labeling: bool = True,
         create_account_holders: bool = True,
-        model=None,
+        model_name: str = None,
         inplace: bool = False,
     ):
         """Enriches a list of Transaction objects.
@@ -872,8 +878,9 @@ class SDK:
             progress is displayed only in interactive mode.
         labeling : bool, optional
             True if the enriched transactions should be labeled; False otherwise.
-        model
-            TODO: fill out
+        model_name: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler
         inplace
             Enrich the dataframe inplace.
         """
@@ -898,17 +905,17 @@ class SDK:
             with_progress,
             labeling,
             create_account_holders,
-            model,
+            model_name,
         )
 
     @staticmethod
-    def _build_params_str(labeling, create_account_holders, model=None):
+    def _build_params_str(labeling, create_account_holders, model_name=None):
         params = {
             "labeling": labeling,
             "create_account_holders": create_account_holders,
         }
-        if model is not None:
-            params["model_name"] = model
+        if model_name is not None:
+            params["model_name"] = model_name
 
         params_str = urlencode(params)
         return params_str
@@ -921,7 +928,7 @@ class SDK:
         with_progress: bool = DEFAULT_WITH_PROGRESS,
         labeling: bool = True,
         create_account_holders: bool = True,
-        model=None,
+        model_name: str = None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
         if not is_sync:
@@ -931,13 +938,13 @@ class SDK:
                 poll_interval,
                 labeling,
                 create_account_holders,
-                model,
+                model_name,
             )
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
         params_str = self._build_params_str(
-            labeling, create_account_holders, model=model
+            labeling, create_account_holders, model_name=model_name
         )
 
         try:
@@ -965,7 +972,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=True,
-        model=None,
+        model_name=None,
         inplace=False,
     ):
         txs = self.df_to_transaction_list(df, mapping, inplace)
@@ -975,7 +982,7 @@ class SDK:
             create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             with_progress=with_progress,
-            model=model,
+            model_name=model_name,
         )
 
     @add_transactions_async.register(list)
@@ -987,7 +994,7 @@ class SDK:
         with_progress=None,
         labeling=True,
         create_account_holders=True,
-        model=None,
+        model_name=None,
     ):
         return self._add_transactions_async(
             transactions,
@@ -995,7 +1002,7 @@ class SDK:
             poll_interval,
             labeling,
             create_account_holders,
-            model,
+            model_name,
         )
 
     def _add_transactions_async(
@@ -1005,10 +1012,10 @@ class SDK:
         poll_interval=10,
         labeling=True,
         create_account_holders=True,
-        model=None,
+        model_name=None,
     ):
         params_str = self._build_params_str(
-            labeling, create_account_holders, model=model
+            labeling, create_account_holders, model_name=model_name
         )
 
         try:
