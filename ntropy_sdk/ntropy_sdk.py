@@ -299,7 +299,7 @@ class Batch:
         self.num_transactions = num_transactions
 
     def __repr__(self):
-        return f"Batch(id={self.batch_id}"
+        return f"Batch(id={self.batch_id})"
 
     def poll(self):
         url = f"/v2/transactions/async/{self.batch_id}"
@@ -436,16 +436,10 @@ class SDK:
         self.retry_ratelimited_request("POST", url, account_holder.to_dict())
         account_holder.set_sdk(self)
 
-    @singledispatchmethod
-    def add_transactions(
+    def df_to_list(
         self,
         df,
         mapping=None,
-        poll_interval=10,
-        with_progress=None,
-        labeling=True,
-        create_account_holders=True,
-        model=None,
         inplace=False,
     ):
         try:
@@ -458,9 +452,6 @@ class SDK:
 
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Transactions object needs to be a pandas dataframe.")
-
-        if mapping is None:
-            mapping = self.DEFAULT_MAPPING.copy()
 
         required_columns = [
             "amount",
@@ -513,7 +504,21 @@ class SDK:
             )
 
         txs = df.apply(to_tx, axis=1).to_list()
+        return txs
 
+    @singledispatchmethod
+    def add_transactions(
+        self,
+        df,
+        mapping=DEFAULT_MAPPING.copy(),
+        poll_interval=10,
+        with_progress=None,
+        labeling=True,
+        create_account_holders=True,
+        model=None,
+        inplace=False,
+    ):
+        txs = self.df_to_list(df, mapping, inplace)
         df["_output_tx"] = self.add_transactions(
             txs,
             labeling=labeling,
@@ -622,6 +627,77 @@ class SDK:
                     poll_interval=poll_interval,
                     num_transactions=len(transactions),
                 ).wait(with_progress=with_progress)
+
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+
+            raise
+
+    @singledispatchmethod
+    def add_transactions_async(
+        self,
+        df,
+        mapping=DEFAULT_MAPPING.copy(),
+        poll_interval=10,
+        with_progress=None,
+        labeling=True,
+        create_account_holders=True,
+        model=None,
+        inplace=False,
+    ):
+        txs = self.df_to_list(df, mapping, inplace)
+        return self.add_transactions(
+            txs,
+            labeling=labeling,
+            create_account_holders=create_account_holders,
+            poll_interval=poll_interval,
+            with_progress=with_progress,
+            model=model,
+        )
+
+    @add_transactions_async.register(list)
+    def _add_transactions_async(
+        self,
+        transactions: List[Transaction],
+        timeout=4 * 60 * 60,
+        poll_interval=10,
+        with_progress=None,
+        labeling=True,
+        create_account_holders=True,
+        model=None,
+        inplace=False,
+    ):
+        params = {
+            "labeling": labeling,
+            "create_account_holders": create_account_holders,
+        }
+        if model is not None:
+            params["model_name"] = model
+
+        params_str = urlencode(params)
+
+        try:
+
+            url = f"/v2/transactions/async?" + params_str
+
+            data = [transaction.to_dict() for transaction in transactions]
+            resp = self.retry_ratelimited_request("POST", url, data)
+
+            r = resp.json()
+            batch_id = r.get("id", "")
+
+            if not batch_id:
+                raise ValueError("batch_id missing from response")
+
+            return Batch(
+                self,
+                batch_id,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                num_transactions=len(transactions),
+            )
 
         except requests.HTTPError as e:
             if e.response.status_code == 404:
