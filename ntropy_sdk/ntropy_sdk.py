@@ -648,7 +648,7 @@ class SDK:
         inplace=False,
     ):
         txs = self.df_to_list(df, mapping, inplace)
-        return self.add_transactions(
+        return self.add_transactions_async(
             txs,
             labeling=labeling,
             create_account_holders=create_account_holders,
