@@ -541,7 +541,7 @@ class SDK:
         return df
 
     @add_transactions.register(list)
-    def _(
+    def _add_transactions_list(
         self,
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
@@ -611,22 +611,16 @@ class SDK:
                 return EnrichedTransactionList.from_list(self, resp.json())
 
             else:
-
-                r = resp.json()
-                batch_id = r.get("id", "")
-
-                if not batch_id:
-                    raise ValueError("batch_id missing from response")
-
+                batch = self._add_transactions_async(
+                    transactions,
+                    timeout,
+                    poll_interval,
+                    labeling,
+                    create_account_holders,
+                    model,
+                )
                 with_progress = with_progress or self._with_progress
-
-                return Batch(
-                    self,
-                    batch_id,
-                    timeout=timeout,
-                    poll_interval=poll_interval,
-                    num_transactions=len(transactions),
-                ).wait(with_progress=with_progress)
+                return batch.wait(with_progress=with_progress)
 
         except requests.HTTPError as e:
             if e.response.status_code == 404:
@@ -658,7 +652,7 @@ class SDK:
         )
 
     @add_transactions_async.register(list)
-    def _add_transactions_async(
+    def _add_transactions_list_async(
         self,
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
@@ -667,7 +661,24 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model=None,
-        inplace=False,
+    ):
+        return self._add_transactions_async(
+            transactions,
+            timeout,
+            poll_interval,
+            labeling,
+            create_account_holders,
+            model,
+        )
+
+    def _add_transactions_async(
+        self,
+        transactions: List[Transaction],
+        timeout=4 * 60 * 60,
+        poll_interval=10,
+        labeling=True,
+        create_account_holders=True,
+        model=None,
     ):
         params = {
             "labeling": labeling,
