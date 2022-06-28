@@ -45,7 +45,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
             if True uses a progress bar to track progress of model training
         sdk : SDK, optional
             instantiated SDK object, if not provided and not set using
-            set_sdk, it will be created by reading the API key from 
+            set_sdk, it will be created by reading the API key from
             environment variables
         """
         self.name = name
@@ -103,7 +103,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         ValueError
             if status of the model is set to error by the server
         RuntimeError
-            if the model fails with an unexpected error 
+            if the model fails with an unexpected error
         """
         try:
             status = self.get_status()
@@ -170,7 +170,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
 
     def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
         """Starts a training process for a custom labeling model given the provided
-        input data. The model can be trained using a list of transactions or a 
+        input data. The model can be trained using a list of transactions or a
         dataframe with the same transactions
 
         Parameters
@@ -236,7 +236,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X: TransactionList) -> List[str]:
-        """Given a sequence of transactions (in list or dataframe format), predicts the 
+        """Given a sequence of transactions (in list or dataframe format), predicts the
         labels using the trained custom model and returns them in the same order as the
         provided transactions. If labels_only is set to False, returns a list of
         EnrichedTransactions instead
@@ -252,7 +252,6 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         Union[List[str], EnrichedTransaction]
             A list of labels or EnrichedTransactions in the same order as the provided
             input transactions
-            
         """
         self.check_is_fitted()
 
