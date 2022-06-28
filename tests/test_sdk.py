@@ -9,6 +9,7 @@ from ntropy_sdk import (
     Transaction,
     EnrichedTransaction,
     AccountHolder,
+    Batch,
 )
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 
@@ -305,3 +306,60 @@ def test_readme():
     ).read()
     readme_data = readme_file.split("```python")[1].split("```")[0]
     exec(readme_data, globals())
+
+
+def test_add_transactions_async(sdk):
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+    )
+
+    batch = sdk.add_transactions_async([tx])
+    assert batch.batch_id and len(batch.batch_id) > 0
+
+    enriched = batch.wait()
+    assert enriched[0].merchant == "Amazon"
+
+
+def test_add_transactions_async_df(sdk):
+    df = pd.DataFrame(
+        data={
+            "amount": [26],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_type": ["business"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    batch = sdk.add_transactions_async(df)
+    enriched = batch.wait()
+    assert enriched[0].merchant == "Target"
+
+
+def test_batch(sdk):
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+    )
+
+    batch = sdk.add_transactions_async([tx] * 10)
+    resp, status = batch.poll()
+    assert status == "started" and resp["total"] == 10
+
+    batch.wait()
+
+    resp, status = batch.poll()
+    assert status == "finished" and resp[0].merchant == "Amazon"
+
+    batch = Batch(sdk, batch.batch_id)
+    resp, status = batch.poll()
+    assert status == "finished" and resp[0].merchant == "Amazon"
