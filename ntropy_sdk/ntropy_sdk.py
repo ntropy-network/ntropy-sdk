@@ -8,7 +8,7 @@ import re
 import sys
 
 from datetime import datetime, date
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
@@ -743,6 +743,7 @@ class SDK:
         create_account_holders: bool = True,
         model_name: str = None,
         inplace: bool = False,
+        tx_builder: Callable = Transaction.from_row,
     ):
         """Enriches a pandas dataframe of Transactions.
 
