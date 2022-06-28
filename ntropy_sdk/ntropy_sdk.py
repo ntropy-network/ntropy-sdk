@@ -152,6 +152,21 @@ class Transaction:
 
         return tx_dict
 
+    @classmethod
+    def from_row(cls, row):
+        return cls(
+            amount=row["amount"],
+            date=row.get("date"),
+            description=row.get("description", ""),
+            entry_type=row["entry_type"],
+            iso_currency_code=row["iso_currency_code"],
+            account_holder_id=row.get("account_holder_id"),
+            account_holder_type=row.get("account_holder_type"),
+            mcc=row.get("mcc"),
+            country=row.get("country"),
+            transaction_id=row.get("transaction_id"),
+        )
+
 
 class AccountHolder:
     def __init__(
@@ -436,11 +451,12 @@ class SDK:
         self.retry_ratelimited_request("POST", url, account_holder.to_dict())
         account_holder.set_sdk(self)
 
-    def df_to_list(
+    def df_to_transaction_list(
         self,
         df,
         mapping=None,
         inplace=False,
+        tx_builder=Transaction.from_row,
     ):
         try:
             import pandas as pd
@@ -489,21 +505,7 @@ class SDK:
                     "argument, or move the existing columns to another column"
                 )
 
-        def to_tx(row):
-            return Transaction(
-                amount=row["amount"],
-                date=row.get("date"),
-                description=row.get("description", ""),
-                entry_type=row["entry_type"],
-                iso_currency_code=row["iso_currency_code"],
-                account_holder_id=row.get("account_holder_id"),
-                account_holder_type=row.get("account_holder_type"),
-                mcc=row.get("mcc"),
-                country=row.get("country"),
-                transaction_id=row.get("transaction_id"),
-            )
-
-        txs = df.apply(to_tx, axis=1).to_list()
+        txs = df.apply(tx_builder, axis=1).to_list()
         return txs
 
     @singledispatchmethod
@@ -518,7 +520,7 @@ class SDK:
         model=None,
         inplace=False,
     ):
-        txs = self.df_to_list(df, mapping, inplace)
+        txs = self.df_to_transaction_list(df, mapping, inplace)
         df["_output_tx"] = self.add_transactions(
             txs,
             labeling=labeling,
@@ -641,7 +643,7 @@ class SDK:
         model=None,
         inplace=False,
     ):
-        txs = self.df_to_list(df, mapping, inplace)
+        txs = self.df_to_transaction_list(df, mapping, inplace)
         return self.add_transactions_async(
             txs,
             labeling=labeling,
