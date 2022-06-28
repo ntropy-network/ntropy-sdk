@@ -235,6 +235,59 @@ class Transaction:
         return tx_dict
 
 
+class LabeledTransaction(Transaction):
+    fields = [
+        "account_holder_id",
+        "account_holder_type",
+        "transaction_id",
+        "amount",
+        "date",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "country",
+        "mcc",
+        "label",
+    ]
+
+    def __init__(
+        self,
+        amount,
+        date,
+        description,
+        entry_type,
+        iso_currency_code,
+        account_holder_id=None,
+        account_holder_type=None,
+        country=None,
+        transaction_id=None,
+        mcc=None,
+        label=None,
+    ):
+        super().__init__(
+            amount,
+            date,
+            description,
+            entry_type,
+            iso_currency_code,
+            account_holder_id,
+            account_holder_type,
+            country,
+            transaction_id,
+            mcc,
+        )
+
+        if label:
+            assert_type(label, "label", str)
+        else:
+            raise ValueError("label should be set")
+
+        self.label = label
+
+    def __repr__(self):
+        return f"LabeledTransaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type}, label={self.label})"
+
+
 class AccountHolder:
     """A financial account holder."""
 
@@ -622,6 +675,109 @@ class Batch:
             raise NtropyError("Batch wait timeout")
 
 
+class Model:
+    def __init__(
+        self,
+        sdk,
+        model_name,
+        created_at=None,
+        account_holder_type=None,
+        status=None,
+        progress=None,
+        timeout=20 * 60 * 60,
+        poll_interval=10,
+    ):
+        self.sdk = sdk
+        self.model_name = model_name
+
+        self.created_at = (created_at,)
+        self.account_holder_type = (account_holder_type,)
+        self.status = (status,)
+        self.progress = (progress,)
+
+        self.timeout = time.time() + timeout
+        self.poll_interval = poll_interval
+
+    def __repr__(self):
+        return f"Model(name={self.model_name}"
+
+    def is_synced(self):
+        return self.created_at is not None
+
+    def poll(self):
+        url = f"/v2/model/{self.model_name}"
+
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        status = json_resp.get("status")
+        progress = json_resp.get("progress")
+        created_at = json_resp.get("created_at")
+        account_holder_type = json_resp.get("account_holder_type")
+
+        self.status = status
+        self.progress = progress
+        self.created_at = created_at
+        self.account_holder_type = account_holder_type
+
+        return json_resp, status, progress
+
+    def wait(self, with_progress=DEFAULT_WITH_PROGRESS, poll_interval=None):
+        if with_progress:
+            return self._wait_with_progress(poll_interval=poll_interval)
+        else:
+            return self._wait(poll_interval=poll_interval)
+
+    def _wait(self, poll_interval=None):
+        if not poll_interval:
+            poll_interval = self.poll_interval
+        while self.timeout - time.time() > 0:
+            resp, status, _ = self.poll()
+            if status == "error":
+                raise NtropyError("Unexpected model training error")
+            if status != "ready":
+                time.sleep(poll_interval)
+                continue
+            return resp
+        raise NtropyError("Model training wait timeout")
+
+    def _wait_with_progress(self, poll_interval=None):
+        if not poll_interval:
+            poll_interval = self.poll_interval
+        with tqdm(total=self.num_transactions, desc="started") as progress:
+            while self.timeout - time.time() > 0:
+                resp, status, pr = self.poll()
+                if status == "error":
+                    raise NtropyError("Unexpected model training error")
+                if status != "ready":
+                    diff_n = pr - progress.n
+                    progress.update(diff_n)
+                    time.sleep(poll_interval)
+                    continue
+                progress.desc = status
+                progress.update(100)
+                return resp
+            raise NtropyError("Model training wait timeout")
+
+    @staticmethod
+    def from_response(sdk, response):
+        name = response.get("name")
+        if name is None:
+            raise ValueError("Invalid response for creating a model - missing name")
+
+        created_at = response.get("created_at")
+        account_holder_type = response.get("account_holder_type")
+        status = response.get("status")
+        progress = response.get("progress")
+
+        return Model(
+            sdk,
+            name,
+            created_at=created_at,
+            account_holder_type=account_holder_type,
+            status=status,
+            progress=progress,
+        )
+
+
 class SDK:
     """The main Ntropy SDK object that holds the connection to the API server and implements
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
@@ -798,7 +954,9 @@ class SDK:
             )
 
         if not isinstance(df, pd.DataFrame):
-            raise TypeError("Transactions object needs to be a pandas dataframe.")
+            raise TypeError(
+                "Transactions object needs to be a pandas dataframe or a list of Transaction objects."
+            )
 
         required_columns = [
             "amount",
@@ -806,6 +964,7 @@ class SDK:
             "description",
             "entry_type",
             "iso_currency_code",
+            "label"
         ]
 
         optional_columns = [
@@ -835,6 +994,30 @@ class SDK:
                     "- consider using inplace=False, overriding the mapping keyword "
                     "argument, or move the existing columns to another column"
                 )
+        return df
+
+
+    @singledispatchmethod
+    def add_transactions(
+        self,
+        df,
+        mapping=None,
+        poll_interval=10,
+        with_progress=None,
+        labeling=True,
+        create_account_holders=True,
+        model=None,
+        inplace=False,
+    ):
+        try:
+            import pandas as pd
+        except ImportError:
+            # If here, the input data is not a dataframe, or import would succeed
+            raise ValueError(
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+            )
+
+        df = self._verify_transactions_df(df, inplace=inplace, mapping=mapping)
 
         txs = df.apply(tx_builder, axis=1).to_list()
         return txs
@@ -1201,3 +1384,59 @@ class SDK:
         url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
+
+    @singledispatchmethod
+    def train_custom_model(self, df, model_name: str):
+        try:
+            import pandas as pd
+        except ImportError:
+            # If here, the input data is not a dataframe, or import would succeed
+            raise ValueError(
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+            )
+
+        df = self._verify_transactions_df(df, inplace=True, mapping=None)
+
+        def to_labeled_tx(row):
+            return LabeledTransaction(
+                amount=row["amount"],
+                date=row.get("date"),
+                description=row.get("description", ""),
+                entry_type=row["entry_type"],
+                iso_currency_code=row["iso_currency_code"],
+                account_holder_id=row.get("account_holder_id"),
+                account_holder_type=row.get("account_holder_type"),
+                mcc=row.get("mcc"),
+                country=row.get("country"),
+                transaction_id=row.get("transaction_id"),
+                label=row.get("label"),
+            )
+
+        txs = df.apply(to_labeled_tx, axis=1).to_list()
+        return self._train_custom_model(txs, model_name)
+
+    @train_custom_model.register(list)
+    def _(
+        self,
+        transactions: List[Transaction],
+        model_name: str,
+    ):
+        return self._train_custom_model(
+            transactions,
+            model_name,
+        )
+
+    def _train_custom_model(self, transactions, model_name. str):
+        url = f"/v2/models/{model_name}"
+        response = self.retry_ratelimited_request("POST", url, {"transactions": transactions}).json()
+        return Model.from_response(response)
+
+    def get_all_custom_models(self):
+        url = "/v2/models"
+        responses = self.retry_ratelimited_request("GET", url, None).json()
+        return [Model.from_response(r) for r in responses]
+
+    def get_custom_model(self, model_name):
+        url = f"/v2/models/{model_name}"
+        response = self.retry_ratelimited_request("GET", url, None).json()
+        return Model.from_response(response)
