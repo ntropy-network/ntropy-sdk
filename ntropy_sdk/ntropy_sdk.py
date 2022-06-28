@@ -577,6 +577,18 @@ class SDK:
             model,
         )
 
+    @staticmethod
+    def _build_params_str(labeling, create_account_holders, model=None):
+        params = {
+            "labeling": labeling,
+            "create_account_holders": create_account_holders,
+        }
+        if model is not None:
+            params["model_name"] = model
+
+        params_str = urlencode(params)
+        return params_str
+
     def _add_transactions(
         self,
         transactions: List[Transaction],
@@ -588,47 +600,36 @@ class SDK:
         model=None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
+        if not is_sync:
+            batch = self._add_transactions_async(
+                transactions,
+                timeout,
+                poll_interval,
+                labeling,
+                create_account_holders,
+                model,
+            )
+            with_progress = with_progress or self._with_progress
+            return batch.wait(with_progress=with_progress)
 
-        params = {
-            "labeling": labeling,
-            "create_account_holders": create_account_holders,
-        }
-        if model is not None:
-            params["model_name"] = model
-
-        params_str = urlencode(params)
+        params_str = self._build_params_str(
+            labeling, create_account_holders, model=model
+        )
 
         try:
-
-            url = f"/v2/transactions/{'sync' if is_sync else 'async'}?" + params_str
-
             data = [transaction.to_dict() for transaction in transactions]
+            url = f"/v2/transactions/sync?" + params_str
             resp = self.retry_ratelimited_request("POST", url, data)
 
-            if is_sync:
+            if resp.status_code != 200:
+                raise NtropyBatchError("Batch failed", errors=resp.json())
 
-                if resp.status_code != 200:
-                    raise NtropyBatchError("Batch failed", errors=resp.json())
-
-                return EnrichedTransactionList.from_list(self, resp.json())
-
-            else:
-                batch = self._add_transactions_async(
-                    transactions,
-                    timeout,
-                    poll_interval,
-                    labeling,
-                    create_account_holders,
-                    model,
-                )
-                with_progress = with_progress or self._with_progress
-                return batch.wait(with_progress=with_progress)
+            return EnrichedTransactionList.from_list(self, resp.json())
 
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 error = e.response.json()
                 raise ValueError(f"{error['detail']}")
-
             raise
 
     @singledispatchmethod
@@ -682,14 +683,9 @@ class SDK:
         create_account_holders=True,
         model=None,
     ):
-        params = {
-            "labeling": labeling,
-            "create_account_holders": create_account_holders,
-        }
-        if model is not None:
-            params["model_name"] = model
-
-        params_str = urlencode(params)
+        params_str = self._build_params_str(
+            labeling, create_account_holders, model=model
+        )
 
         try:
 
