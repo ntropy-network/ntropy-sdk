@@ -25,6 +25,29 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         progress_bar: bool = True,
         sdk: SDK = None,
     ):
+        """Base wrapper for an Ntropy custom model that implements
+        the scikit-learn interfaces of BaseEstimator and ClassifierMixin
+
+        Parameters
+        ----------
+        name : str
+            identifying name of the custom model
+        sync : bool, optional
+            if True the scikit-learn model will block during training
+            until it is complete or errors, by default True
+        poll_interval : int, optional
+            interval in seconds to use for polling the server when
+            listening for model status changes, by default 10
+        labels_only : bool, optional
+            if True, returns only the labels on the predict method
+            so that the interface is scikit-learn compatible, by default True
+        progress_bar : bool, optional
+            if True uses a progress bar to track progress of model training
+        sdk : SDK, optional
+            instantiated SDK object, if not provided and not set using
+            set_sdk, it will be created by reading the API key from
+            environment variables
+        """
         self.name = name
         self.sync = sync
         self.poll_interval = poll_interval
@@ -57,12 +80,31 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         self._sdk = sdk
 
     def get_status(self) -> dict:
+        """Returns a json dictionary containing the status of the model
+
+        Returns
+        -------
+        dict
+        """
         status = self.sdk.retry_ratelimited_request(
             "GET", f"/v2/models/{self.name}", None
         ).json()
         return status
 
     def status(self) -> Dict:
+        """Returns a json dictionary containing the status of model, checking for errors first
+
+        Returns
+        -------
+        dict
+
+        Raises
+        ------
+        ValueError
+            if status of the model is set to error by the server
+        RuntimeError
+            if the model fails with an unexpected error
+        """
         try:
             status = self.get_status()
         except HTTPError as e:
@@ -78,6 +120,12 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return status
 
     def is_ready(self) -> bool:
+        """Checks if the model is ready to be used for inference
+
+        Returns
+        -------
+        bool
+        """
         status = self.status()
         if isinstance(status, bool):
             return False
@@ -85,6 +133,12 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return status["status"] == "ready"
 
     def check_is_fitted(self):
+        """Checks if the model has been fitted before
+
+        Raises
+        ------
+        NotFittedError
+        """
         if not self.is_ready():
             raise NotFittedError()
 
@@ -115,6 +169,28 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return uniform_txs
 
     def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
+        """Starts a training process for a custom labeling model given the provided
+        input data. The model can be trained using a list of transactions or a
+        dataframe with the same transactions
+
+        Parameters
+        ----------
+        X : Union[List[Union[dict, Transaction]], pd.DataFrame]
+            A list of transactions in Transaction or dictionary format, or a dataframe
+            containing one transaction per row, and the necessary attributes in columnar format
+        y : List[str]
+            A list of labels in the same order as the provided transactions
+
+        Returns
+        -------
+        BaseModel
+            self
+
+        Raises
+        ------
+        RuntimeError
+            if the model errors out unexpectedly during training
+        """
         url = f"/v2/models/{self.name}"
         self.params = params
 
@@ -160,6 +236,23 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X: TransactionList) -> List[str]:
+        """Given a sequence of transactions (in list or dataframe format), predicts the
+        labels using the trained custom model and returns them in the same order as the
+        provided transactions. If labels_only is set to False, returns a list of
+        EnrichedTransactions instead
+
+        Parameters
+        ----------
+        X : Union[List[Union[dict, Transaction]], pd.DataFrame]
+            A list of transactions in Transaction or dictionary format, or a dataframe
+            containing one transaction per row, and the necessary attributes in columnar format
+
+        Returns
+        -------
+        Union[List[str], EnrichedTransaction]
+            A list of labels or EnrichedTransactions in the same order as the provided
+            input transactions
+        """
         self.check_is_fitted()
 
         X = self._process_transactions(X, as_dict=False)
@@ -173,6 +266,22 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         return y
 
     def score(self, X: TransactionList, y: List[str]) -> float:
+        """Calculates the micro-averaged F1 score for the trained custom model given the provided
+        test set
+
+        Parameters
+        ----------
+        X : Union[List[Union[dict, Transaction]], pd.DataFrame]
+            A list of transactions in Transaction or dictionary format, or a dataframe
+            containing one transaction per row, and the necessary attributes in columnar format
+        y : List[str]
+            A list of labels in the same order as the provided transactions
+
+        Returns
+        -------
+        float
+            micro-averaged F1 score
+        """
         y_pred = self.predict(X)
         return f1_score(y, y_pred, average="micro")
 

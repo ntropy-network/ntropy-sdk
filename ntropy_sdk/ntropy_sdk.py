@@ -6,9 +6,10 @@ import requests
 import logging
 import re
 import sys
+import pandas as pd
 
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, Union, Callable
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
@@ -18,6 +19,7 @@ from ntropy_sdk import __version__
 
 
 DEFAULT_TIMEOUT = 10 * 60
+DEFAULT_RETRIES = 10
 DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
@@ -25,16 +27,21 @@ ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
 class NtropyError(Exception):
+    """An expected error returned from the server-side"""
+
     pass
 
 
 class NtropyBatchError(Exception):
+    """One or more errors in one or more transactions of a submitted transaction batch"""
+
     def __init__(self, message, errors=None):
         super().__init__(message)
         self.errors = errors
 
 
 class Transaction:
+    """A financial transaction that can be enriched with the Ntropy SDK."""
 
     required_fields = [
         "amount",
@@ -60,17 +67,44 @@ class Transaction:
 
     def __init__(
         self,
-        amount,
-        date,
-        description,
-        entry_type,
-        iso_currency_code,
-        account_holder_id=None,
-        account_holder_type=None,
-        country=None,
-        transaction_id=None,
-        mcc=None,
+        amount: Union[int, float],
+        date: str,
+        description: str,
+        entry_type: str,
+        iso_currency_code: str,
+        account_holder_id: str = None,
+        account_holder_type: str = None,
+        country: str = None,
+        transaction_id: str = None,
+        mcc: int = None,
     ):
+        """Parameters
+        ----------
+        amount : int or float
+            Amount of the transaction.
+        date : str
+            Transaction date in ISO-8601 format (i.e. YYYY-MM-DD).
+        description : str
+            Description text of the transaction.
+        entry_type : {"incoming", "outgoing"}
+            Either incoming or outgoing depending on the transaction.
+        iso_currency_code : str
+            Currency of the transaction, in ISO-4217 format (e.g. USD).
+        account_holder_id : str, optional
+            ID of the account holder; if the account holder does not exist, create
+            a new one with the specified account holder type.
+        account_holder_type: {"consumer", "business", "freelance", "unknown"}, optional
+            Type of the account holder – must be one of consumer, business,
+            freelance, or unknown.
+        country: str, optional
+            Country where the transaction was made, in ISO-3166-2 format (e.g. US).
+        transaction_id: str, optional
+            Unique identifier of the transaction in your system. If not supplied,
+            a random transaction_id is used.
+        mcc: int, optional
+            The Merchant Category Code of the merchant, according to ISO 18245.
+        """
+
         if not transaction_id:
             transaction_id = str(uuid.uuid4())
         else:
@@ -141,19 +175,35 @@ class Transaction:
 
     @classmethod
     def from_dict(cls, val: dict):
+        """Constructs a Transaction object from a dictionary of Transaction fields.
+
+        Parameters
+        ----------
+        val
+            A key-value dictionary of Transaction fields.
+
+        Returns
+        ------
+        Transaction
+            A corresponding Transaction object.
+        """
+
         return cls(**val)
-
-    def to_dict(self):
-        tx_dict = {}
-        for field in self.fields:
-            value = getattr(self, field)
-            if value is not None:
-                tx_dict[field] = value
-
-        return tx_dict
 
     @classmethod
     def from_row(cls, row):
+        """Constructs a Transaction object from a pandas.Series containing Transaction fields.
+
+        Parameters
+        ----------
+        val
+            A pandas.Series containing Transaction fields
+
+        Returns
+        ------
+        Transaction
+            A corresponding Transaction object.
+        """
         return cls(
             amount=row["amount"],
             date=row.get("date"),
@@ -167,8 +217,27 @@ class Transaction:
             transaction_id=row.get("transaction_id"),
         )
 
+    def to_dict(self):
+        """Returns a dictionary of non-empty fields for a Transaction.
+
+        Returns
+        ------
+        dict
+            A dictionary of the Transaction's fields.
+        """
+
+        tx_dict = {}
+        for field in self.fields:
+            value = getattr(self, field)
+            if value is not None:
+                tx_dict[field] = value
+
+        return tx_dict
+
 
 class AccountHolder:
+    """A financial account holder."""
+
     def __init__(
         self,
         id: str,
@@ -177,6 +246,21 @@ class AccountHolder:
         industry: str = None,
         website: str = None,
     ):
+        """Parameters
+        ----------
+        id : str
+            Unique identifier for the account holder in your system.
+        type : {"consumer", "business", "freelance", "unknown"}
+            Type of the account holder – must be one of consumer, business,
+            freelance, or unknown.
+        name : str, optional
+            Name of the account holder.
+        industry : str, optional
+            Industry of the account holder.
+        website : str, optional
+            Website of the account holder.
+        """
+
         if not id:
             raise ValueError("id must be set")
 
@@ -194,9 +278,25 @@ class AccountHolder:
         self._sdk = None
 
     def set_sdk(self, sdk):
+        """Sets the internal SDK reference used by this account holder object
+
+        Parameters
+        ----------
+        sdk : SDK
+            A SDK to use with the account holder.
+        """
+
         self._sdk = sdk
 
     def to_dict(self):
+        """Returns a dictionary of non-empty fields for an AccountHolder.
+
+        Returns
+        -------
+        dict
+            A dictionary of the account holder's fields.
+        """
+
         out = {"id": self.id, "type": self.type}
         for key in ("name", "industry", "website"):
             value = getattr(self, key, None)
@@ -206,6 +306,22 @@ class AccountHolder:
         return out
 
     def get_metrics(self, metrics: List[str], start: date, end: date):
+        """Returns the result of a metrics query.
+
+        Parameters
+        ----------
+        metrics : List[str]
+            A list of metrics to query for.
+        start : date
+            A start date range.
+        end : date
+            An end date range.
+
+        Returns
+        -------
+        dict:
+            A JSON object of the query result
+        """
         if not self._sdk:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
@@ -214,23 +330,56 @@ class AccountHolder:
 
 
 class EnrichedTransaction:
+    """An enriched financial transaction."""
+
     def __init__(
         self,
         sdk,
-        labels=None,
-        location=None,
-        logo=None,
-        merchant=None,
-        merchant_id=None,
-        person=None,
-        transaction_id=None,
-        website=None,
-        chart_of_accounts=None,
-        recurrence=None,
-        confidence=None,
-        transaction_type=None,
+        labels: List[str] = None,
+        location: str = None,
+        logo: str = None,
+        merchant: str = None,
+        merchant_id: str = None,
+        person: str = None,
+        transaction_id: str = None,
+        website: str = None,
+        chart_of_accounts: List[str] = None,
+        recurrence: str = None,
+        confidence: float = None,
+        transaction_type: str = None,
         **kwargs,
     ):
+        """Parameters
+        ----------
+        sdk : SDK
+            An SDK to use with the EnrichedTransaction.
+        labels : List[str], optional
+            Label for the transaction.
+        location : str, optional
+            Location of the merchant.
+        logo : str, optional
+            A link to the logo of the merchant.
+        merchant : str, optional
+            The name of the transaction merchant.
+        merchant_id : str, optional
+            A unique identifier for the merchant.
+        person : str, optional
+            Name of the person in the transaction.
+        transaction_id : str, optional
+            Unique transaction identifier.
+        website : str, optional
+            Website of the merchant.
+        chart_of_accounts : List[str], optional
+            Label from the standard chart-of-accounts hierarchy.
+        recurrence: {"one off", "recurring"}, optional
+            Indicates if the Transaction is recurring.
+        confidence: float, optional
+            A numerical score between 0.0 and 1.0 indicating the confidence
+            of the enrichment.
+        transaction_type: {"consumer", "business", "freelance", "unknown"}
+            Type of the transaction.
+        """
+
         self.sdk = sdk
         self.labels = labels
         self.location = location
@@ -253,15 +402,44 @@ class EnrichedTransaction:
         self,
         **kwargs,
     ):
+        """Reports an incorrectly enriched transaction.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments for the correct transaction.
+        """
+
         return self.sdk.retry_ratelimited_request(
             "POST", "/v2/report", {"transaction_id": self.transaction_id, **kwargs}
         )
 
     @classmethod
     def from_dict(cls, sdk, val: dict):
+        """Constructs an EnrichedTransaction object from a dictionary of fields.
+
+        Parameters
+        ----------
+        val : dict
+            A key-value dictionary of EnrichedTransaction fields.
+
+        Returns
+        -------
+        EnrichedTransaction
+            A corresponding EnrichedTransaction object.
+        """
+
         return cls(sdk, **val)
 
     def to_dict(self):
+        """Returns a dictionary of non-empty fields for an EnrichedTransaction.
+
+        Returns
+        -------
+        dict
+            A dictionary of the EnrichedTransaction's fields.
+        """
+
         return {
             "labels": self.labels,
             "location": self.location,
@@ -279,11 +457,27 @@ class EnrichedTransaction:
 
 
 class EnrichedTransactionList(list):
+    """A list of EnrichedTransaction."""
+
     def __init__(self, transactions: List[EnrichedTransaction]):
+        """Parameters
+        ----------
+        transactions : List[EnrichedTransaction]
+            A list of EnrichedTransaction objects.
+        """
+
         super().__init__(transactions)
         self.transactions = transactions
 
-    def to_csv(self, filepath):
+    def to_csv(self, filepath: str):
+        """Writes the list of EnrichedTransaction objects to a CSV file.
+
+        Parameters
+        ----------
+        filepath : str
+            Filepath of the CSV to write in.
+        """
+
         if not len(self):
             return
         with open(filepath, "w") as fp:
@@ -295,18 +489,46 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_list(cls, sdk, vals: list):
+        """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
+
+        Parameters
+        ----------
+        vals : List[dict]
+            A list of dictionaries representing EnrichedTransaction fields.
+
+        Returns
+        -------
+        EnrichedTransactionList
+            A corresponding EnrichedTransactionList object.
+        """
         return cls([EnrichedTransaction.from_dict(sdk, val) for val in vals])
 
 
 class Batch:
+    """An enriched batch with a unique identifier."""
+
     def __init__(
         self,
         sdk,
-        batch_id,
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        num_transactions=0,
+        batch_id: str,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        num_transactions: int = 0,
     ):
+        """Parameters
+        ----------
+        sdk : SDK
+            A SDK associated with the batch.
+        batch_id : str
+            A unique identifier for the batch.
+        timeout : int, optional
+            A timeout for retrieving the batch result.
+        poll_interval : int, optional
+            The interval between polling retries.
+        num_transactions : int, optional
+            The number of transactions in the batch.
+        """
+
         self.batch_id = batch_id
         self.timeout = time.time() + timeout
         self.poll_interval = poll_interval
@@ -317,6 +539,16 @@ class Batch:
         return f"Batch(id={self.batch_id})"
 
     def poll(self):
+        """Polls the current batch status and returns the server response and status attribute.
+
+        Returns
+        -------
+        status : str
+            The status of the batch enrichment.
+        dict
+            The JSON response of the batch poll.
+        """
+
         url = f"/v2/transactions/async/{self.batch_id}"
 
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
@@ -330,13 +562,36 @@ class Batch:
 
         return json_resp, status
 
-    def wait(self, with_progress=DEFAULT_WITH_PROGRESS, poll_interval=None):
+    def wait(self, with_progress: bool = DEFAULT_WITH_PROGRESS, poll_interval=None):
+        """Continuously polls the status of this batch, blocking until the batch status is
+        "ready" or "error"
+
+        Parameters
+        ----------
+        with_progress : bool
+            True if the batch enrichment is displayed with a progress bar,
+            False otherwise. By default, progress is displayed only in interactive
+            mode.
+        poll_interval : bool
+            The interval between polling retries. If not specified, defaults to
+            the batch's poll_interval.
+
+        Returns
+        -------
+        status : str
+            The status of the batch enrichment.
+        dict
+            The JSON response of the batch poll.
+        """
+
         if with_progress:
             return self._wait_with_progress(poll_interval=poll_interval)
         else:
             return self._wait(poll_interval=poll_interval)
 
     def _wait(self, poll_interval=None):
+        """Retrieve the current batch enrichment without progress updates."""
+
         if not poll_interval:
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
@@ -348,6 +603,8 @@ class Batch:
         raise NtropyError("Batch wait timeout")
 
     def _wait_with_progress(self, poll_interval=None):
+        """Retrieve the current batch enrichment with progress updates."""
+
         if not poll_interval:
             poll_interval = self.poll_interval
         with tqdm(total=self.num_transactions, desc="started") as progress:
@@ -366,6 +623,10 @@ class Batch:
 
 
 class SDK:
+    """The main Ntropy SDK object that holds the connection to the API server and implements
+    the fault-tolerant communication methods. An SDK instance is associated with an API key.
+    """
+
     MAX_BATCH_SIZE = 100000
     MAX_SYNC_BATCH = 4000
     DEFAULT_MAPPING = {
@@ -383,8 +644,20 @@ class SDK:
         self,
         token: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
+        retries: int = DEFAULT_RETRIES,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
     ):
+        """Parameters
+        ----------
+        token : str, optional
+            The api key for Ntropy SDK. If not supplied, the SDK will use the
+            environment variable $NTROPY_API_KEY.
+        timeout : int, optional
+            The timeout for requests to the Ntropy API.
+        with_progress : bool, optional
+            True if enrichment should include a progress bar; False otherwise.
+        """
+
         if not token:
             if ENV_NTROPY_API_TOKEN not in os.environ:
                 raise NtropyError(
@@ -393,7 +666,7 @@ class SDK:
             token = os.environ[ENV_NTROPY_API_TOKEN]
 
         self.base_url = "https://api.ntropy.com"
-        self.retries = 10
+        self.retries = retries
         self.token = token
         self.session = requests.Session()
         self.logger = logging.getLogger("Ntropy-SDK")
@@ -403,6 +676,27 @@ class SDK:
     def retry_ratelimited_request(
         self, method: str, url: str, payload: object, log_level=logging.DEBUG
     ):
+        """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
+        Catches expected errors and wraps them in NtropyError.
+        Retries the request for Rate-Limiting errors or Unexpected Errors (50x)
+
+        Parameters
+        ----------
+        method : str
+            The HTTP method to use.
+        url : str
+            The API url to request.
+        payload : object
+            The request payload.
+        log_level : int, optional
+            The logging level for the request.
+
+        Raises
+        ------
+        NtropyError
+            If the request failed after the maximum number of retries.
+        """
+
         for _ in range(self.retries):
             try:
                 resp = self.session.request(
@@ -443,6 +737,14 @@ class SDK:
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
     def create_account_holder(self, account_holder: AccountHolder):
+        """Creates an AccountHolder for the current user.
+
+        Parameters
+        ----------
+        account_holder : AccountHolder
+            The AccountHolder to add.
+        """
+
         if not isinstance(account_holder, AccountHolder):
             raise ValueError("account_holder should be of type AccountHolder")
 
@@ -454,16 +756,29 @@ class SDK:
     def df_to_transaction_list(
         self,
         df,
-        mapping=None,
-        inplace=False,
-        tx_builder=Transaction.from_row,
+        mapping: dict = None,
+        inplace: bool = False,
+        tx_builder: Callable = Transaction.from_row,
     ):
+        """Transforms a dataframe with the expected format to a list of `Transacton` objects
+
+        Parameters
+        ----------
+        df
+            The dataframe containing the Transactions. At minimum, the dataframe
+            must contain the columns specified in the Transaction class.
+        mapping
+            A mapping from the column names of the provided dataframe and the
+            expected column names
+        inplace : bool, optional
+            Enrich the dataframe inplace.
+        """
         try:
             import pandas as pd
         except ImportError:
             # If here, the input data is not a dataframe, or import would succeed
             raise ValueError(
-                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for its `df` parameter, you supplied a '{type(df)}'"
             )
 
         if not isinstance(df, pd.DataFrame):
@@ -511,49 +826,48 @@ class SDK:
     @singledispatchmethod
     def add_transactions(
         self,
-        df,
-        mapping=DEFAULT_MAPPING.copy(),
-        poll_interval=10,
-        with_progress=None,
-        labeling=True,
-        create_account_holders=True,
-        model=None,
-        inplace=False,
-    ):
-        txs = self.df_to_transaction_list(df, mapping, inplace)
-        df["_output_tx"] = self.add_transactions(
-            txs,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
-            poll_interval=poll_interval,
-            with_progress=with_progress,
-            model=model,
-        )
-
-        def get_tx_val(tx, v):
-            sentinel = object()
-            output = getattr(tx, v, tx.kwargs.get(v, sentinel))
-            if output == sentinel:
-                raise KeyError(f"invalid mapping: {v} not in {tx}")
-            return output
-
-        for k, v in mapping.items():
-            df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
-        df = df.drop(["_output_tx"], axis=1)
-        return df
-
-    @add_transactions.register(list)
-    def _add_transactions_list(
-        self,
         transactions: List[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        with_progress=None,
-        labeling=True,
-        create_account_holders=True,
-        model=None,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        labeling: bool = True,
+        create_account_holders: bool = True,
+        model_name: str = None,
+        mapping=DEFAULT_MAPPING.copy(),
         inplace=False,
     ):
+        """Enriches either a list of Transaction objects or a pandas dataframe synchronously.
+        Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
+
+        Parameters
+        ----------
+        transactions : List[Transaction], pandas.DataFrame
+            A list of Transaction objects or a pandas DataFrame with the required
+            columns.
+        timeout : int, optional
+            Timeout for enriching the transactions.
+        poll_interval : int, optional
+            The interval between consecutive polling retries.
+        with_progress : bool, optional
+            True if progress bar should be displayed; False otherwise. By default,
+            progress is displayed only in interactive mode.
+        labeling : bool, optional
+            True if the enriched transactions should be labeled; False otherwise.
+        model_name: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler
+        mapping : dict, optional
+            A mapping from the column names of the provided dataframe and the
+            expected column names. Note: this only applies to DataFrame enrichment.
+        inplace : bool, optional
+            Enrich the dataframe inplace. Note: this only applies to DataFrame enrichment.
+
+        Returns
+        -------
+        List[EnrichedTransaction], pandas.DataFrame
+            A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
+        """
+
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
                 transactions[i : (i + self.MAX_BATCH_SIZE)]
@@ -574,17 +888,54 @@ class SDK:
             with_progress,
             labeling,
             create_account_holders,
-            model,
+            model_name,
         )
 
+    @add_transactions.register(pd.DataFrame)
+    def _add_transactions_df(
+        self,
+        df,
+        timeout: int = 4 * 60 * 60,
+        poll_interval=10,
+        with_progress=None,
+        labeling=True,
+        create_account_holders=True,
+        model_name=None,
+        mapping=DEFAULT_MAPPING.copy(),
+        inplace=False,
+    ):
+
+        txs = self.df_to_transaction_list(df, mapping, inplace)
+        df["_output_tx"] = self.add_transactions(
+            txs,
+            labeling=labeling,
+            create_account_holders=create_account_holders,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            with_progress=with_progress,
+            model_name=model_name,
+        )
+
+        def get_tx_val(tx, v):
+            sentinel = object()
+            output = getattr(tx, v, tx.kwargs.get(v, sentinel))
+            if output == sentinel:
+                raise KeyError(f"invalid mapping: {v} not in {tx}")
+            return output
+
+        for k, v in mapping.items():
+            df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
+        df = df.drop(["_output_tx"], axis=1)
+        return df
+
     @staticmethod
-    def _build_params_str(labeling, create_account_holders, model=None):
+    def _build_params_str(labeling, create_account_holders, model_name=None):
         params = {
             "labeling": labeling,
             "create_account_holders": create_account_holders,
         }
-        if model is not None:
-            params["model_name"] = model
+        if model_name is not None:
+            params["model_name"] = model_name
 
         params_str = urlencode(params)
         return params_str
@@ -592,12 +943,12 @@ class SDK:
     def _add_transactions(
         self,
         transactions: List[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        with_progress=None,
-        labeling=True,
-        create_account_holders=True,
-        model=None,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        labeling: bool = True,
+        create_account_holders: bool = True,
+        model_name: str = None,
     ):
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
         if not is_sync:
@@ -607,13 +958,13 @@ class SDK:
                 poll_interval,
                 labeling,
                 create_account_holders,
-                model,
+                model_name,
             )
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
         params_str = self._build_params_str(
-            labeling, create_account_holders, model=model
+            labeling, create_account_holders, model_name=model_name
         )
 
         try:
@@ -635,13 +986,61 @@ class SDK:
     @singledispatchmethod
     def add_transactions_async(
         self,
-        df,
-        mapping=DEFAULT_MAPPING.copy(),
+        transactions: List[Transaction],
+        timeout=4 * 60 * 60,
         poll_interval=10,
-        with_progress=None,
         labeling=True,
         create_account_holders=True,
-        model=None,
+        model_name=None,
+        mapping=DEFAULT_MAPPING.copy(),
+        inplace=False,
+    ):
+        """Enriches either a list of Transaction objects or a pandas dataframe asynchronously.
+        Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
+
+        Parameters
+        ----------
+        transactions : List[Transaction], pandas.DataFrame
+            A list of Transaction objects or a pandas DataFrame with the required
+            columns.
+        timeout : int, optional
+            Timeout for enriching the transactions.
+        poll_interval : int, optional
+            The interval between consecutive polling retries.
+        labeling : bool, optional
+            True if the enriched transactions should be labeled; False otherwise.
+        model_name: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler
+        mapping : dict, optional
+            A mapping from the column names of the provided dataframe and the
+            expected column names. Note: this only applies to DataFrame enrichment.
+        inplace : bool, optional
+            Enrich the dataframe inplace. Note: this only applies to DataFrame enrichment.
+
+        Returns
+        -------
+        Batch
+            A Batch object that can be polled and awaited.
+        """
+        return self._add_transactions_async(
+            transactions,
+            timeout,
+            poll_interval,
+            labeling,
+            create_account_holders,
+            model_name,
+        )
+
+    @add_transactions_async.register(pd.DataFrame)
+    def _add_transactions_df_async(
+        self,
+        df,
+        poll_interval=10,
+        labeling=True,
+        create_account_holders=True,
+        model_name=None,
+        mapping=DEFAULT_MAPPING.copy(),
         inplace=False,
     ):
         txs = self.df_to_transaction_list(df, mapping, inplace)
@@ -650,28 +1049,7 @@ class SDK:
             labeling=labeling,
             create_account_holders=create_account_holders,
             poll_interval=poll_interval,
-            with_progress=with_progress,
-            model=model,
-        )
-
-    @add_transactions_async.register(list)
-    def _add_transactions_list_async(
-        self,
-        transactions: List[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        with_progress=None,
-        labeling=True,
-        create_account_holders=True,
-        model=None,
-    ):
-        return self._add_transactions_async(
-            transactions,
-            timeout,
-            poll_interval,
-            labeling,
-            create_account_holders,
-            model,
+            model_name=model_name,
         )
 
     def _add_transactions_async(
@@ -681,10 +1059,10 @@ class SDK:
         poll_interval=10,
         labeling=True,
         create_account_holders=True,
-        model=None,
+        model_name=None,
     ):
         params_str = self._build_params_str(
-            labeling, create_account_holders, model=model
+            labeling, create_account_holders, model_name=model_name
         )
 
         try:
@@ -716,6 +1094,19 @@ class SDK:
             raise
 
     def get_account_holder(self, account_holder_id: str):
+        """Returns an AccountHolder object for the account holder with the provided id
+
+        Parameters
+        ----------
+        account_holder_id : str
+            A unique identifier for the account holder.
+
+        Returns
+        -------
+        AccountHolder
+            The AccountHolder corresponding to the id.
+        """
+
         url = f"/v2/account-holder/{account_holder_id}"
         try:
             response = self.retry_ratelimited_request("GET", url, None).json()
@@ -730,6 +1121,25 @@ class SDK:
     def get_account_holder_metrics(
         self, account_holder_id: str, metrics: List[str], start: date, end: date
     ):
+        """Returns the result of a metrics query for a specific account holder.
+
+        Parameters
+        ----------
+        account_holder_id : str
+            The unique identifier for the account holder.
+        metrics : List[str]
+            A list of metrics to query for.
+        start : date
+            A start date range.
+        end : date
+            An end date range.
+
+        Returns
+        -------
+        dict:
+            A JSON object of the query result
+        """
+
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id should be of type string")
 
@@ -745,17 +1155,33 @@ class SDK:
         return response.json()
 
     def get_labels(self, account_holder_type: str):
+        """Returns a hierarchy of possible labels for a specific type.
+
+        Parameters
+        ----------
+        account_holder_type : {"consumer", "business", "freelance", "unknown"}
+            The account holder type.
+
+        Returns
+        -------
+        dict
+            A hierarchy of labels for the given account holder type.
+        """
+
         assert account_holder_type in ACCOUNT_HOLDER_TYPES
         url = f"/v2/labels/hierarchy/{account_holder_type}"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
     def get_chart_of_accounts(self):
+        """Returns all available chart of accounts.
+
+        Returns
+        -------
+        dict
+            A hierarchy of possible chart of accounts.
+        """
+
         url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
-
-    def list_models(self):
-        url = "/v2/models"
-        r = self.retry_ratelimited_request("GET", url, None).json()
-        return r
