@@ -733,7 +733,7 @@ class SDK:
                 time.sleep(backoff)
 
                 # quadratic backoff for 500 errors with max 16 seconds
-                backoff = min(backoff * 2, 16)
+                backoff = min(backoff * 2, 4)
 
                 continue
             try:
