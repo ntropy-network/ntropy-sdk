@@ -697,6 +697,7 @@ class SDK:
             If the request failed after the maximum number of retries.
         """
 
+        backoff = 1
         for _ in range(self.retries):
             try:
                 resp = self.session.request(
@@ -726,6 +727,14 @@ class SDK:
                     log_level, "Retrying in %s seconds due to ratelimit", retry_after
                 )
                 time.sleep(retry_after)
+
+                continue
+            elif resp.status_code >= 500 and resp.status_code <= 511:
+                time.sleep(backoff)
+
+                # quadratic backoff for 500 errors with max 16 seconds
+                backoff = min(backoff * 2, 16)
+
                 continue
             try:
                 resp.raise_for_status()
