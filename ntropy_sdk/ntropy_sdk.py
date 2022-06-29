@@ -1031,7 +1031,6 @@ class SDK:
         self,
         df,
         poll_interval=10,
-        with_progress=None,
         labeling=True,
         create_account_holders=True,
         model_name=None,
@@ -1044,7 +1043,6 @@ class SDK:
             labeling=labeling,
             create_account_holders=create_account_holders,
             poll_interval=poll_interval,
-            with_progress=with_progress,
             model_name=model_name,
         )
 
