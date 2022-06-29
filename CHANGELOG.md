@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - Update get_account_holder to return an AccountHolder object
 - Removed list_models method
 - Added docstrings to SDK methods
+- Added `retries` attribute to SDK object, which determines the number of retries per request before failling
 
 ## [4.6.0] – 2022-06-16
 - Allow zero amount transactions, removed flag

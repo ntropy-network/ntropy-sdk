@@ -19,6 +19,7 @@ from ntropy_sdk import __version__
 
 
 DEFAULT_TIMEOUT = 10 * 60
+DEFAULT_RETRIES = 10
 DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
@@ -189,6 +190,33 @@ class Transaction:
 
         return cls(**val)
 
+    @classmethod
+    def from_row(cls, row):
+        """Constructs a Transaction object from a pandas.Series containing Transaction fields.
+
+        Parameters
+        ----------
+        val
+            A pandas.Series containing Transaction fields
+
+        Returns
+        ------
+        Transaction
+            A corresponding Transaction object.
+        """
+        return cls(
+            amount=row["amount"],
+            date=row.get("date"),
+            description=row.get("description", ""),
+            entry_type=row["entry_type"],
+            iso_currency_code=row["iso_currency_code"],
+            account_holder_id=row.get("account_holder_id"),
+            account_holder_type=row.get("account_holder_type"),
+            mcc=row.get("mcc"),
+            country=row.get("country"),
+            transaction_id=row.get("transaction_id"),
+        )
+
     def to_dict(self):
         """Returns a dictionary of non-empty fields for a Transaction.
 
@@ -205,21 +233,6 @@ class Transaction:
                 tx_dict[field] = value
 
         return tx_dict
-
-    @classmethod
-    def from_row(cls, row):
-        return cls(
-            amount=row["amount"],
-            date=row.get("date"),
-            description=row.get("description", ""),
-            entry_type=row["entry_type"],
-            iso_currency_code=row["iso_currency_code"],
-            account_holder_id=row.get("account_holder_id"),
-            account_holder_type=row.get("account_holder_type"),
-            mcc=row.get("mcc"),
-            country=row.get("country"),
-            transaction_id=row.get("transaction_id"),
-        )
 
 
 class AccountHolder:
@@ -265,7 +278,7 @@ class AccountHolder:
         self._sdk = None
 
     def set_sdk(self, sdk):
-        """Sets the internal SDK of the account holder.
+        """Sets the internal SDK reference used by this account holder object
 
         Parameters
         ----------
@@ -476,7 +489,7 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_list(cls, sdk, vals: list):
-        """Constructs a list of EnrichedTransaction objects from corresponding fields.
+        """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
 
         Parameters
         ----------
@@ -526,7 +539,7 @@ class Batch:
         return f"Batch(id={self.batch_id})"
 
     def poll(self):
-        """Poll the current batch.
+        """Polls the current batch status and returns the server response and status attribute.
 
         Returns
         -------
@@ -550,7 +563,8 @@ class Batch:
         return json_resp, status
 
     def wait(self, with_progress: bool = DEFAULT_WITH_PROGRESS, poll_interval=None):
-        """Retrieve the current batch enrichment.
+        """Continuously polls the status of this batch, blocking until the batch status is
+        "ready" or "error"
 
         Parameters
         ----------
@@ -609,7 +623,9 @@ class Batch:
 
 
 class SDK:
-    """An Ntropy SDK, associated with an api key."""
+    """The main Ntropy SDK object that holds the connection to the API server and implements
+    the fault-tolerant communication methods. An SDK instance is associated with an API key.
+    """
 
     MAX_BATCH_SIZE = 100000
     MAX_SYNC_BATCH = 4000
@@ -628,6 +644,7 @@ class SDK:
         self,
         token: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
+        retries: int = DEFAULT_RETRIES,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
     ):
         """Parameters
@@ -649,7 +666,7 @@ class SDK:
             token = os.environ[ENV_NTROPY_API_TOKEN]
 
         self.base_url = "https://api.ntropy.com"
-        self.retries = 10
+        self.retries = retries
         self.token = token
         self.session = requests.Session()
         self.logger = logging.getLogger("Ntropy-SDK")
@@ -659,7 +676,9 @@ class SDK:
     def retry_ratelimited_request(
         self, method: str, url: str, payload: object, log_level=logging.DEBUG
     ):
-        """Request an Ntropy API endpoint.
+        """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
+        Catches expected errors and wraps them in NtropyError.
+        Retries the request for Rate-Limiting errors or Unexpected Errors (50x)
 
         Parameters
         ----------
@@ -718,7 +737,7 @@ class SDK:
         raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
 
     def create_account_holder(self, account_holder: AccountHolder):
-        """Adds an AccountHolder to a user.
+        """Creates an AccountHolder for the current user.
 
         Parameters
         ----------
@@ -738,15 +757,10 @@ class SDK:
         self,
         df,
         mapping: dict = None,
-        poll_interval: int = 10,
-        with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
-        model_name: str = None,
         inplace: bool = False,
         tx_builder: Callable = Transaction.from_row,
     ):
-        """Enriches a pandas dataframe of Transactions.
+        """Transforms a dataframe with the expected format to a list of `Transacton` objects
 
         Parameters
         ----------
@@ -756,16 +770,6 @@ class SDK:
         mapping
             A mapping from the column names of the provided dataframe and the
             expected column names
-        poll_interval : int, optional
-            The interval between consecutive polling retries.
-        with_progress : bool, optional
-            True if progress bar should be displayed; False otherwise. By default,
-            progress is displayed only in interactive mode.
-        labeling: bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
-        model_name: str, optional
-            Name of the custom model to use for labeling the transaction. If
-            provided, replaces the default labeler
         inplace : bool, optional
             Enrich the dataframe inplace.
         """
@@ -832,7 +836,8 @@ class SDK:
         mapping=DEFAULT_MAPPING.copy(),
         inplace=False,
     ):
-        """Enriches Transaction objects synchronously.
+        """Enriches either a list of Transaction objects or a pandas dataframe synchronously.
+        Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
 
         Parameters
         ----------
@@ -990,7 +995,8 @@ class SDK:
         mapping=DEFAULT_MAPPING.copy(),
         inplace=False,
     ):
-        """Enriches Transaction objects asynchronously.
+        """Enriches either a list of Transaction objects or a pandas dataframe asynchronously.
+        Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
 
         Parameters
         ----------
@@ -1088,7 +1094,7 @@ class SDK:
             raise
 
     def get_account_holder(self, account_holder_id: str):
-        """Returns an AccountHolder object from an id
+        """Returns an AccountHolder object for the account holder with the provided id
 
         Parameters
         ----------
