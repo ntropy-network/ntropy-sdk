@@ -645,6 +645,7 @@ class SDK:
         token: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
         retries: int = DEFAULT_RETRIES,
+        retry_on_unhandled_exception: bool = False,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
     ):
         """Parameters
@@ -654,6 +655,10 @@ class SDK:
             environment variable $NTROPY_API_KEY.
         timeout : int, optional
             The timeout for requests to the Ntropy API.
+        retries : int, optional
+            The number of retries for a certain request before failing
+        retry_on_unhandled_exception : boolean, optional
+            Whether to retry or not, when a request returns an unhandled exception (50x status codes)
         with_progress : bool, optional
             True if enrichment should include a progress bar; False otherwise.
         """
@@ -666,11 +671,13 @@ class SDK:
             token = os.environ[ENV_NTROPY_API_TOKEN]
 
         self.base_url = "https://api.ntropy.com"
-        self.retries = retries
         self.token = token
         self.session = requests.Session()
         self.logger = logging.getLogger("Ntropy-SDK")
+
         self._timeout = timeout
+        self._retries = retries
+        self._retry_on_unhandled_exception = retry_on_unhandled_exception
         self._with_progress = with_progress
 
     def retry_ratelimited_request(
@@ -697,7 +704,8 @@ class SDK:
             If the request failed after the maximum number of retries.
         """
 
-        for _ in range(self.retries):
+        backoff = 1
+        for _ in range(self._retries):
             try:
                 resp = self.session.request(
                     method,
@@ -726,6 +734,14 @@ class SDK:
                     log_level, "Retrying in %s seconds due to ratelimit", retry_after
                 )
                 time.sleep(retry_after)
+
+                continue
+            elif (
+                resp.status_code >= 500 and resp.status_code <= 511
+            ) and self._retry_on_unhandled_exception:
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 8)
+
                 continue
             try:
                 resp.raise_for_status()
@@ -734,7 +750,7 @@ class SDK:
                     raise NtropyError(e.response.json()) from e
                 raise
             return resp
-        raise NtropyError(f"Failed to {method} {url} after {self.retries} attempts")
+        raise NtropyError(f"Failed to {method} {url} after {self._retries} attempts")
 
     def create_account_holder(self, account_holder: AccountHolder):
         """Creates an AccountHolder for the current user.
