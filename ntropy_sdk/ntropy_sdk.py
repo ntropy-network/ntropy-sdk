@@ -289,7 +289,7 @@ class LabeledTransaction(Transaction):
     def __repr__(self):
         return f"LabeledTransaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type}, label={self.label})"
 
-     @classmethod
+    @classmethod
     def from_row(cls, row):
         """Constructs a LabeledTransaction object from a pandas.Series containing Transaction fields.
 
