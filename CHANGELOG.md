@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - Removed list_models method
 - Added docstrings to SDK methods
 - Added `retries` attribute to SDK object, which determines the number of retries per request before failling
+- Added `retry_on_unhandled_exception` to SDK object, which controls whether the SDK should retry requests that return an error code in the range 500-511
 
 ## [4.6.0] – 2022-06-16
 - Allow zero amount transactions, removed flag
