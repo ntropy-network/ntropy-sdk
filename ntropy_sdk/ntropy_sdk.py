@@ -6,7 +6,6 @@ import requests
 import logging
 import re
 import sys
-import pandas as pd
 
 from datetime import datetime, date
 from typing import Optional, Union, Callable
