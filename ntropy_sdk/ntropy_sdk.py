@@ -9,7 +9,7 @@ import sys
 import pandas as pd
 
 from datetime import datetime, date
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Any
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
@@ -49,7 +49,6 @@ class Transaction:
         "description",
         "entry_type",
         "iso_currency_code",
-        "transaction_id",
     ]
 
     fields = [
@@ -237,6 +236,14 @@ class Transaction:
 
 class LabeledTransaction(Transaction):
     """Represents a base Transaction object with an associated label for custom moodel training tasks"""
+
+    required_fields = [
+        "amount",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "date",
+    ]
 
     fields = [
         "account_holder_id",
@@ -729,13 +736,13 @@ class Model:
         self.poll_interval = poll_interval
 
     def __repr__(self):
-        return f"Model(name={self.model_name}"
+        return f"Model(name={self.model_name})"
 
     def is_synced(self):
         return self.created_at is not None
 
     def poll(self):
-        url = f"/v2/model/{self.model_name}"
+        url = f"/v2/models/{self.model_name}"
 
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status = json_resp.get("status")
@@ -772,7 +779,7 @@ class Model:
     def _wait_with_progress(self, poll_interval=None):
         if not poll_interval:
             poll_interval = self.poll_interval
-        with tqdm(total=self.num_transactions, desc="started") as progress:
+        with tqdm(total=100, desc="started") as progress:
             while self.timeout - time.time() > 0:
                 resp, status, pr = self.poll()
                 if status == "error":
@@ -960,7 +967,7 @@ class SDK:
         df,
         mapping: dict = None,
         inplace: bool = False,
-        tx_builder: Callable = Transaction.from_row,
+        tx_class: Any = Transaction,
     ):
         """Transforms a dataframe with the expected format to a list of `Transacton` objects
 
@@ -986,21 +993,11 @@ class SDK:
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Transactions object needs to be a pandas dataframe.")
 
-        required_columns = [
-            "amount",
-            "date",
-            "description",
-            "entry_type",
-            "iso_currency_code",
-        ]
+        if mapping is None:
+            mapping = self.DEFAULT_MAPPING
 
-        optional_columns = [
-            "country",
-            "mcc",
-            "transaction_id",
-            "account_holder_id",
-            "account_holder_type",
-        ]
+        required_columns = tx_class.required_fields
+        optional_columns = tx_class.fields
 
         cols = set(df.columns)
         missing_cols = set(required_columns).difference(cols)
@@ -1022,7 +1019,7 @@ class SDK:
                     "argument, or move the existing columns to another column"
                 )
 
-        txs = df.apply(tx_builder, axis=1).to_list()
+        txs = df.apply(tx_class.from_row, axis=1).to_list()
         return txs
 
     @singledispatchmethod
@@ -1390,77 +1387,49 @@ class SDK:
 
     @singledispatchmethod
     def train_custom_model(self, transactions, model_name: str):
-        """_summary_
-
-        Parameters
-        ----------
-        transactions : _type_
-            _description_
-        model_name : str
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
-
-        Raises
-        ------
-        ValueError
-            _description_
-        """
-        return self._train_custom_model(
-            transactions,
-            model_name,
-        )
-
-    @train_custom_model.register(list)
-    def train_custom_model_df(
-        self,
-        df,
-        model_name: str,
-    ):
         try:
             import pandas as pd
         except ImportError:
             # If here, the input data is not a dataframe, or import would succeed
             raise ValueError(
-                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
             )
 
-        df = self._verify_transactions_df(df, inplace=True, mapping=None)
+        transactions = self.df_to_transaction_list(
+            transactions,
+            mapping=None,
+            inplace=True,
+            tx_class=LabeledTransaction,
+        )
 
-        def to_labeled_tx(row):
-            return LabeledTransaction(
-                amount=row["amount"],
-                date=row.get("date"),
-                description=row.get("description", ""),
-                entry_type=row["entry_type"],
-                iso_currency_code=row["iso_currency_code"],
-                account_holder_id=row.get("account_holder_id"),
-                account_holder_type=row.get("account_holder_type"),
-                mcc=row.get("mcc"),
-                country=row.get("country"),
-                transaction_id=row.get("transaction_id"),
-                label=row.get("label"),
-            )
+        return self._train_custom_model(transactions, model_name)
 
-        txs = df.apply(to_labeled_tx, axis=1).to_list()
-        return self._train_custom_model(txs, model_name)
+    @train_custom_model.register(list)
+    def train_custom_model_list(
+        self,
+        transactions,
+        model_name: str,
+    ):
+        return self._train_custom_model(
+            transactions,
+            model_name,
+        )
 
     def _train_custom_model(self, transactions, model_name: str):
+        txs = [tx.to_dict() for tx in transactions]
+
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request(
-            "POST", url, {"transactions": transactions}
+            "POST", url, {"transactions": txs}
         ).json()
-        return Model.from_response(response)
+        return Model.from_response(self, response)
 
     def get_all_custom_models(self):
         url = "/v2/models"
         responses = self.retry_ratelimited_request("GET", url, None).json()
-        return [Model.from_response(r) for r in responses]
+        return [Model.from_response(self, r) for r in responses]
 
     def get_custom_model(self, model_name):
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
-        return Model.from_response(response)
+        return Model.from_response(self, response)
