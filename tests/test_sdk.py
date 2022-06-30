@@ -322,7 +322,7 @@ def test_add_transactions_async(sdk):
     assert batch.batch_id and len(batch.batch_id) > 0
 
     enriched = batch.wait()
-    assert enriched[0].merchant == "Amazon"
+    assert enriched[0].merchant == "Amazon Web Services"
 
 
 def test_add_transactions_async_df(sdk):
@@ -358,8 +358,8 @@ def test_batch(sdk):
     batch.wait()
 
     resp, status = batch.poll()
-    assert status == "finished" and resp[0].merchant == "Amazon"
+    assert status == "finished" and resp[0].merchant == "Amazon Web Services"
 
     batch = Batch(sdk, batch.batch_id)
     resp, status = batch.poll()
-    assert status == "finished" and resp[0].merchant == "Amazon"
+    assert status == "finished" and resp[0].merchant == "Amazon Web Services"
