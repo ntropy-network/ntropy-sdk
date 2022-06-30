@@ -235,6 +235,89 @@ class Transaction:
         return tx_dict
 
 
+class LabeledTransaction(Transaction):
+    """Represents a base Transaction object with an associated label for custom moodel training tasks"""
+
+    fields = [
+        "account_holder_id",
+        "account_holder_type",
+        "transaction_id",
+        "amount",
+        "date",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "country",
+        "mcc",
+        "label",
+    ]
+
+    def __init__(
+        self,
+        amount,
+        date,
+        description,
+        entry_type,
+        iso_currency_code,
+        account_holder_id=None,
+        account_holder_type=None,
+        country=None,
+        transaction_id=None,
+        mcc=None,
+        label=None,
+    ):
+        super().__init__(
+            amount,
+            date,
+            description,
+            entry_type,
+            iso_currency_code,
+            account_holder_id,
+            account_holder_type,
+            country,
+            transaction_id,
+            mcc,
+        )
+
+        if label:
+            assert_type(label, "label", str)
+        else:
+            raise ValueError("label should be set")
+
+        self.label = label
+
+    def __repr__(self):
+        return f"LabeledTransaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type}, label={self.label})"
+
+     @classmethod
+    def from_row(cls, row):
+        """Constructs a LabeledTransaction object from a pandas.Series containing Transaction fields.
+
+        Parameters
+        ----------
+        val
+            A pandas.Series containing Transaction fields
+
+        Returns
+        ------
+        Transaction
+            A corresponding Transaction object.
+        """
+        return cls(
+            amount=row["amount"],
+            date=row.get("date"),
+            description=row.get("description", ""),
+            entry_type=row["entry_type"],
+            iso_currency_code=row["iso_currency_code"],
+            account_holder_id=row.get("account_holder_id"),
+            account_holder_type=row.get("account_holder_type"),
+            mcc=row.get("mcc"),
+            country=row.get("country"),
+            transaction_id=row.get("transaction_id"),
+            label=row.get("label"),
+        )
+
+
 class AccountHolder:
     """A financial account holder."""
 
@@ -620,6 +703,109 @@ class Batch:
                 progress.update(diff_n)
                 return resp
             raise NtropyError("Batch wait timeout")
+
+
+class Model:
+    def __init__(
+        self,
+        sdk,
+        model_name,
+        created_at=None,
+        account_holder_type=None,
+        status=None,
+        progress=None,
+        timeout=20 * 60 * 60,
+        poll_interval=10,
+    ):
+        self.sdk = sdk
+        self.model_name = model_name
+
+        self.created_at = (created_at,)
+        self.account_holder_type = (account_holder_type,)
+        self.status = (status,)
+        self.progress = (progress,)
+
+        self.timeout = time.time() + timeout
+        self.poll_interval = poll_interval
+
+    def __repr__(self):
+        return f"Model(name={self.model_name}"
+
+    def is_synced(self):
+        return self.created_at is not None
+
+    def poll(self):
+        url = f"/v2/model/{self.model_name}"
+
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        status = json_resp.get("status")
+        progress = json_resp.get("progress")
+        created_at = json_resp.get("created_at")
+        account_holder_type = json_resp.get("account_holder_type")
+
+        self.status = status
+        self.progress = progress
+        self.created_at = created_at
+        self.account_holder_type = account_holder_type
+
+        return json_resp, status, progress
+
+    def wait(self, with_progress=DEFAULT_WITH_PROGRESS, poll_interval=None):
+        if with_progress:
+            return self._wait_with_progress(poll_interval=poll_interval)
+        else:
+            return self._wait(poll_interval=poll_interval)
+
+    def _wait(self, poll_interval=None):
+        if not poll_interval:
+            poll_interval = self.poll_interval
+        while self.timeout - time.time() > 0:
+            resp, status, _ = self.poll()
+            if status == "error":
+                raise NtropyError("Unexpected model training error")
+            if status != "ready":
+                time.sleep(poll_interval)
+                continue
+            return resp
+        raise NtropyError("Model training wait timeout")
+
+    def _wait_with_progress(self, poll_interval=None):
+        if not poll_interval:
+            poll_interval = self.poll_interval
+        with tqdm(total=self.num_transactions, desc="started") as progress:
+            while self.timeout - time.time() > 0:
+                resp, status, pr = self.poll()
+                if status == "error":
+                    raise NtropyError("Unexpected model training error")
+                if status != "ready":
+                    diff_n = pr - progress.n
+                    progress.update(diff_n)
+                    time.sleep(poll_interval)
+                    continue
+                progress.desc = status
+                progress.update(100)
+                return resp
+            raise NtropyError("Model training wait timeout")
+
+    @staticmethod
+    def from_response(sdk, response):
+        name = response.get("name")
+        if name is None:
+            raise ValueError("Invalid response for creating a model - missing name")
+
+        created_at = response.get("created_at")
+        account_holder_type = response.get("account_holder_type")
+        status = response.get("status")
+        progress = response.get("progress")
+
+        return Model(
+            sdk,
+            name,
+            created_at=created_at,
+            account_holder_type=account_holder_type,
+            status=status,
+            progress=progress,
+        )
 
 
 class SDK:
