@@ -1201,3 +1201,80 @@ class SDK:
         url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
+
+    @singledispatchmethod
+    def train_custom_model(self, transactions, model_name: str):
+        """_summary_
+
+        Parameters
+        ----------
+        transactions : _type_
+            _description_
+        model_name : str
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+
+        Raises
+        ------
+        ValueError
+            _description_
+        """
+        return self._train_custom_model(
+            transactions,
+            model_name,
+        )
+
+    @train_custom_model.register(list)
+    def train_custom_model_df(
+        self,
+        df,
+        model_name: str,
+    ):
+        try:
+            import pandas as pd
+        except ImportError:
+            # If here, the input data is not a dataframe, or import would succeed
+            raise ValueError(
+                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+            )
+
+        df = self._verify_transactions_df(df, inplace=True, mapping=None)
+
+        def to_labeled_tx(row):
+            return LabeledTransaction(
+                amount=row["amount"],
+                date=row.get("date"),
+                description=row.get("description", ""),
+                entry_type=row["entry_type"],
+                iso_currency_code=row["iso_currency_code"],
+                account_holder_id=row.get("account_holder_id"),
+                account_holder_type=row.get("account_holder_type"),
+                mcc=row.get("mcc"),
+                country=row.get("country"),
+                transaction_id=row.get("transaction_id"),
+                label=row.get("label"),
+            )
+
+        txs = df.apply(to_labeled_tx, axis=1).to_list()
+        return self._train_custom_model(txs, model_name)
+
+    def _train_custom_model(self, transactions, model_name: str):
+        url = f"/v2/models/{model_name}"
+        response = self.retry_ratelimited_request(
+            "POST", url, {"transactions": transactions}
+        ).json()
+        return Model.from_response(response)
+
+    def get_all_custom_models(self):
+        url = "/v2/models"
+        responses = self.retry_ratelimited_request("GET", url, None).json()
+        return [Model.from_response(r) for r in responses]
+
+    def get_custom_model(self, model_name):
+        url = f"/v2/models/{model_name}"
+        response = self.retry_ratelimited_request("GET", url, None).json()
+        return Model.from_response(response)
