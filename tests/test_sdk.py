@@ -366,15 +366,15 @@ def test_batch(sdk):
     resp, status = batch.poll()
     assert status == "finished" and resp[0].merchant == "Amazon Web Services"
 
+
 def test_train_custom_model(sdk):
     tx_cloud = LabeledTransaction(
-        amount=float("nan"),
+        amount=102.04,
         description="TARGET T- 5800 20th St 11/30/19 17:32",
         entry_type="debit",
         date="2012-12-10",
-        account_holder_id="1",
         iso_currency_code="USD",
-        transaction_id="one-two-three",
+        account_holder_type="business",
         mcc=5432,
         label="supermarket",
     )
@@ -389,29 +389,32 @@ def test_train_custom_model(sdk):
     )
     model_name = f"test_{str(uuid.uuid4())[:20]}"
 
-    model = sdk.train_custom_model(tx_cloud + tx_supermarket, model_name)
+    model = sdk.train_custom_model([tx_cloud] * 10 + [tx_supermarket] * 10, model_name)
     _, status, _ = model.poll()
-    assert status in ["training", "queued"] and m.is_synced()
+    assert status in ["enriching", "training", "queued"] and model.is_synced()
 
-    m = Model(model_name)
+    m = Model(sdk, model_name)
     _, status, _ = model.poll()
-    assert status in ["training", "queued"] and m.is_synced()
+    assert status in ["enriching", "training", "queued"] and m.is_synced()
 
     m.wait()
-    _, status, _ = model.poll()
+    _, status, _ = model.poll(polling_interval=1)
     assert status == "ready"
 
-    e = sdk.add_transactions([
-        Transaction(
-            amount=float("nan"),
-            description="TARGET T- 5800 20th St 11/30/19 17:32",
-            entry_type="debit",
-            date="2012-12-10",
-            account_holder_id="1",
-            iso_currency_code="USD",
-            transaction_id="one-two-three",
-            mcc=5432,
-        )]
+    e = sdk.add_transactions(
+        [
+            Transaction(
+                amount=110.2,
+                description="TARGET T- 5800 20th St 11/30/19 17:32",
+                entry_type="debit",
+                date="2012-12-10",
+                account_holder_id="1",
+                iso_currency_code="USD",
+                transaction_id="one-two-three",
+                mcc=5432,
+            )
+        ],
+        model_name=model_name,
     )[0]
 
-    assert 'supermarket' in e.labels
+    assert "supermarket" in e.labels

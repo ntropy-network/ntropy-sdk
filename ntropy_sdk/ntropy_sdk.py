@@ -713,8 +713,8 @@ class Batch:
 
 
 class Model:
-    """A model reference with an associated name
-    """
+    """A model reference with an associated name"""
+
     def __init__(
         self,
         sdk,
@@ -757,7 +757,7 @@ class Model:
             The JSON response of the model poll
         status : str
             The status of the batch enrichment.
-        progress: 
+        progress:
             The progress from 0 to 100 of the training process
         """
         url = f"/v2/models/{self.model_name}"
@@ -1180,7 +1180,9 @@ class SDK:
         return df
 
     @staticmethod
-    def _build_params_str(labeling: bool, create_account_holders: bool, model_name: str=None) -> str:
+    def _build_params_str(
+        labeling: bool, create_account_holders: bool, model_name: str = None
+    ) -> str:
         params = {
             "labeling": labeling,
             "create_account_holders": create_account_holders,
@@ -1439,9 +1441,9 @@ class SDK:
 
     @singledispatchmethod
     def train_custom_model(self, transactions, model_name: str) -> Model:
-        """Trains a custom model for labeling transactions, using as training data the provided transactions, 
-        either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column. 
-        The model is associated with the provided name. Returns a Model instance that can be polled or waited for 
+        """Trains a custom model for labeling transactions, using as training data the provided transactions,
+        either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column.
+        The model is associated with the provided name. Returns a Model instance that can be polled or waited for
         while the training is running, and can be used in enrichment after ready.
 
         Parameters
