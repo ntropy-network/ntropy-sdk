@@ -1392,7 +1392,7 @@ class SDK:
         except ImportError:
             # If here, the input data is not a dataframe, or import would succeed
             raise ValueError(
-                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(df)}'"
+                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(transactions)}'"
             )
 
         transactions = self.df_to_transaction_list(
