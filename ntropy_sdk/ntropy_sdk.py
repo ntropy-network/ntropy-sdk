@@ -1320,7 +1320,7 @@ class SDK:
 
         try:
 
-            url = f"/v2/transactions/async?" + params_str
+            url = "/v2/transactions/async?" + params_str
 
             data = [transaction.to_dict() for transaction in transactions]
             resp = self.retry_ratelimited_request("POST", url, data)

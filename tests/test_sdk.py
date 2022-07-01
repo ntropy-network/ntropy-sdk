@@ -393,12 +393,12 @@ def test_train_custom_model(sdk):
     _, status, _ = model.poll()
     assert status in ["enriching", "training", "queued"] and model.is_synced()
 
-    m = Model(sdk, model_name)
+    m = Model(sdk, model_name, poll_interval=1)
     _, status, _ = model.poll()
     assert status in ["enriching", "training", "queued"] and m.is_synced()
 
     m.wait()
-    _, status, _ = model.poll(polling_interval=1)
+    _, status, _ = model.poll()
     assert status == "ready"
 
     e = sdk.add_transactions(
