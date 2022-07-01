@@ -7,9 +7,11 @@ from tests import API_KEY
 from ntropy_sdk import (
     SDK,
     Transaction,
+    LabeledTransaction,
     EnrichedTransaction,
     AccountHolder,
     Batch,
+    Model,
 )
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 
@@ -363,3 +365,53 @@ def test_batch(sdk):
     batch = Batch(sdk, batch.batch_id)
     resp, status = batch.poll()
     assert status == "finished" and resp[0].merchant == "Amazon Web Services"
+
+def test_train_custom_model(sdk):
+    tx_cloud = LabeledTransaction(
+        amount=float("nan"),
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        iso_currency_code="USD",
+        transaction_id="one-two-three",
+        mcc=5432,
+        label="supermarket",
+    )
+    tx_supermarket = LabeledTransaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+        label="cloud",
+    )
+    model_name = f"test_{str(uuid.uuid4())[:20]}"
+
+    model = sdk.train_custom_model(tx_cloud + tx_supermarket, model_name)
+    _, status, _ = model.poll()
+    assert status in ["training", "queued"] and m.is_synced()
+
+    m = Model(model_name)
+    _, status, _ = model.poll()
+    assert status in ["training", "queued"] and m.is_synced()
+
+    m.wait()
+    _, status, _ = model.poll()
+    assert status == "ready"
+
+    e = sdk.add_transactions([
+        Transaction(
+            amount=float("nan"),
+            description="TARGET T- 5800 20th St 11/30/19 17:32",
+            entry_type="debit",
+            date="2012-12-10",
+            account_holder_id="1",
+            iso_currency_code="USD",
+            transaction_id="one-two-three",
+            mcc=5432,
+        )]
+    )[0]
+
+    assert 'supermarket' in e.labels
