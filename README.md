@@ -5,13 +5,13 @@ This repository hosts the SDK for the Ntropy API.  To use the Ntropy API you req
 The Ntropy API provides transaction enrichment and categorization, account ledger, metrics and custom model training. The full documentation is available at the [developer portal](https://developers.ntropy.com/).
 
 
-## Installation:
+## Installation
 
 ```bash
 $ python3 -m pip install --upgrade 'ntropy-sdk'
 ```
 
-## Quick Start:
+## Quick Start
 
 
 Enriching your first transaction requires an SDK object and an input Transaction object. The API key can be set in the environment variable NTROPY_API_KEY or in the SDK constructor:
