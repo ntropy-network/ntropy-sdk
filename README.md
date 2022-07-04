@@ -13,7 +13,8 @@ $ python3 -m pip install --upgrade 'ntropy-sdk'
 
 ## Quick Start:
 
-Using the SDK and enriching your first transaction requires an SDK object and an input Transaction object. The API key can be set in the environment variable NTROPY_API_KEY or in the SDK constructor:
+
+Enriching your first transaction requires an SDK object and an input Transaction object. The API key can be set in the environment variable NTROPY_API_KEY or in the SDK constructor:
 
 ```python
 from ntropy_sdk import SDK, Transaction
@@ -37,7 +38,9 @@ print(enriched_tx.merchant)
 
 The returned EnrichedTransaction contains the added information by Ntropy API.  You can consult the Enrichment section of the documentation for more information on the parameters for both `Transaction` and `EnrichedTransaction`.
 
-The SDK reference is available at [https://developers.ntropy.com/sdk] and the in-depth documentation and examples at the [developer portal](https://developers.ntropy.com/docs/enrichment).
+## Documentation
+
+ You can consult in-depth documentation and examples at the [developer portal](https://developers.ntropy.com/docs/enrichment) and at the [SDK reference](https://developers.ntropy.com/sdk).
 
 ## License:
 Free software: MIT license
