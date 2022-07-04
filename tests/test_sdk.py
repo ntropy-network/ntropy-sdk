@@ -418,3 +418,61 @@ def test_train_custom_model(sdk):
     )[0]
 
     assert "supermarket" in e.labels
+
+
+def test_train_custom_model_df(sdk):
+    txs = [
+        {
+            "amount": 102.04,
+            "description": "TARGET T- 5800 20th St 11/30/19 17:32",
+            "entry_type": "debit",
+            "date": "2012-12-10",
+            "iso_currency_code": "USD",
+            "account_holder_type": "business",
+            "mcc": 5432,
+            "label": "supermarket",
+        },
+        {
+            "amount": 24.56,
+            "description": "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+            "entry_type": "debit",
+            "date": "2012-12-10",
+            "account_holder_type": "business",
+            "iso_currency_code": "USD",
+            "label": "cloud",
+            "mcc": 1234,
+        },
+    ] * 10
+
+    model_name = f"test_{str(uuid.uuid4())[:20]}"
+    df = pd.DataFrame(txs)
+
+    model = sdk.train_custom_model(df, model_name)
+    _, status, _ = model.poll()
+    assert status in ["enriching", "training", "queued"] and model.is_synced()
+
+    m = Model(sdk, model_name, poll_interval=1)
+    _, status, _ = model.poll()
+    assert status in ["enriching", "training", "queued"] and m.is_synced()
+
+    m.wait()
+    _, status, _ = model.poll()
+    assert status == "ready"
+
+    e = sdk.add_transactions(
+        [
+            Transaction(
+                amount=110.2,
+                description="TARGET T- 5800 20th St 11/30/19 17:32",
+                entry_type="debit",
+                date="2012-12-10",
+                account_holder_id="1",
+                iso_currency_code="USD",
+                transaction_id="one-two-three",
+                mcc=5432,
+            )
+        ],
+        model_name=model_name,
+    )[0]
+
+    assert "supermarket" in e.labels
