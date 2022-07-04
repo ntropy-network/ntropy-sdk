@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Added docstrings to SDK methods
 - Added `retries` attribute to SDK object, which determines the number of retries per request before failling
 - Added `retry_on_unhandled_exception` to SDK object, which controls whether the SDK should retry requests that return an error code in the range 500-511
+- Added base custom model API to SDK that closer resembles the REST Api structure. Added three new methods to SDK `train_custom_model`, `get_custom_model` and `get_all_custom_models`. Added new classes to represent custom model structures `LabeledTransaction` and `Model`.
 
 ## [4.6.0] – 2022-06-16
 - Allow zero amount transactions, removed flag
