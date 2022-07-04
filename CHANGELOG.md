@@ -3,12 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
-- Update get_account_holder to return an AccountHolder object
-- Removed list_models method
-- Added docstrings to SDK methods
+
+## [4.7.0]  - 2022-07-04
+
+- Update `get_account_holder` method to return an AccountHolder object instead of dictionaries
+- Added docstrings to all public SDK methods. Consult the reference at https://developers.ntropy.com/sdk
 - Added `retries` attribute to SDK object, which determines the number of retries per request before failling
 - Added `retry_on_unhandled_exception` to SDK object, which controls whether the SDK should retry requests that return an error code in the range 500-511
-- Added base custom model API to SDK that closer resembles the REST Api structure. Added three new methods to SDK `train_custom_model`, `get_custom_model` and `get_all_custom_models`. Added new classes to represent custom model structures `LabeledTransaction` and `Model`.
+- Removed `list_models` method. Added base custom model API to SDK that closer resembles the REST API structure. Added three new methods to SDK `train_custom_model`, `get_custom_model` and `get_all_custom_models`. Added new classes to represent custom model structures `LabeledTransaction` and `Model`.
 
 ## [4.6.0] – 2022-06-16
 - Allow zero amount transactions, removed flag
