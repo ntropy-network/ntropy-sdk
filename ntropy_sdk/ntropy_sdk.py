@@ -1444,7 +1444,7 @@ class SDK:
 
     @singledispatchmethod
     def train_custom_model(self, transactions, model_name: str) -> Model:
-        """Trains a custom model for labeling transactions, using as training data the provided transactions,
+        """Trains a custom model for labeling transactions, using the provided transactions as training data,
         either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column.
         The model is associated with the provided name. Returns a Model instance that can be polled or waited for
         while the training is running, and can be used in enrichment after ready.
@@ -1466,7 +1466,7 @@ class SDK:
         except ImportError:
             # If here, the input data is not a dataframe, or import would succeed
             raise ValueError(
-                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for it's `df` parameter, you supplied a '{type(transactions)}'"
+                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for its `df` parameter, you supplied a '{type(transactions)}'"
             )
 
         transactions = self.df_to_transaction_list(
@@ -1504,14 +1504,14 @@ class SDK:
         Returns
         -------
         List[Model]
-            List of all trained models, indepdently of their status
+            List of all trained models, independently of their status
         """
         url = "/v2/models"
         responses = self.retry_ratelimited_request("GET", url, None).json()
         return [Model.from_response(self, r) for r in responses]
 
     def get_custom_model(self, model_name: str) -> Model:
-        """Returns a specific model referenced by it's model name
+        """Returns a specific model referenced by its model name
 
         Parameters
         ----------
