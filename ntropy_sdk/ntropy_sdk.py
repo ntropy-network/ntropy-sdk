@@ -986,6 +986,12 @@ class SDK:
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 8)
 
+                self.logger.log(
+                    log_level,
+                    "Retrying in %s seconds due to unhandled exception in the server side",
+                    backoff,
+                )
+
                 continue
             try:
                 resp.raise_for_status()
