@@ -1083,15 +1083,9 @@ class SDK:
         labeling: bool = True,
         create_account_holders: bool = True,
         model_name: str = None,
-<<<<<<< HEAD
-        mapping=DEFAULT_MAPPING.copy(),
-        inplace=False,
-    ) -> EnrichedTransactionList:
-=======
-        mapping: dict = DEFAULT_MAPPING.copy(),
+        mapping: dict = None,
         inplace: bool = False,
     ):
->>>>>>> main
         """Enriches either a list of Transaction objects or a pandas dataframe synchronously.
         Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
 
@@ -1123,6 +1117,8 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
+        if mapping is None:
+            mapping = self.DEFAULT_MAPPING
 
         txs = self.df_to_transaction_list(transactions, mapping, inplace)
         transactions["_output_tx"] = self.add_transactions(
@@ -1183,46 +1179,6 @@ class SDK:
             model_name,
         )
 
-<<<<<<< HEAD
-    @add_transactions.register(pd.DataFrame)
-    def _add_transactions_df(
-        self,
-        df,
-        timeout: int = 4 * 60 * 60,
-        poll_interval=10,
-        with_progress=None,
-        labeling=True,
-        create_account_holders=True,
-        model_name=None,
-        mapping=DEFAULT_MAPPING.copy(),
-        inplace=False,
-    ) -> EnrichedTransactionList:
-
-        txs = self.df_to_transaction_list(df, mapping, inplace)
-        df["_output_tx"] = self.add_transactions(
-            txs,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
-            timeout=timeout,
-            poll_interval=poll_interval,
-            with_progress=with_progress,
-            model_name=model_name,
-        )
-
-        def get_tx_val(tx, v):
-            sentinel = object()
-            output = getattr(tx, v, tx.kwargs.get(v, sentinel))
-            if output == sentinel:
-                raise KeyError(f"invalid mapping: {v} not in {tx}")
-            return output
-
-        for k, v in mapping.items():
-            df[v] = df["_output_tx"].apply(lambda tx: get_tx_val(tx, k))
-        df = df.drop(["_output_tx"], axis=1)
-        return df
-
-=======
->>>>>>> main
     @staticmethod
     def _build_params_str(
         labeling: bool, create_account_holders: bool, model_name: str = None
@@ -1283,27 +1239,15 @@ class SDK:
     @singledispatchmethod
     def add_transactions_async(
         self,
-<<<<<<< HEAD
-        transactions: List[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
-        model_name=None,
-        mapping=DEFAULT_MAPPING.copy(),
-        inplace=False,
-    ) -> Batch:
-=======
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         labeling: bool = True,
         create_account_holders: bool = True,
         model_name: str = None,
-        mapping: dict = DEFAULT_MAPPING.copy(),
+        mapping: dict = None,
         inplace: bool = False,
     ):
->>>>>>> main
         """Enriches either a list of Transaction objects or a pandas dataframe asynchronously.
         Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
 
@@ -1332,6 +1276,8 @@ class SDK:
         Batch
             A Batch object that can be polled and awaited.
         """
+        if mapping is None:
+            mapping = self.DEFAULT_MAPPING
 
         txs = self.df_to_transaction_list(transactions, mapping, inplace)
         return self.add_transactions_async(
@@ -1352,18 +1298,6 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model_name=None,
-<<<<<<< HEAD
-        mapping=DEFAULT_MAPPING.copy(),
-        inplace=False,
-    ) -> Batch:
-        txs = self.df_to_transaction_list(df, mapping, inplace)
-        return self.add_transactions_async(
-            txs,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
-            poll_interval=poll_interval,
-            model_name=model_name,
-=======
     ):
         return self._add_transactions_async(
             transactions,
@@ -1372,7 +1306,6 @@ class SDK:
             labeling,
             create_account_holders,
             model_name,
->>>>>>> main
         )
 
     def _add_transactions_async(
