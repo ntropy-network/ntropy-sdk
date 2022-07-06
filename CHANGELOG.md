@@ -3,9 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
+- Added TCP keep-alive to Ntropy API requests
+
 
 ## [4.7.0]  - 2022-07-04
-
 - Update `get_account_holder` method to return an AccountHolder object instead of dictionaries
 - Added docstrings to all public SDK methods. Consult the reference at https://developers.ntropy.com/sdk
 - Added `retries` attribute to SDK object, which determines the number of retries per request before failling
