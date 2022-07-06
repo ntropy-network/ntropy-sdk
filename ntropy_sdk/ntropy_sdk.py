@@ -12,6 +12,7 @@ from typing import Optional, Union, Callable, Any
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
+from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 
 from ntropy_sdk.utils import singledispatchmethod, assert_type
 from ntropy_sdk import __version__
@@ -917,6 +918,8 @@ class SDK:
         self.base_url = "https://api.ntropy.com"
         self.token = token
         self.session = requests.Session()
+        self.keep_alive = TCPKeepAliveAdapter()
+        self.session.mount("https://", self.keep_alive)
         self.logger = logging.getLogger("Ntropy-SDK")
 
         self._timeout = timeout
@@ -964,6 +967,7 @@ class SDK:
             except requests.ConnectionError:
                 # Rebuild session on connection error and retry
                 self.session = requests.Session()
+                self.session.mount("https://", self.keep_alive)
                 continue
 
             if resp.status_code == 429:
