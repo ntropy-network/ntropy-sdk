@@ -8,22 +8,33 @@ import re
 import sys
 
 from datetime import datetime, date
-from typing import Optional, Union, Callable, Any
+from typing import Optional, Union, Callable, Any, Type, NewType
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 
-from ntropy_sdk.utils import singledispatchmethod, assert_type
+from ntropy_sdk.utils import (
+    RecurrenceType,
+    TransactionType,
+    singledispatchmethod,
+    assert_type,
+    AccountHolderType,
+    validate_date,
+    EntryType,
+)
 from ntropy_sdk import __version__
-
+from pydantic import BaseModel, Field, Extra, validator
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
 DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
-COUNTRY_REGEX = re.compile(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$")
+COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
+
+# to avoid type check errors
+SDK = NewType("SDK", int)
 
 
 class NtropyError(Exception):
@@ -40,137 +51,53 @@ class NtropyBatchError(Exception):
         self.errors = errors
 
 
-class Transaction:
+class Transaction(BaseModel):
     """A financial transaction that can be enriched with the Ntropy SDK."""
 
-    required_fields = [
-        "amount",
-        "date",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-    ]
+    amount: float = Field(ge=0, description="Amount of the transaction.")
+    entry_type: EntryType = Field(
+        description="Either incoming or outgoing depending on the transaction."
+    )
+    iso_currency_code: str = Field(
+        description="Currency of the transaction, in ISO-4217 format (e.g. USD)."
+    )
+    description: str = Field(description="Description text of the transaction.")
 
-    fields = [
-        "account_holder_id",
-        "account_holder_type",
-        "transaction_id",
-        "amount",
-        "date",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-        "country",
-        "mcc",
-    ]
+    _date_validator = validator("date", pre=True, allow_reuse=True)(validate_date)
+    date: str = Field(
+        description="Transaction date in ISO-8601 format (i.e. YYYY-MM-DD)."
+    )
+    account_holder_id: Optional[str] = Field(
+        min_length=1,
+        description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
+    )
+    account_holder_type: Optional[AccountHolderType] = Field(
+        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+    )
+    country: Optional[str] = Field(
+        regex=COUNTRY_REGEX,
+        description="Country where the transaction was made, in ISO-3166-2 format (e.g. US).",
+    )
+    transaction_id: Optional[str] = Field(
+        description="Unique identifier of the transaction in your system. If not supplied, a random transaction_id is used.",
+        min_length=1,
+    )
+    mcc: Optional[int] = Field(
+        ge=1000,
+        le=9999,
+        description="The Merchant Category Code of the merchant, according to ISO 18245.",
+    )
 
-    def __init__(
-        self,
-        amount: Union[int, float],
-        date: str,
-        description: str,
-        entry_type: str,
-        iso_currency_code: str,
-        account_holder_id: str = None,
-        account_holder_type: str = None,
-        country: str = None,
-        transaction_id: str = None,
-        mcc: int = None,
-    ):
-        """Parameters
-        ----------
-        amount : int or float
-            Amount of the transaction.
-        date : str
-            Transaction date in ISO-8601 format (i.e. YYYY-MM-DD).
-        description : str
-            Description text of the transaction.
-        entry_type : {"incoming", "outgoing"}
-            Either incoming or outgoing depending on the transaction.
-        iso_currency_code : str
-            Currency of the transaction, in ISO-4217 format (e.g. USD).
-        account_holder_id : str, optional
-            ID of the account holder; if the account holder does not exist, create
-            a new one with the specified account holder type.
-        account_holder_type: {"consumer", "business", "freelance", "unknown"}, optional
-            Type of the account holder – must be one of consumer, business,
-            freelance, or unknown.
-        country: str, optional
-            Country where the transaction was made, in ISO-3166-2 format (e.g. US).
-        transaction_id: str, optional
-            Unique identifier of the transaction in your system. If not supplied,
-            a random transaction_id is used.
-        mcc: int, optional
-            The Merchant Category Code of the merchant, according to ISO 18245.
-        """
-
-        if not transaction_id:
-            transaction_id = str(uuid.uuid4())
-        else:
-            assert_type(transaction_id, "transaction_id", str)
-
-        self.transaction_id = transaction_id
-
-        if account_holder_id is not None:
-            assert_type(account_holder_id, "account_holder_id", str)
-        self.account_holder_id = account_holder_id
-
-        if account_holder_type is not None:
-            assert_type(account_holder_type, "account_holder_type", str)
-            if account_holder_type not in ACCOUNT_HOLDER_TYPES:
-                raise ValueError(
-                    f"account_holder_type must be one of {ACCOUNT_HOLDER_TYPES}"
-                )
-        self.account_holder_type = account_holder_type
-
-        assert_type(amount, "amount", (int, float))
-        if amount < 0:
-            raise ValueError(
-                "amount must be a nonnegative number. For negative amounts, change the entry_type field."
-            )
-
-        self.amount = amount
-
-        try:
-            assert_type(date, "date", str)
-            datetime.strptime(date, "%Y-%m-%d")
-        except (ValueError, TypeError):
-            raise ValueError("date must be of the format %Y-%m-%d")
-
-        self.date = date
-
-        assert_type(description, "description", str)
-        self.description = description
-
-        assert_type(entry_type, "entry_type", str)
-        if entry_type not in ["debit", "credit", "outgoing", "incoming"]:
-            raise ValueError("entry_type nust be one of 'incoming' or 'outgoing'")
-
-        self.entry_type = entry_type
-
-        assert_type(iso_currency_code, "iso_currency_code", str)
-        self.iso_currency_code = iso_currency_code
-
-        if country is not None:
-            assert_type(country, "country", str)
-            if not COUNTRY_REGEX.match(country):
-                raise ValueError("country should be in ISO-3611-2 format")
-
-        self.country = country
-
-        if mcc:
-            assert_type(mcc, "mcc", int)
-            if not (1000 <= mcc <= 9999):
-                raise ValueError("mcc must be in the range of 1000-9999")
-
-        self.mcc = mcc
-
-        for field in self.required_fields:
-            if getattr(self, field) is None:
-                raise ValueError(f"{field} should be set")
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not kwargs.get("transaction_id"):
+            self.transaction_id = str(uuid.uuid4())
 
     def __repr__(self):
         return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
+
+    def __str__(self):
+        return repr(self)
 
     @classmethod
     def from_dict(cls, val: dict):
@@ -224,74 +151,19 @@ class Transaction:
         dict
             A dictionary of the Transaction's fields.
         """
+        return self.dict(exclude_none=True)
 
-        tx_dict = {}
-        for field in self.fields:
-            value = getattr(self, field)
-            if value is not None:
-                tx_dict[field] = value
-
-        return tx_dict
+    class Config:
+        use_enum_values = True
 
 
 class LabeledTransaction(Transaction):
     """Represents a base Transaction object with an associated label for custom moodel training tasks"""
 
-    required_fields = [
-        "amount",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-        "date",
-    ]
+    label: str = Field(description="Ground truth label for a transaction.")
 
-    fields = [
-        "account_holder_id",
-        "account_holder_type",
-        "transaction_id",
-        "amount",
-        "date",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-        "country",
-        "mcc",
-        "label",
-    ]
-
-    def __init__(
-        self,
-        amount,
-        date,
-        description,
-        entry_type,
-        iso_currency_code,
-        account_holder_id=None,
-        account_holder_type=None,
-        country=None,
-        transaction_id=None,
-        mcc=None,
-        label=None,
-    ):
-        super().__init__(
-            amount,
-            date,
-            description,
-            entry_type,
-            iso_currency_code,
-            account_holder_id,
-            account_holder_type,
-            country,
-            transaction_id,
-            mcc,
-        )
-
-        if label:
-            assert_type(label, "label", str)
-        else:
-            raise ValueError("label should be set")
-
-        self.label = label
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def __repr__(self):
         return f"LabeledTransaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type}, label={self.label})"
@@ -325,47 +197,25 @@ class LabeledTransaction(Transaction):
         )
 
 
-class AccountHolder:
+class AccountHolder(BaseModel):
     """A financial account holder."""
 
-    def __init__(
-        self,
-        id: str,
-        type: str,
-        name: str = None,
-        industry: str = None,
-        website: str = None,
-    ):
-        """Parameters
-        ----------
-        id : str
-            Unique identifier for the account holder in your system.
-        type : {"consumer", "business", "freelance", "unknown"}
-            Type of the account holder – must be one of consumer, business,
-            freelance, or unknown.
-        name : str, optional
-            Name of the account holder.
-        industry : str, optional
-            Industry of the account holder.
-        website : str, optional
-            Website of the account holder.
-        """
+    id: str = Field(
+        description="Unique identifier for the account holder in your system."
+    )
+    type: AccountHolderType = Field(
+        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+    )
+    name: Optional[str] = Field(description="Name of the account holder.")
+    industry: Optional[str] = Field(description="Industry of the account holder.")
+    website: Optional[str] = Field(description="Website of the account holder.")
+    _sdk = None
 
-        if not id:
-            raise ValueError("id must be set")
+    def __repr__(self):
+        return f"AccountHolder(id={self.id}, type={self.type})"
 
-        if not type:
-            raise ValueError("type must be set")
-
-        if type not in ACCOUNT_HOLDER_TYPES:
-            raise ValueError("type is not valid")
-
-        self.id = id
-        self.type = type
-        self.name = name
-        self.industry = industry
-        self.website = website
-        self._sdk = None
+    def __str__(self):
+        return repr(self)
 
     def set_sdk(self, sdk):
         """Sets the internal SDK reference used by this account holder object
@@ -387,13 +237,7 @@ class AccountHolder:
             A dictionary of the account holder's fields.
         """
 
-        out = {"id": self.id, "type": self.type}
-        for key in ("name", "industry", "website"):
-            value = getattr(self, key, None)
-            if value is not None:
-                out[key] = value
-
-        return out
+        return self.dict(exclude_none=True)
 
     def get_metrics(self, metrics: List[str], start: date, end: date):
         """Returns the result of a metrics query.
@@ -418,72 +262,36 @@ class AccountHolder:
             )
         return self._sdk.get_account_holder_metrics(self.id, metrics, start, end)
 
+    class Config:
+        use_enum_values = True
 
-class EnrichedTransaction:
+
+class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
-    def __init__(
-        self,
-        sdk,
-        labels: List[str] = None,
-        location: str = None,
-        logo: str = None,
-        merchant: str = None,
-        merchant_id: str = None,
-        person: str = None,
-        transaction_id: str = None,
-        website: str = None,
-        chart_of_accounts: List[str] = None,
-        recurrence: str = None,
-        confidence: float = None,
-        transaction_type: str = None,
-        **kwargs,
-    ):
-        """Parameters
-        ----------
-        sdk : SDK
-            An SDK to use with the EnrichedTransaction.
-        labels : List[str], optional
-            Label for the transaction.
-        location : str, optional
-            Location of the merchant.
-        logo : str, optional
-            A link to the logo of the merchant.
-        merchant : str, optional
-            The name of the transaction merchant.
-        merchant_id : str, optional
-            A unique identifier for the merchant.
-        person : str, optional
-            Name of the person in the transaction.
-        transaction_id : str, optional
-            Unique transaction identifier.
-        website : str, optional
-            Website of the merchant.
-        chart_of_accounts : List[str], optional
-            Label from the standard chart-of-accounts hierarchy.
-        recurrence: {"one off", "recurring"}, optional
-            Indicates if the Transaction is recurring.
-        confidence: float, optional
-            A numerical score between 0.0 and 1.0 indicating the confidence
-            of the enrichment.
-        transaction_type: {"consumer", "business", "freelance", "unknown"}
-            Type of the transaction.
-        """
-
-        self.sdk = sdk
-        self.labels = labels
-        self.location = location
-        self.logo = logo
-        self.merchant = merchant
-        self.person = person
-        self.transaction_id = transaction_id
-        self.website = website
-        self.merchant_id = merchant_id
-        self.kwargs = kwargs
-        self.chart_of_accounts = chart_of_accounts
-        self.recurrence = recurrence
-        self.confidence = confidence
-        self.transaction_type = transaction_type
+    sdk: SDK = Field(description="An SDK to use with the EnrichedTransaction.")
+    labels: Optional[List[str]] = Field(description="Label for the transaction.")
+    location: Optional[str] = Field(description="Location of the merchant.")
+    logo: Optional[str] = Field(description="A link to the logo of the merchant.")
+    merchant: Optional[str] = Field(description="The name of the transaction merchant.")
+    merchant_id: Optional[str] = Field(
+        description="A unique identifier for the merchant."
+    )
+    person: Optional[str] = Field(description="Name of the person in the transaction.")
+    transaction_id: Optional[str] = Field(description="Unique transaction identifier.")
+    website: Optional[str] = Field(description="Website of the merchant.")
+    chart_of_accounts: Optional[List[str]] = Field(
+        description="Label from the standard chart-of-accounts hierarchy."
+    )
+    recurrence: Optional[RecurrenceType] = Field(
+        description="Indicates if the Transaction is recurring."
+    )
+    confidence: Optional[float] = Field(
+        ge=0.0,
+        le=1.0,
+        description="A numerical score between 0.0 and 1.0 indicating the confidence",
+    )
+    transaction_type: TransactionType = Field(description="Type of the transaction.")
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -530,24 +338,15 @@ class EnrichedTransaction:
             A dictionary of the EnrichedTransaction's fields.
         """
 
-        return {
-            "labels": self.labels,
-            "location": self.location,
-            "logo": self.logo,
-            "merchant": self.merchant,
-            "merchant_id": self.merchant_id,
-            "person": self.person,
-            "transaction_id": self.transaction_id,
-            "website": self.website,
-            "chart_of_accounts": self.chart_of_accounts,
-            "recurrence": self.recurrence,
-            "confidence": self.confidence,
-            "transaction_type": self.transaction_type,
-        }
+        return self.dict()
+
+    class Config:
+        use_enum_values = True
+        arbitrary_types_allowed = True
 
 
 class EnrichedTransactionList(list):
-    """A list of EnrichedTransaction."""
+    """A list of EnrichedTransaction objects."""
 
     def __init__(self, transactions: List[EnrichedTransaction]):
         """Parameters
@@ -594,36 +393,22 @@ class EnrichedTransactionList(list):
         return cls([EnrichedTransaction.from_dict(sdk, val) for val in vals])
 
 
-class Batch:
+class Batch(BaseModel):
     """An enriched batch with a unique identifier."""
 
-    def __init__(
-        self,
-        sdk,
-        batch_id: str,
-        timeout: int = 4 * 60 * 60,
-        poll_interval: int = 10,
-        num_transactions: int = 0,
-    ):
-        """Parameters
-        ----------
-        sdk : SDK
-            A SDK associated with the batch.
-        batch_id : str
-            A unique identifier for the batch.
-        timeout : int, optional
-            A timeout for retrieving the batch result.
-        poll_interval : int, optional
-            The interval between polling retries.
-        num_transactions : int, optional
-            The number of transactions in the batch.
-        """
+    sdk: SDK = Field(description="A SDK associated with the batch.")
+    batch_id: str = Field(description="A unique identifier for the batch.")
+    timeout: int = Field(
+        4 * 60 * 60, description="A timeout for retrieving the batch result."
+    )
+    poll_interval: int = Field(10, description="The interval between polling retries.")
+    num_transactions: int = Field(
+        0, description="The number of transactions in the batch."
+    )
 
-        self.batch_id = batch_id
-        self.timeout = time.time() + timeout
-        self.poll_interval = poll_interval
-        self.sdk = sdk
-        self.num_transactions = num_transactions
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.timeout = time.time() + self.timeout
 
     def __repr__(self):
         return f"Batch(id={self.batch_id})"
@@ -712,30 +497,21 @@ class Batch:
             raise NtropyError("Batch wait timeout")
 
 
-class Model:
+class Model(BaseModel):
     """A model reference with an associated name"""
 
-    def __init__(
-        self,
-        sdk,
-        model_name,
-        created_at=None,
-        account_holder_type=None,
-        status=None,
-        progress=None,
-        timeout=20 * 60 * 60,
-        poll_interval=10,
-    ):
-        self.sdk = sdk
-        self.model_name = model_name
+    sdk: SDK = Field(description="TODO")
+    model_name: str = Field(description="TODO")
+    created_at: Optional[str]
+    account_holder_type: AccountHolderType
+    status: str
+    progress: int
+    timeout: int = Field(20 * 60 * 60)
+    poll_interval: int = Field(10)
 
-        self.created_at = (created_at,)
-        self.account_holder_type = (account_holder_type,)
-        self.status = (status,)
-        self.progress = (progress,)
-
-        self.timeout = time.time() + timeout
-        self.poll_interval = poll_interval
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.timeout = time.time() + self.timeout
 
     def __repr__(self):
         return f"Model(name={self.model_name})"
@@ -867,7 +643,7 @@ class Model:
         )
 
 
-class SDK:
+class SDK(BaseModel):
     """The main Ntropy SDK object that holds the connection to the API server and implements
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
     """
@@ -885,28 +661,27 @@ class SDK:
         # the entire enriched transaction object is at _output_tx
     }
 
-    def __init__(
-        self,
-        token: Optional[str] = None,
-        timeout: int = DEFAULT_TIMEOUT,
-        retries: int = DEFAULT_RETRIES,
-        retry_on_unhandled_exception: bool = False,
-        with_progress: bool = DEFAULT_WITH_PROGRESS,
-    ):
-        """Parameters
-        ----------
-        token : str, optional
-            The api key for Ntropy SDK. If not supplied, the SDK will use the
-            environment variable $NTROPY_API_KEY.
-        timeout : int, optional
-            The timeout for requests to the Ntropy API.
-        retries : int, optional
-            The number of retries for a certain request before failing
-        retry_on_unhandled_exception : boolean, optional
-            Whether to retry or not, when a request returns an unhandled exception (50x status codes)
-        with_progress : bool, optional
-            True if enrichment should include a progress bar; False otherwise.
-        """
+    token: Optional[str] = Field(
+        description="The api key for Ntropy SDK. If not supplied, the SDK will use the environment variable $NTROPY_API_KEY."
+    )
+    timeout: Optional[int] = Field(
+        DEFAULT_TIMEOUT, description="The timeout for requests to the Ntropy API"
+    )
+    retries: Optional[int] = Field(
+        DEFAULT_RETRIES,
+        description="The number of retries for a certain request before failing",
+    )
+    retry_on_unhandled_exception: Optional[bool] = Field(
+        False,
+        description="Whether to retry or not, when a request returns an unhandled exception (50x status codes)",
+    )
+    with_progress: Optional[bool] = Field(
+        DEFAULT_WITH_PROGRESS,
+        description="True if enrichment should include a progress bar; False otherwise.",
+    )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         if not token:
             if ENV_NTROPY_API_TOKEN not in os.environ:
@@ -922,10 +697,10 @@ class SDK:
         self.session.mount("https://", self.keep_alive)
         self.logger = logging.getLogger("Ntropy-SDK")
 
-        self._timeout = timeout
-        self._retries = retries
-        self._retry_on_unhandled_exception = retry_on_unhandled_exception
-        self._with_progress = with_progress
+        self._timeout = self.timeout
+        self._retries = self.retries
+        self._retry_on_unhandled_exception = self.retry_on_unhandled_exception
+        self._with_progress = self.with_progress
 
     def retry_ratelimited_request(
         self, method: str, url: str, payload: object, log_level=logging.DEBUG
@@ -1536,3 +1311,6 @@ class SDK:
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
+
+    class Config:
+        keep_untouched = (singledispatchmethod,)
