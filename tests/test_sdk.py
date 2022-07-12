@@ -362,7 +362,7 @@ def test_batch(sdk):
     resp, status = batch.poll()
     assert status == "finished" and resp[0].merchant == "Amazon Web Services"
 
-    batch = Batch(sdk, batch.batch_id)
+    batch = Batch(sdk=sdk, batch_id=batch.batch_id)
     resp, status = batch.poll()
     assert status == "finished" and resp[0].merchant == "Amazon Web Services"
 
@@ -393,7 +393,7 @@ def test_train_custom_model(sdk):
     _, status, _ = model.poll()
     assert status in ["enriching", "training", "queued"] and model.is_synced()
 
-    m = Model(sdk, model_name, poll_interval=1)
+    m = Model(sdk=sdk, model_name=model_name, poll_interval=1)
     _, status, _ = model.poll()
     assert status in ["enriching", "training", "queued"] and m.is_synced()
 
@@ -451,7 +451,7 @@ def test_train_custom_model_df(sdk):
     _, status, _ = model.poll()
     assert status in ["enriching", "training", "queued"] and model.is_synced()
 
-    m = Model(sdk, model_name, poll_interval=1)
+    m = Model(sdk=sdk, model_name=model_name, poll_interval=1)
     _, status, _ = model.poll()
     assert status in ["enriching", "training", "queued"] and m.is_synced()
 

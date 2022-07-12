@@ -33,6 +33,7 @@ ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
+
 class NtropyError(Exception):
     """An expected error returned from the server-side"""
 
@@ -68,7 +69,7 @@ class Transaction(BaseModel):
         "entry_type",
         "iso_currency_code",
         "country",
-        "mcc"
+        "mcc",
     ]
 
     amount: float = Field(ge=0, description="Amount of the transaction.")
@@ -262,6 +263,7 @@ class LabeledTransaction(Transaction):
         """
         return self.dict(exclude_none=True)
 
+
 class AccountHolder(BaseModel):
     """A financial account holder."""
 
@@ -357,7 +359,9 @@ class EnrichedTransaction(BaseModel):
         le=1.0,
         description="A numerical score between 0.0 and 1.0 indicating the confidence",
     )
-    transaction_type: Optional[TransactionType] = Field(description="Type of the transaction.")
+    transaction_type: Optional[TransactionType] = Field(
+        description="Type of the transaction."
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -571,20 +575,26 @@ class Batch(BaseModel):
         arbitrary_types_allowed = True
         extra = "allow"
 
+
 class Model(BaseModel):
     """A model reference with an associated name"""
 
     sdk: "SDK" = Field(description="TODO")
     model_name: str = Field(description="TODO")
-    created_at: Optional[str]
-    account_holder_type: Optional[AccountHolderType]
-    status: Optional[str]
-    progress: Optional[int]
+    created_at: Optional[str] = None
+    account_holder_type: Optional[AccountHolderType] = None
+    status: Optional[str] = None
+    progress: Optional[int] = None
     timeout: Optional[int] = Field(20 * 60 * 60)
     poll_interval: Optional[int] = Field(10)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.account_holder_type = (self.account_holder_type,)
+        self.created_at = (self.created_at,)
+        self.status = (self.status,)
+        self.progress = (self.progress,)
+
         self.timeout = time.time() + self.timeout
 
     def __repr__(self):
@@ -719,6 +729,7 @@ class Model(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         use_enum_values = True
+
 
 class SDK:
     """The main Ntropy SDK object that holds the connection to the API server and implements
@@ -1392,6 +1403,7 @@ class SDK:
 
     class Config:
         keep_untouched = (singledispatchmethod,)
+
 
 Batch.update_forward_refs()
 EnrichedTransaction.update_forward_refs()
