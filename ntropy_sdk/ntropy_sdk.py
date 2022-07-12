@@ -8,7 +8,7 @@ import re
 import sys
 
 from datetime import datetime, date
-from typing import Optional, Union, Callable, Any, Type, NewType
+from typing import Optional, Union, Callable, Any, ClassVar
 from tqdm.auto import tqdm
 from typing import List
 from urllib.parse import urlencode
@@ -33,10 +33,6 @@ ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
-# to avoid type check errors
-SDK = NewType("SDK", int)
-
-
 class NtropyError(Exception):
     """An expected error returned from the server-side"""
 
@@ -53,6 +49,27 @@ class NtropyBatchError(Exception):
 
 class Transaction(BaseModel):
     """A financial transaction that can be enriched with the Ntropy SDK."""
+
+    _required_fields: ClassVar[List[str]] = [
+        "amount",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "date",
+    ]
+
+    _fields: ClassVar[List[str]] = [
+        "account_holder_id",
+        "account_holder_type",
+        "transaction_id",
+        "amount",
+        "date",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "country",
+        "mcc"
+    ]
 
     amount: float = Field(ge=0, description="Amount of the transaction.")
     entry_type: EntryType = Field(
@@ -158,9 +175,31 @@ class Transaction(BaseModel):
 
 
 class LabeledTransaction(Transaction):
-    """Represents a base Transaction object with an associated label for custom moodel training tasks"""
+    """Represents a base Transaction object with an associated label for custom model training tasks. All other fields are the same as Transaction."""
 
     label: str = Field(description="Ground truth label for a transaction.")
+
+    _required_fields: ClassVar[List[str]] = [
+        "amount",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "date",
+    ]
+
+    _fields: ClassVar[List[str]] = [
+        "account_holder_id",
+        "account_holder_type",
+        "transaction_id",
+        "amount",
+        "date",
+        "description",
+        "entry_type",
+        "iso_currency_code",
+        "country",
+        "mcc",
+        "label",
+    ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -170,17 +209,17 @@ class LabeledTransaction(Transaction):
 
     @classmethod
     def from_row(cls, row):
-        """Constructs a LabeledTransaction object from a pandas.Series containing Transaction fields.
+        """Constructs a LabeledTransaction object from a pandas.Series containing LabeledTransaction fields.
 
         Parameters
         ----------
         val
-            A pandas.Series containing Transaction fields
+            A pandas.Series containing LabeledTransaction fields
 
         Returns
         ------
-        Transaction
-            A corresponding Transaction object.
+        LabeledTransaction
+            A corresponding LabeledTransaction object.
         """
         return cls(
             amount=row["amount"],
@@ -196,6 +235,32 @@ class LabeledTransaction(Transaction):
             label=row.get("label"),
         )
 
+    @classmethod
+    def from_dict(cls, val: dict):
+        """Constructs a LabeledTransaction object from a dictionary of LabeledTransaction fields.
+
+        Parameters
+        ----------
+        val
+            A key-value dictionary of LabeledTransaction fields.
+
+        Returns
+        ------
+        LabeledTransaction
+            A corresponding LabeledTransaction object.
+        """
+
+        return cls(**val)
+
+    def to_dict(self):
+        """Returns a dictionary of non-empty fields for a LabeledTransaction.
+
+        Returns
+        ------
+        dict
+            A dictionary of the LabeledTransaction's fields.
+        """
+        return self.dict(exclude_none=True)
 
 class AccountHolder(BaseModel):
     """A financial account holder."""
@@ -264,12 +329,13 @@ class AccountHolder(BaseModel):
 
     class Config:
         use_enum_values = True
+        extra = "allow"
 
 
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
-    sdk: SDK = Field(description="An SDK to use with the EnrichedTransaction.")
+    sdk: "SDK" = Field(description="An SDK to use with the EnrichedTransaction.")
     labels: Optional[List[str]] = Field(description="Label for the transaction.")
     location: Optional[str] = Field(description="Location of the merchant.")
     logo: Optional[str] = Field(description="A link to the logo of the merchant.")
@@ -291,7 +357,11 @@ class EnrichedTransaction(BaseModel):
         le=1.0,
         description="A numerical score between 0.0 and 1.0 indicating the confidence",
     )
-    transaction_type: TransactionType = Field(description="Type of the transaction.")
+    transaction_type: Optional[TransactionType] = Field(description="Type of the transaction.")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.kwargs = kwargs
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -327,7 +397,7 @@ class EnrichedTransaction(BaseModel):
             A corresponding EnrichedTransaction object.
         """
 
-        return cls(sdk, **val)
+        return cls(sdk=sdk, **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -343,6 +413,7 @@ class EnrichedTransaction(BaseModel):
     class Config:
         use_enum_values = True
         arbitrary_types_allowed = True
+        extra = "allow"
 
 
 class EnrichedTransactionList(list):
@@ -496,18 +567,21 @@ class Batch(BaseModel):
                 return resp
             raise NtropyError("Batch wait timeout")
 
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "allow"
 
 class Model(BaseModel):
     """A model reference with an associated name"""
 
-    sdk: SDK = Field(description="TODO")
+    sdk: "SDK" = Field(description="TODO")
     model_name: str = Field(description="TODO")
     created_at: Optional[str]
-    account_holder_type: AccountHolderType
-    status: str
-    progress: int
-    timeout: int = Field(20 * 60 * 60)
-    poll_interval: int = Field(10)
+    account_holder_type: Optional[AccountHolderType]
+    status: Optional[str]
+    progress: Optional[int]
+    timeout: Optional[int] = Field(20 * 60 * 60)
+    poll_interval: Optional[int] = Field(10)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -634,16 +708,19 @@ class Model(BaseModel):
         progress = response.get("progress")
 
         return Model(
-            sdk,
-            name,
+            sdk=sdk,
+            model_name=name,
             created_at=created_at,
             account_holder_type=account_holder_type,
             status=status,
             progress=progress,
         )
 
+    class Config:
+        arbitrary_types_allowed = True
+        use_enum_values = True
 
-class SDK(BaseModel):
+class SDK:
     """The main Ntropy SDK object that holds the connection to the API server and implements
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
     """
@@ -661,27 +738,28 @@ class SDK(BaseModel):
         # the entire enriched transaction object is at _output_tx
     }
 
-    token: Optional[str] = Field(
-        description="The api key for Ntropy SDK. If not supplied, the SDK will use the environment variable $NTROPY_API_KEY."
-    )
-    timeout: Optional[int] = Field(
-        DEFAULT_TIMEOUT, description="The timeout for requests to the Ntropy API"
-    )
-    retries: Optional[int] = Field(
-        DEFAULT_RETRIES,
-        description="The number of retries for a certain request before failing",
-    )
-    retry_on_unhandled_exception: Optional[bool] = Field(
-        False,
-        description="Whether to retry or not, when a request returns an unhandled exception (50x status codes)",
-    )
-    with_progress: Optional[bool] = Field(
-        DEFAULT_WITH_PROGRESS,
-        description="True if enrichment should include a progress bar; False otherwise.",
-    )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        retries: int = DEFAULT_RETRIES,
+        retry_on_unhandled_exception: bool = False,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+    ):
+        """Parameters
+        ----------
+        token : str, optional
+            The api key for Ntropy SDK. If not supplied, the SDK will use the
+            environment variable $NTROPY_API_KEY.
+        timeout : int, optional
+            The timeout for requests to the Ntropy API.
+        retries : int, optional
+            The number of retries for a certain request before failing
+        retry_on_unhandled_exception : boolean, optional
+            Whether to retry or not, when a request returns an unhandled exception (50x status codes)
+        with_progress : bool, optional
+            True if enrichment should include a progress bar; False otherwise.
+        """
 
         if not token:
             if ENV_NTROPY_API_TOKEN not in os.environ:
@@ -697,10 +775,10 @@ class SDK(BaseModel):
         self.session.mount("https://", self.keep_alive)
         self.logger = logging.getLogger("Ntropy-SDK")
 
-        self._timeout = self.timeout
-        self._retries = self.retries
-        self._retry_on_unhandled_exception = self.retry_on_unhandled_exception
-        self._with_progress = self.with_progress
+        self._timeout = timeout
+        self._retries = retries
+        self._retry_on_unhandled_exception = retry_on_unhandled_exception
+        self._with_progress = with_progress
 
     def retry_ratelimited_request(
         self, method: str, url: str, payload: object, log_level=logging.DEBUG
@@ -832,8 +910,8 @@ class SDK(BaseModel):
         if mapping is None:
             mapping = self.DEFAULT_MAPPING
 
-        required_columns = tx_class.required_fields
-        optional_columns = tx_class.fields
+        required_columns = tx_class._required_fields
+        optional_columns = tx_class._fields
 
         cols = set(df.columns)
         missing_cols = set(required_columns).difference(cols)
@@ -1120,8 +1198,8 @@ class SDK(BaseModel):
                 raise ValueError("batch_id missing from response")
 
             return Batch(
-                self,
-                batch_id,
+                sdk=self,
+                batch_id=batch_id,
                 timeout=timeout,
                 poll_interval=poll_interval,
                 num_transactions=len(transactions),
@@ -1314,3 +1392,7 @@ class SDK(BaseModel):
 
     class Config:
         keep_untouched = (singledispatchmethod,)
+
+Batch.update_forward_refs()
+EnrichedTransaction.update_forward_refs()
+Model.update_forward_refs()
