@@ -471,7 +471,7 @@ class EnrichedTransactionList(list):
 class Batch(BaseModel):
     """An enriched batch with a unique identifier."""
 
-    sdk: SDK = Field(description="A SDK associated with the batch.")
+    sdk: "SDK" = Field(description="A SDK associated with the batch.")
     batch_id: str = Field(description="A unique identifier for the batch.")
     timeout: int = Field(
         4 * 60 * 60, description="A timeout for retrieving the batch result."
