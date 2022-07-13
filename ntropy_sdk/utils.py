@@ -52,6 +52,10 @@ def validate_date(value: Union[str, date, datetime]):
         raise ValueError("date must be of the format %Y-%m-%d")
 
 
+def dict_to_str(dict):
+    return ", ".join(f"{k}={v}" for k, v in dict.items())
+
+
 # Ported from CPython implementation, starting from Python 3.8.0
 # https://github.com/python/cpython/blob/main/Lib/functools.py
 class singledispatchmethod:

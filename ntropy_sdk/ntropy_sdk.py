@@ -17,6 +17,7 @@ from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 from ntropy_sdk.utils import (
     RecurrenceType,
     TransactionType,
+    dict_to_str,
     singledispatchmethod,
     assert_type,
     AccountHolderType,
@@ -112,7 +113,7 @@ class Transaction(BaseModel):
             self.transaction_id = str(uuid.uuid4())
 
     def __repr__(self):
-        return f"Transaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type})"
+        return f"Transaction({dict_to_str(self.to_dict())})"
 
     def __str__(self):
         return repr(self)
@@ -206,7 +207,7 @@ class LabeledTransaction(Transaction):
         super().__init__(**kwargs)
 
     def __repr__(self):
-        return f"LabeledTransaction(transaction_id={self.transaction_id}, description={self.description}, amount={self.amount}, entry_type={self.entry_type}, label={self.label})"
+        return f"LabeledTransaction({dict_to_str(self.to_dict())})"
 
     @classmethod
     def from_row(cls, row):
@@ -279,7 +280,7 @@ class AccountHolder(BaseModel):
     _sdk = None
 
     def __repr__(self):
-        return f"AccountHolder(id={self.id}, type={self.type})"
+        return f"AccountHolder({dict_to_str(self.to_dict())})"
 
     def __str__(self):
         return repr(self)
@@ -368,7 +369,7 @@ class EnrichedTransaction(BaseModel):
         self.kwargs = kwargs
 
     def __repr__(self):
-        return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
+        return f"EnrichedTransaction({dict_to_str(self.to_dict())})"
 
     def report(
         self,
@@ -412,7 +413,7 @@ class EnrichedTransaction(BaseModel):
             A dictionary of the EnrichedTransaction's fields.
         """
 
-        return self.dict()
+        return self.dict(exclude_none=True)
 
     class Config:
         use_enum_values = True
@@ -486,7 +487,7 @@ class Batch(BaseModel):
         self.timeout = time.time() + self.timeout
 
     def __repr__(self):
-        return f"Batch(id={self.batch_id})"
+        return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
 
     def poll(self):
         """Polls the current batch status and returns the server response and status attribute.
@@ -598,7 +599,7 @@ class Model(BaseModel):
         self.timeout = time.time() + self.timeout
 
     def __repr__(self):
-        return f"Model(name={self.model_name})"
+        return f"Model({dict_to_str(self.dict(exclude_none=True))})"
 
     def is_synced(self) -> bool:
         """Returns True if the model instance was already synced at least once with the server
