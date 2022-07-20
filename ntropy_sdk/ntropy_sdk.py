@@ -363,6 +363,9 @@ class EnrichedTransaction(BaseModel):
     transaction_type: Optional[TransactionType] = Field(
         description="Type of the transaction."
     )
+    predicted_mcc: Optional[List[int]] = Field(
+        description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245) predicted by the model."
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
