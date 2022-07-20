@@ -580,14 +580,14 @@ class Batch(BaseModel):
 class Model(BaseModel):
     """A model reference with an associated name"""
 
-    sdk: "SDK" = Field(description="TODO")
-    model_name: str = Field(description="TODO")
-    created_at: Optional[str] = None
-    account_holder_type: Optional[AccountHolderType] = None
-    status: Optional[str] = None
-    progress: Optional[int] = None
-    timeout: Optional[int] = Field(20 * 60 * 60)
-    poll_interval: Optional[int] = Field(10)
+    sdk: "SDK" = Field(description="A SDK associated with the model.")
+    model_name: str = Field(description="The name of the model.")
+    created_at: Optional[str] = Field(description="The date the model was created.")
+    account_holder_type: Optional[AccountHolderType] = Field(description="Type of the account holder – must be one of consumer, business, freelance, or unknown.")
+    status: Optional[str] = Field(description="The status of the batch enrichment.")
+    progress: Optional[int] = Field(description="The progress from 0 to 100 of the training process")
+    timeout: Optional[int] = Field(20 * 60 * 60, description="A timeout for retrieving the batch result.")
+    poll_interval: Optional[int] = Field(10, description="The interval between polling retries.")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
