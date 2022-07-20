@@ -425,18 +425,19 @@ class EnrichedTransaction:
     def __init__(
         self,
         sdk,
-        labels: List[str] = None,
-        location: str = None,
-        logo: str = None,
-        merchant: str = None,
-        merchant_id: str = None,
-        person: str = None,
-        transaction_id: str = None,
-        website: str = None,
-        chart_of_accounts: List[str] = None,
-        recurrence: str = None,
-        confidence: float = None,
-        transaction_type: str = None,
+        labels: Optional[List[str]] = None,
+        location: Optional[str] = None,
+        logo: Optional[str] = None,
+        merchant: Optional[str] = None,
+        merchant_id: Optional[str] = None,
+        person: Optional[str] = None,
+        transaction_id: Optional[str] = None,
+        website: Optional[str] = None,
+        chart_of_accounts: Optional[List[str]] = None,
+        recurrence: Optional[str] = None,
+        confidence: Optional[float] = None,
+        predicted_mcc: Optional[List[int]] = None, 
+        transaction_type: Optional[str] = None,
         **kwargs,
     ):
         """Parameters
@@ -466,6 +467,8 @@ class EnrichedTransaction:
         confidence: float, optional
             A numerical score between 0.0 and 1.0 indicating the confidence
             of the enrichment.
+        predicted_mcc: List[int], optional
+            A list of MCC (Merchant Category Code of the merchant, according to ISO 18245) predicted by the model. 
         transaction_type: {"consumer", "business", "freelance", "unknown"}
             Type of the transaction.
         """
@@ -484,6 +487,7 @@ class EnrichedTransaction:
         self.recurrence = recurrence
         self.confidence = confidence
         self.transaction_type = transaction_type
+        self.predicted_mcc = predicted_mcc
 
     def __repr__(self):
         return f"EnrichedTransaction(transaction_id={self.transaction_id}, merchant={self.merchant}, logo={self.logo}, labels={self.labels})"
@@ -543,6 +547,7 @@ class EnrichedTransaction:
             "recurrence": self.recurrence,
             "confidence": self.confidence,
             "transaction_type": self.transaction_type,
+            "predicted_mcc": self.predicted_mcc
         }
 
 
