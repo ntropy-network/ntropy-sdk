@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
+
+## [4.8.0] – 2022-07-20
 - Added TCP keep-alive to Ntropy API requests
 - Migrated SDK classes to Pydantic
 - Added new predicted_mcc field in EnrichedTransaction
