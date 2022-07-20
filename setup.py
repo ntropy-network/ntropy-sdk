@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 with open("README.md") as readme_file:
     readme = readme_file.read()
 
-requirements = ["requests", "tqdm"]
+requirements = ["requests", "tqdm", "requests_toolbelt", "pydantic"]
 
 EXTRAS_REQUIRE = {
     "models": ["pandas", "scikit-learn", "numpy"],
