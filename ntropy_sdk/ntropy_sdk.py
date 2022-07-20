@@ -547,7 +547,7 @@ class EnrichedTransaction:
             "recurrence": self.recurrence,
             "confidence": self.confidence,
             "transaction_type": self.transaction_type,
-            "predicted_mcc": self.predicted_mcc
+            "predicted_mcc": self.predicted_mcc,
         }
 
 
