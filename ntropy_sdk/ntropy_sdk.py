@@ -436,7 +436,7 @@ class EnrichedTransaction:
         chart_of_accounts: Optional[List[str]] = None,
         recurrence: Optional[str] = None,
         confidence: Optional[float] = None,
-        predicted_mcc: Optional[List[int]] = None, 
+        predicted_mcc: Optional[List[int]] = None,
         transaction_type: Optional[str] = None,
         **kwargs,
     ):
@@ -468,7 +468,7 @@ class EnrichedTransaction:
             A numerical score between 0.0 and 1.0 indicating the confidence
             of the enrichment.
         predicted_mcc: List[int], optional
-            A list of MCC (Merchant Category Code of the merchant, according to ISO 18245) predicted by the model. 
+            A list of MCC (Merchant Category Code of the merchant, according to ISO 18245) predicted by the model.
         transaction_type: {"consumer", "business", "freelance", "unknown"}
             Type of the transaction.
         """
