@@ -1,5 +1,34 @@
 import math
 from functools import singledispatch, update_wrapper
+from datetime import datetime, date
+from typing import Optional, List, Union, Dict, Any
+from enum import Enum
+
+
+class AccountHolderType(Enum):
+    consumer = "consumer"
+    business = "business"
+    freelance = "freelance"
+    unknown = "unknown"
+
+
+class EntryType(Enum):
+    incoming = "incoming"
+    outgoing = "outgoing"
+    credit = "credit"
+    debit = "debit"
+
+
+class TransactionType(Enum):
+    business = "business"
+    consumer = "consumer"
+    unknown = "unknown"
+
+
+class RecurrenceType(str, Enum):
+    recurring = "recurring"
+    subscription = "subscription"
+    one_off = "one off"
 
 
 def assert_type(value, name, expected_type):
@@ -13,6 +42,18 @@ def assert_type(value, name, expected_type):
             raise ValueError(f"{name} value cannot be NaN")
 
     return True
+
+
+def validate_date(value: Union[str, date, datetime]):
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+        return value
+    except ValueError:
+        raise ValueError("date must be of the format %Y-%m-%d")
+
+
+def dict_to_str(dict):
+    return ", ".join(f"{k}={v}" for k, v in dict.items())
 
 
 # Ported from CPython implementation, starting from Python 3.8.0

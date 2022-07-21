@@ -3,8 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged] 
-- Added TCP keep-alive to Ntropy API requests
 
+## [4.8.0] – 2022-07-20
+- Added TCP keep-alive to Ntropy API requests
+- Migrated SDK classes to Pydantic
+- Added new predicted_mcc field in EnrichedTransaction
 
 ## [4.7.0]  - 2022-07-04
 - Update `get_account_holder` method to return an AccountHolder object instead of dictionaries
