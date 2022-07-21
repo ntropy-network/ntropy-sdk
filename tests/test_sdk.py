@@ -3,6 +3,7 @@ import pytest
 import uuid
 import pandas as pd
 
+from decimal import Decimal
 from tests import API_KEY
 from ntropy_sdk import (
     SDK,
@@ -476,3 +477,18 @@ def test_train_custom_model_df(sdk):
     )[0]
 
     assert "supermarket" in e.labels
+
+
+def test_numerical_support():
+    tx = Transaction(
+        amount=Decimal(24.56),
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        iso_currency_code="USD",
+        mcc="5432",
+    )
+
+    assert isinstance(tx.amount, float)
+    assert isinstance(tx.mcc, int)
