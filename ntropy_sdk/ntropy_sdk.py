@@ -338,6 +338,23 @@ class AccountHolder(BaseModel):
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
+    _fields: ClassVar[List[str]] = [
+        "sdk",
+        "labels",
+        "location",
+        "logo",
+        "merchant",
+        "merchant_id",
+        "person",
+        "transaction_id",
+        "website",
+        "chart_of_accounts",
+        "recurrence",
+        "confidence",
+        "transaction_type",
+        "predicted_mcc",
+    ]
+
     sdk: "SDK" = Field(description="An SDK to use with the EnrichedTransaction.")
     labels: Optional[List[str]] = Field(description="Label for the transaction.")
     location: Optional[str] = Field(description="Location of the merchant.")
@@ -368,8 +385,16 @@ class EnrichedTransaction(BaseModel):
     )
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.kwargs = kwargs
+        fields = {}
+        extra = {}
+        for key in kwargs:
+            if key in EnrichedTransaction._fields:
+                fields[key] = kwargs[key]
+            else:
+                extra[key] = kwargs[key]
+
+        super().__init__(**fields)
+        self.kwargs = extra
 
     def __repr__(self):
         return f"EnrichedTransaction({dict_to_str(self.to_dict())})"
@@ -586,11 +611,19 @@ class Model(BaseModel):
     sdk: "SDK" = Field(description="A SDK associated with the model.")
     model_name: str = Field(description="The name of the model.")
     created_at: Optional[str] = Field(description="The date the model was created.")
-    account_holder_type: Optional[AccountHolderType] = Field(description="Type of the account holder – must be one of consumer, business, freelance, or unknown.")
+    account_holder_type: Optional[AccountHolderType] = Field(
+        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+    )
     status: Optional[str] = Field(description="The status of the batch enrichment.")
-    progress: Optional[int] = Field(description="The progress from 0 to 100 of the training process")
-    timeout: Optional[int] = Field(20 * 60 * 60, description="A timeout for retrieving the batch result.")
-    poll_interval: Optional[int] = Field(10, description="The interval between polling retries.")
+    progress: Optional[int] = Field(
+        description="The progress from 0 to 100 of the training process"
+    )
+    timeout: Optional[int] = Field(
+        20 * 60 * 60, description="A timeout for retrieving the batch result."
+    )
+    poll_interval: Optional[int] = Field(
+        10, description="The interval between polling retries."
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
