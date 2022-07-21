@@ -156,7 +156,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
                 tx = tx.to_dict()
             if isinstance(tx, dict) and not as_dict:
                 filtered_tx = {}
-                for field in Transaction.fields:
+                for field in Transaction._fields:
                     if field in tx:
                         filtered_tx[field] = tx[field]
 
