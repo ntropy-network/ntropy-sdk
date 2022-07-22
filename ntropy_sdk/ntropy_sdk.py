@@ -1030,14 +1030,6 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
-        if model is not None:
-            if model_name is not None:
-                msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
-            else:
-                msg = f"Argument model is deprecated and should be replaced with model_name"
-                model_name = model
-            warnings.warn(msg, category=DeprecationWarning)
-
         if mapping is None:
             mapping = self.DEFAULT_MAPPING
 
@@ -1076,7 +1068,16 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model_name=None,
+        model=None,
     ):
+        if model is not None:
+            if model_name is not None:
+                msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
+            else:
+                msg = f"Argument model is deprecated and should be replaced with model_name"
+                model_name = model
+            warnings.warn(msg, category=DeprecationWarning)
+
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
                 transactions[i : (i + self.MAX_BATCH_SIZE)]

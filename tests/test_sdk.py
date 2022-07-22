@@ -413,10 +413,10 @@ def test_train_custom_model(sdk):
         transaction_id="one-two-three",
         mcc=5432,
     )
-    e, *_ = sdk.add_transactions([tx], model_name=model_name)
+    (e,) = sdk.add_transactions([tx], model_name=model_name)
     assert "supermarket" in e.labels
     with pytest.deprecated_call():
-        e, *_ = sdk.add_transactions([tx], model=model_name)
+        (e,) = sdk.add_transactions([tx], model=model_name)
         assert "supermarket" in e.labels
 
 
