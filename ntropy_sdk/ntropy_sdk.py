@@ -16,8 +16,15 @@ from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
-from ntropy_sdk.utils import (AccountHolderType, EntryType, RecurrenceType, TransactionType, dict_to_str,
-                              singledispatchmethod, validate_date)
+from ntropy_sdk.utils import (
+    AccountHolderType,
+    EntryType,
+    RecurrenceType,
+    TransactionType,
+    dict_to_str,
+    singledispatchmethod,
+    validate_date,
+)
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
@@ -1072,7 +1079,7 @@ class SDK:
     ):
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
-                transactions[i: (i + self.MAX_BATCH_SIZE)]
+                transactions[i : (i + self.MAX_BATCH_SIZE)]
                 for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
             ]
 

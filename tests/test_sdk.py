@@ -5,7 +5,15 @@ from decimal import Decimal
 import pandas as pd
 import pytest
 
-from ntropy_sdk import (AccountHolder, Batch, EnrichedTransaction, LabeledTransaction, Model, SDK, Transaction)
+from ntropy_sdk import (
+    AccountHolder,
+    Batch,
+    EnrichedTransaction,
+    LabeledTransaction,
+    Model,
+    SDK,
+    Transaction,
+)
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 from tests import API_KEY
 
@@ -414,27 +422,27 @@ def test_train_custom_model(sdk):
 
 def test_train_custom_model_df(sdk):
     txs = [
-              {
-                  "amount": 102.04,
-                  "description": "TARGET T- 5800 20th St 11/30/19 17:32",
-                  "entry_type": "debit",
-                  "date": "2012-12-10",
-                  "iso_currency_code": "USD",
-                  "account_holder_type": "business",
-                  "mcc": 5432,
-                  "label": "supermarket",
-              },
-              {
-                  "amount": 24.56,
-                  "description": "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
-                  "entry_type": "debit",
-                  "date": "2012-12-10",
-                  "account_holder_type": "business",
-                  "iso_currency_code": "USD",
-                  "label": "cloud",
-                  "mcc": 1234,
-              },
-          ] * 10
+        {
+            "amount": 102.04,
+            "description": "TARGET T- 5800 20th St 11/30/19 17:32",
+            "entry_type": "debit",
+            "date": "2012-12-10",
+            "iso_currency_code": "USD",
+            "account_holder_type": "business",
+            "mcc": 5432,
+            "label": "supermarket",
+        },
+        {
+            "amount": 24.56,
+            "description": "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+            "entry_type": "debit",
+            "date": "2012-12-10",
+            "account_holder_type": "business",
+            "iso_currency_code": "USD",
+            "label": "cloud",
+            "mcc": 1234,
+        },
+    ] * 10
 
     model_name = f"test_{str(uuid.uuid4())[:20]}"
     df = pd.DataFrame(txs)
