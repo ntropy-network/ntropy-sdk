@@ -1,31 +1,30 @@
-import os
-import time
 import csv
-import uuid
-import requests
 import logging
-import re
+import os
 import sys
-
-from datetime import datetime, date
-from typing import Optional, Union, Callable, Any, ClassVar
-from tqdm.auto import tqdm
+import time
+import uuid
+import warnings
+from datetime import date
+from typing import Any, ClassVar, Optional, Union
 from typing import List
 from urllib.parse import urlencode
-from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 
+import requests
+from pydantic import BaseModel, Field, validator
+from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
+from tqdm.auto import tqdm
+
+from ntropy_sdk import __version__
 from ntropy_sdk.utils import (
+    AccountHolderType,
+    EntryType,
     RecurrenceType,
     TransactionType,
     dict_to_str,
     singledispatchmethod,
-    assert_type,
-    AccountHolderType,
     validate_date,
-    EntryType,
 )
-from ntropy_sdk import __version__
-from pydantic import BaseModel, Field, Extra, validator
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
@@ -994,6 +993,7 @@ class SDK:
         labeling: bool = True,
         create_account_holders: bool = True,
         model_name: str = None,
+        model: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1017,6 +1017,8 @@ class SDK:
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
+        model: str, optional
+            Deprecated. Use model_name instead.
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
             expected column names. Note: this only applies to DataFrame enrichment.
@@ -1066,7 +1068,16 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model_name=None,
+        model=None,
     ):
+        if model is not None:
+            if model_name is not None:
+                msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
+            else:
+                msg = f"Argument model is deprecated and should be replaced with model_name"
+                model_name = model
+            warnings.warn(msg, category=DeprecationWarning)
+
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
                 transactions[i : (i + self.MAX_BATCH_SIZE)]

@@ -1,20 +1,21 @@
 import os
-import pytest
 import uuid
-import pandas as pd
-
 from decimal import Decimal
-from tests import API_KEY
+
+import pandas as pd
+import pytest
+
 from ntropy_sdk import (
-    SDK,
-    Transaction,
-    LabeledTransaction,
-    EnrichedTransaction,
     AccountHolder,
     Batch,
+    EnrichedTransaction,
+    LabeledTransaction,
     Model,
+    SDK,
+    Transaction,
 )
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
+from tests import API_KEY
 
 
 @pytest.fixture
@@ -402,23 +403,21 @@ def test_train_custom_model(sdk):
     _, status, _ = model.poll()
     assert status == "ready"
 
-    e = sdk.add_transactions(
-        [
-            Transaction(
-                amount=110.2,
-                description="TARGET T- 5800 20th St 11/30/19 17:32",
-                entry_type="debit",
-                date="2012-12-10",
-                account_holder_id="1",
-                iso_currency_code="USD",
-                transaction_id="one-two-three",
-                mcc=5432,
-            )
-        ],
-        model_name=model_name,
-    )[0]
-
+    tx = Transaction(
+        amount=110.2,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        iso_currency_code="USD",
+        transaction_id="one-two-three",
+        mcc=5432,
+    )
+    (e,) = sdk.add_transactions([tx], model_name=model_name)
     assert "supermarket" in e.labels
+    with pytest.deprecated_call():
+        (e,) = sdk.add_transactions([tx], model=model_name)
+        assert "supermarket" in e.labels
 
 
 def test_train_custom_model_df(sdk):
