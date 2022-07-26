@@ -101,7 +101,7 @@ class Transaction(BaseModel):
         min_length=1,
     )
     mcc: Optional[int] = Field(
-        ge=1000,
+        ge=700,
         le=9999,
         description="The Merchant Category Code of the merchant, according to ISO 18245.",
     )
