@@ -309,6 +309,7 @@ def test_readme():
         os.path.join(os.path.dirname(__file__), "..", "README.md")
     ).read()
     readme_data = readme_file.split("```python")[1].split("```")[0]
+    readme_data = readme_data.replace("YOUR-API-KEY", API_KEY)
     exec(readme_data, globals())
 
 

@@ -16,6 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Mask sensitive
+      run: |
+          echo "::add-mask::${{ secrets.NTROPY_API_KEY }}"
     - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
