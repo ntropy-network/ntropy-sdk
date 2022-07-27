@@ -2,7 +2,8 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unmerged]
+## [Unreleased]
+- Renamed `predicted_mcc` to `mcc` for simplicity.
 
 ## [4.8.1] - 2022-07-22
 - Fixed a bug with deprecated `model` parameter for custom models
