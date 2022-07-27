@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file.
 - Progress bar enabled by default for only interactive mode
 
 ## [4.5.0] – 2022-06-10
-- Correctly handle ConnectionError when acessing API for expired HTTP sessions. Requests are retried by creating a new requests Session.
+- Correctly handle ConnectionError when accessing API for expired HTTP sessions. Requests are retried by creating a new requests Session.
 - Disabled zero amount check by default
 - Account holder id is no longer mandatory for enrichments using dataframes
 - Added missing mcc field when using dataframes
