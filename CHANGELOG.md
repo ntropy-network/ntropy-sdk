@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unmerged]
+- Increased mcc range to 700-9999
 
 ## [4.8.1] - 2022-07-22
 - Fixed a bug with deprecated `model` parameter for custom models
