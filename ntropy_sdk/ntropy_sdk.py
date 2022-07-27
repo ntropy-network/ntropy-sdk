@@ -6,8 +6,8 @@ import time
 import uuid
 import warnings
 from datetime import date
-from typing import Any, ClassVar, Optional, Union
-from typing import List
+from typing import Any, ClassVar, List, Optional
+from collections.abc import Iterable
 from urllib.parse import urlencode
 
 import requests
@@ -938,6 +938,15 @@ class SDK:
         self.retry_ratelimited_request("POST", url, account_holder.to_dict())
         account_holder.set_sdk(self)
 
+    def _is_dataframe(self, obj) -> bool:
+        try:
+            import pandas as pd
+        except ImportError:
+            # If here, the input data is not a dataframe, or import would succeed
+            return False
+
+        return isinstance(obj, pd.DataFrame)
+
     def df_to_transaction_list(
         self,
         df,
@@ -958,16 +967,9 @@ class SDK:
         inplace : bool, optional
             Enrich the dataframe inplace.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            # If here, the input data is not a dataframe, or import would succeed
-            raise ValueError(
-                f"add_transactions takes either a pandas.DataFrame or a list of Transactions for its `df` parameter, you supplied a '{type(df)}'"
-            )
+        import pandas as pd
 
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError("Transactions object needs to be a pandas dataframe.")
+        assert isinstance(df, pd.DataFrame)
 
         if mapping is None:
             mapping = self.DEFAULT_MAPPING
@@ -1045,6 +1047,47 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
+        if self._is_dataframe(transactions):
+            return self._add_transactions_df(
+                transactions,
+                timeout,
+                poll_interval,
+                with_progress,
+                labeling,
+                create_account_holders,
+                model_name,
+                model,
+                mapping,
+                inplace,
+            )
+
+        if isinstance(transactions, Iterable):
+            return self._add_transactions_iterable(
+                transactions,
+                timeout,
+                poll_interval,
+                with_progress,
+                labeling,
+                create_account_holders,
+                model_name,
+                model,
+            )
+
+        raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
+
+    def _add_transactions_df(
+        self,
+        transactions,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        labeling: bool = True,
+        create_account_holders: bool = True,
+        model_name: str = None,
+        model: str = None,
+        mapping: dict = None,
+        inplace: bool = False,
+    ):
         if mapping is None:
             mapping = self.DEFAULT_MAPPING
 
@@ -1120,6 +1163,28 @@ class SDK:
             labeling,
             create_account_holders,
             model_name,
+        )
+
+    def _add_transactions_iterable(
+        self,
+        transactions,
+        timeout: int = 4 * 60 * 60,
+        poll_interval=10,
+        with_progress=DEFAULT_WITH_PROGRESS,
+        labeling=True,
+        create_account_holders=True,
+        model_name=None,
+        model=None,
+    ):
+        return self._add_transactions_list(
+            list(transactions),
+            timeout,
+            poll_interval,
+            with_progress,
+            labeling,
+            create_account_holders,
+            model_name,
+            model,
         )
 
     @staticmethod
@@ -1219,6 +1284,41 @@ class SDK:
         Batch
             A Batch object that can be polled and awaited.
         """
+        if self._is_dataframe(transactions):
+            return self._add_transactions_async_df(
+                transactions,
+                timeout,
+                poll_interval,
+                labeling,
+                create_account_holders,
+                model_name,
+                mapping,
+                inplace,
+            )
+
+        if isinstance(transactions, Iterable):
+            return self._add_transactions_async_iterable(
+                transactions,
+                timeout,
+                poll_interval,
+                labeling,
+                create_account_holders,
+                model_name,
+            )
+
+        raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
+
+    def _add_transactions_async_df(
+        self,
+        transactions,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        labeling: bool = True,
+        create_account_holders: bool = True,
+        model_name: str = None,
+        mapping: dict = None,
+        inplace: bool = False,
+    ):
         if mapping is None:
             mapping = self.DEFAULT_MAPPING
 
@@ -1247,6 +1347,24 @@ class SDK:
 
         return self._add_transactions_async(
             transactions,
+            timeout,
+            poll_interval,
+            labeling,
+            create_account_holders,
+            model_name,
+        )
+
+    def _add_transactions_async_iterable(
+        self,
+        transactions: Iterable[Transaction],
+        timeout=4 * 60 * 60,
+        poll_interval=10,
+        labeling=True,
+        create_account_holders=True,
+        model_name=None,
+    ):
+        return self._add_transactions_async_list(
+            list(transactions),
             timeout,
             poll_interval,
             labeling,

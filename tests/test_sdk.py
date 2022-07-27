@@ -145,6 +145,7 @@ def test_account_holder_type_or_id_pandas(sdk):
     assert "missing account holder information" in enriched.labels[0]
 
 
+
 def test_dataframe_inplace(sdk):
     df = pd.DataFrame(
         data={
@@ -166,6 +167,43 @@ def test_dataframe_inplace(sdk):
     # inplace = True should change the original dataframe
     sdk.add_transactions(df, inplace=True)
     assert "goods" in df.labels[0]
+
+def test_account_holder_type_or_id_iterable(sdk):
+    id_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+    enriched = sdk.add_transactions((t for t in [id_tx]))[0]
+    assert "missing account holder information" not in enriched.labels
+
+    type_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+    enriched = sdk.add_transactions((t for t in [type_tx]))[0]
+    assert "missing account holder information" not in enriched.labels
+
+    invalid_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+
+    enriched = sdk.add_transactions((t for t in [invalid_tx]))[0]
+    assert "missing account holder information" in enriched.labels
 
 
 def test_bad_date():
@@ -369,6 +407,23 @@ def test_add_transactions_async_df(sdk):
     batch = sdk.add_transactions_async(df)
     enriched = batch.wait()
     assert enriched[0].merchant == "Target"
+
+
+def test_add_transactions_async_iterable(sdk):
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+    )
+
+    batch = sdk.add_transactions_async((t for t in [tx]))
+    assert batch.batch_id and len(batch.batch_id) > 0
+
+    enriched = batch.wait()
+    assert enriched[0].merchant == "Amazon Web Services"
 
 
 def test_batch(sdk):
