@@ -351,7 +351,7 @@ class EnrichedTransaction(BaseModel):
         "recurrence",
         "confidence",
         "transaction_type",
-        "predicted_mcc",
+        "mcc",
     ]
 
     sdk: "SDK" = Field(description="An SDK to use with the EnrichedTransaction.")
@@ -379,8 +379,8 @@ class EnrichedTransaction(BaseModel):
     transaction_type: Optional[TransactionType] = Field(
         description="Type of the transaction."
     )
-    predicted_mcc: Optional[List[int]] = Field(
-        description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245) predicted by the model."
+    mcc: Optional[List[int]] = Field(
+        description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
     )
 
     def __init__(self, **kwargs):
@@ -428,7 +428,9 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-
+        # temporarily support while API is not updated
+        if "predicted_mcc" in val:
+            val["mcc"] = val.pop("predicted_mcc")
         return cls(sdk=sdk, **val)
 
     def to_dict(self):
