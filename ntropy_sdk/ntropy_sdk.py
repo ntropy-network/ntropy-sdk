@@ -428,9 +428,6 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        # temporarily support while API is not updated
-        if "predicted_mcc" in val:
-            val["mcc"] = val.pop("predicted_mcc")
         return cls(sdk=sdk, **val)
 
     def to_dict(self):
