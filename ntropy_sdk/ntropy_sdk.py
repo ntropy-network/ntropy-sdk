@@ -1014,13 +1014,13 @@ class SDK:
         mapping: dict = None,
         inplace: bool = False,
     ):
-        """Enriches either a list of Transaction objects or a pandas dataframe synchronously.
+        """Enriches either an iterable of Transaction objects or a pandas dataframe synchronously.
         Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
 
         Parameters
         ----------
-        transactions : List[Transaction], pandas.DataFrame
-            A list of Transaction objects or a pandas DataFrame with the required
+        transactions : Iterable[Transaction], pandas.DataFrame
+            An iterable of Transaction objects or a pandas DataFrame with the required
             columns.
         timeout : int, optional
             Timeout for enriching the transactions.
@@ -1256,13 +1256,13 @@ class SDK:
         mapping: dict = None,
         inplace: bool = False,
     ):
-        """Enriches either a list of Transaction objects or a pandas dataframe asynchronously.
+        """Enriches either an iterable of Transaction objects or a pandas dataframe asynchronously.
         Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
 
         Parameters
         ----------
-        transactions : List[Transaction], pandas.DataFrame
-            A list of Transaction objects or a pandas DataFrame with the required
+        transactions : Iterable[Transaction], pandas.DataFrame
+            An iterable of Transaction objects or a pandas DataFrame with the required
             columns.
         timeout : int, optional
             Timeout for enriching the transactions.
