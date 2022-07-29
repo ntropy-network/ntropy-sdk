@@ -6,7 +6,7 @@ import time
 import uuid
 import warnings
 from datetime import date
-from typing import Any, ClassVar, List, Optional
+from typing import Any, ClassVar, Generator, List, Optional, TypeVar
 from collections.abc import Iterable
 from urllib.parse import urlencode
 from itertools import islice
@@ -35,7 +35,10 @@ COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
-def chunks(it: Iterable, chunk_size: int):
+T = TypeVar("T")
+
+
+def chunks(it: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
     it = it.__iter__()
     while True:
         chunk = list(islice(it, chunk_size))
@@ -1158,7 +1161,7 @@ class SDK:
 
     def _add_transactions_iterable(
         self,
-        transactions,
+        transactions: Iterable[Transaction],
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
