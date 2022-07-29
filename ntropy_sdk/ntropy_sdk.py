@@ -1298,10 +1298,11 @@ class SDK:
             A Batch object that can be polled and awaited.
         """
 
-        if len(transactions) > self.MAX_BATCH_SIZE:
-            raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
-
         if self._is_dataframe(transactions):
+
+            if len(transactions) > self.MAX_BATCH_SIZE:
+                raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
+
             return self._add_transactions_async_df(
                 transactions,
                 timeout,
@@ -1361,6 +1362,9 @@ class SDK:
     ):
         if None in transactions:
             raise ValueError("transactions contains a None value")
+
+        if len(transactions) > self.MAX_BATCH_SIZE:
+            raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
 
         return self._add_transactions_async(
             transactions,
