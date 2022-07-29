@@ -9,6 +9,7 @@ from datetime import date
 from typing import Any, ClassVar, List, Optional
 from collections.abc import Iterable
 from urllib.parse import urlencode
+from itertools import islice
 
 import requests
 from pydantic import BaseModel, Field, validator
@@ -32,6 +33,15 @@ DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
+
+
+def chunks(it: Iterable, chunk_size: int):
+    it = it.__iter__()
+    while True:
+        chunk = list(islice(it, chunk_size))
+        if len(chunk) == 0:
+            return
+        yield chunk
 
 
 class NtropyError(Exception):
@@ -1157,16 +1167,19 @@ class SDK:
         model_name=None,
         model=None,
     ):
-        return self._add_transactions_list(
-            list(transactions),
-            timeout,
-            poll_interval,
-            with_progress,
-            labeling,
-            create_account_holders,
-            model_name,
-            model,
-        )
+        result = []
+        for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
+            result += self._add_transactions_list(
+                chunk,
+                timeout,
+                poll_interval,
+                with_progress,
+                labeling,
+                create_account_holders,
+                model_name,
+                model,
+            )
+        return result
 
     @staticmethod
     def _build_params_str(
@@ -1265,6 +1278,10 @@ class SDK:
         Batch
             A Batch object that can be polled and awaited.
         """
+
+        if len(transactions) > self.MAX_BATCH_SIZE:
+            raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
+
         if self._is_dataframe(transactions):
             return self._add_transactions_async_df(
                 transactions,
