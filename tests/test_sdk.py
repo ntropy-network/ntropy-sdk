@@ -253,6 +253,7 @@ def test_enrich_huge_batch(sdk):
         assert isinstance(enriched_tx, EnrichedTransaction)
         assert enriched_tx.merchant is not None
         assert enriched_tx.transaction_id == txs[i].transaction_id
+        assert enriched_tx.parent_tx is txs[i]
 
 
 def test_report(sdk):
@@ -351,6 +352,7 @@ def test_add_transactions_async(sdk):
 
     enriched = batch.wait()
     assert enriched[0].merchant == "Amazon Web Services"
+    assert enriched[0].parent_tx is tx
 
 
 def test_add_transactions_async_df(sdk):
@@ -531,3 +533,16 @@ def test_none_in_txns_error(sdk):
             assert False
         except ValueError as e:
             assert str(e) == "transactions contains a None value"
+
+def test_parent_tx(sdk):
+    id_tx = Transaction(
+        amount=24.56,
+        description="TARGET T- 5800 20th St 11/30/19 17:32",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id="1",
+        iso_currency_code="USD",
+        mcc=5432,
+    )
+    enriched = sdk.add_transactions([id_tx])[0]
+    assert enriched.parent_tx is id_tx
