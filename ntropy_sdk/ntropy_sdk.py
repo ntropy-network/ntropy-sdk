@@ -517,7 +517,9 @@ class Batch(BaseModel):
     num_transactions: int = Field(
         0, description="The number of transactions in the batch."
     )
-    transactions: list = Field([], description="The transactions submitted in this batch")
+    transactions: list = Field(
+        [], description="The transactions submitted in this batch"
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -543,7 +545,10 @@ class Batch(BaseModel):
         status, results = json_resp.get("status"), json_resp.get("results", [])
 
         if status == "finished":
-            return EnrichedTransactionList.from_list(self.sdk, results, self.transactions), status
+            return (
+                EnrichedTransactionList.from_list(self.sdk, results, self.transactions),
+                status,
+            )
 
         if status == "error":
             raise NtropyBatchError(f"Batch failed: {results}", errors=results)

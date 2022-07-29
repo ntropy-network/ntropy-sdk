@@ -534,6 +534,7 @@ def test_none_in_txns_error(sdk):
         except ValueError as e:
             assert str(e) == "transactions contains a None value"
 
+
 def test_parent_tx(sdk):
     id_tx = Transaction(
         amount=24.56,
