@@ -1072,6 +1072,9 @@ class SDK:
         model_name=None,
         model=None,
     ):
+        if None in transactions:
+            raise ValueError("transactions contains a None value")
+
         if model is not None:
             if model_name is not None:
                 msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
@@ -1223,6 +1226,9 @@ class SDK:
         create_account_holders=True,
         model_name=None,
     ):
+        if None in transactions:
+            raise ValueError("transactions contains a None value")
+
         return self._add_transactions_async(
             transactions,
             timeout,
