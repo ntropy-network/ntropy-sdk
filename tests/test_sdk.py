@@ -492,3 +492,19 @@ def test_numerical_support():
 
     assert isinstance(tx.amount, float)
     assert isinstance(tx.mcc, int)
+
+
+def test_none_in_txns_error(sdk):
+    test_values = [[None]]
+    for test_value in test_values:
+        try:
+            sdk.add_transactions(test_value)
+            assert False
+        except ValueError as e:
+            assert str(e) == "transactions contains a None value"
+
+        try:
+            sdk.add_transactions_async(test_value)
+            assert False
+        except ValueError as e:
+            assert str(e) == "transactions contains a None value"
