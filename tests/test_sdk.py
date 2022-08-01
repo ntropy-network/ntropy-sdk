@@ -3,6 +3,7 @@ import uuid
 from decimal import Decimal
 
 import pandas as pd
+import polars as pl
 import pytest
 
 from ntropy_sdk import (
@@ -142,7 +143,51 @@ def test_account_holder_type_or_id_pandas(sdk):
         }
     )
     enriched = sdk.add_transactions(df)
-    assert "missing account holder information" in enriched.labels[0]
+
+
+def test_account_holder_type_or_id_polars(sdk):
+    account_holder = AccountHolder(
+        id=str(uuid.uuid4()), type="business", industry="fintech", website="ntropy.com"
+    )
+    sdk.create_account_holder(account_holder)
+
+    df = pl.DataFrame(
+        data={
+            "amount": [26],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_id": [account_holder.id],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    enriched = sdk.add_transactions(df)
+    assert "missing account holder information" not in enriched.labels[0]
+
+    df = pl.DataFrame(
+        {
+            "amount": [27],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_type": ["business"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    enriched = sdk.add_transactions(df)
+    assert "missing account holder information" not in enriched.labels[0]
+
+    df = pl.DataFrame(
+        {
+            "amount": [28],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    enriched = sdk.add_transactions(df)
+    assert "missing account holder information" in enriched.labels[0]   assert "missing account holder information" in enriched.labels[0]
 
 
 def test_account_holder_type_or_id_iterable(sdk):
@@ -383,6 +428,20 @@ def test_add_transactions_async_df(sdk):
     enriched = batch.wait()
     assert enriched[0].merchant == "Target"
 
+    df = pl.DataFrame(
+        data={
+            "amount": [26],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_type": ["business"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    batch = sdk.add_transactions_async(df)
+    enriched = batch.wait()
+    assert enriched[0].merchant == "Target"
+
 
 def test_add_transactions_async_iterable(sdk):
     tx = Transaction(
@@ -500,8 +559,45 @@ def test_train_custom_model_df(sdk):
         },
     ] * 10
 
+    # Pandas
+
     model_name = f"test_{str(uuid.uuid4())[:20]}"
     df = pd.DataFrame(txs)
+
+    model = sdk.train_custom_model(df, model_name)
+    _, status, _ = model.poll()
+    assert status in ["enriching", "training", "queued"] and model.is_synced()
+
+    m = Model(sdk=sdk, model_name=model_name, poll_interval=1)
+    _, status, _ = model.poll()
+    assert status in ["enriching", "training", "queued"] and m.is_synced()
+
+    m.wait()
+    _, status, _ = model.poll()
+    assert status == "ready"
+
+    e = sdk.add_transactions(
+        [
+            Transaction(
+                amount=110.2,
+                description="TARGET T- 5800 20th St 11/30/19 17:32",
+                entry_type="debit",
+                date="2012-12-10",
+                account_holder_id="1",
+                iso_currency_code="USD",
+                transaction_id="one-two-three",
+                mcc=5432,
+            )
+        ],
+        model_name=model_name,
+    )[0]
+
+    assert "supermarket" in e.labels
+
+    # Polars
+
+    model_name = f"test_{str(uuid.uuid4())[:20]}"
+    df = pl.DataFrame(txs)
 
     model = sdk.train_custom_model(df, model_name)
     _, status, _ = model.poll()
