@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 No changes.
 
+## [4.8.3] - 2022-08-05
+- Add repeating label to reccurence
+
 ## [4.8.2] - 2022-08-01
 - Renamed `predicted_mcc` to `mcc` for simplicity.
 - Increased mcc range to 700-9999
