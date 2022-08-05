@@ -257,7 +257,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
 
         X = self._process_transactions(X, as_dict=False)
         y = self.sdk.add_transactions(
-            X, model=self.name, poll_interval=self.poll_interval
+            X, model_name=self.name, poll_interval=self.poll_interval
         )
 
         if self.labels_only:
