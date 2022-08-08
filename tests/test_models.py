@@ -6,6 +6,7 @@ import uuid
 import pytest
 import sklearn
 import time
+import pandas as pd
 
 
 tx_supermarket = Transaction(
@@ -24,6 +25,7 @@ tx_cloud = Transaction(
     date="2012-12-10",
     account_holder_type="business",
     iso_currency_code="USD",
+    mcc=1234,
 )
 tx_supermarket2 = Transaction(
     amount=101.04,
@@ -50,21 +52,23 @@ def sdk():
 
 def test_model_status(sdk):
     model_name = f"test_{str(uuid.uuid4())[:20]}"
-    model = CustomTransactionClassifier(name=model_name, sdk=sdk)
+    model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
     model.fit([tx_supermarket, tx_cloud], ["supermarket", "cloud"])
     status = model.get_status()
+
     assert (
         status["name"] == model_name
         and status["progress"] == 100
         and status["status"] == "ready"
     )
-    assert model.model_type() == CustomTransactionClassifier
+
+    assert model.model_type == "CustomTransactionClassifier"
 
 
 def test_model_fitting_sync(sdk):
-    model_name = f"test_models2"  # f"test_{str(uuid.uuid4())[:20]}"
-    model = CustomTransactionClassifier(name=model_name, sdk=sdk)
+    model_name = f"test_{str(uuid.uuid4())[:20]}"
+    model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
     model.fit([tx_supermarket, tx_cloud], ["supermarket", "cloud"])
     assert model.predict([tx_supermarket2])[0][0] == "supermarket"
@@ -82,7 +86,7 @@ def test_model_fitting_sync(sdk):
 
 def test_model_fitting_async(sdk):
     model_name = f"test_{str(uuid.uuid4())[:20]}"
-    model = CustomTransactionClassifier(name=model_name, sdk=sdk)
+    model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
     assert model.get_params()["sync"]
     model.set_params(sync=False)
@@ -98,3 +102,15 @@ def test_model_fitting_async(sdk):
     while model.get_status()["status"] == "enriching":
         time.sleep(1)
     assert model.predict([tx_supermarket2])[0][0] == "supermarket"
+
+
+def test_model_fitting_df(sdk):
+    txs = [tx_supermarket.to_dict(), tx_cloud.to_dict()]
+
+    df = pd.DataFrame(txs)
+    model_name = f"test_{str(uuid.uuid4())[:20]}"
+    model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
+    model.fit(df, ["supermarket", "cloud"])
+
+    assert model.predict([tx_supermarket])[0][0] == "supermarket"
+    assert model.predict([tx_cloud])[0][0] == "cloud"
