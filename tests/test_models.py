@@ -1,5 +1,5 @@
 from ntropy_sdk import SDK, Transaction
-from ntropy_sdk.models import BaseModel, CustomTransactionClassifier
+from ntropy_sdk.models import CustomTransactionClassifier
 from tests import API_KEY
 import os
 import uuid
