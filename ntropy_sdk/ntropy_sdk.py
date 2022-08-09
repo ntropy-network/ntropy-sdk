@@ -1036,6 +1036,9 @@ class SDK:
         if mapping is None:
             mapping = self.DEFAULT_MAPPING
 
+        if not inplace:
+            transactions = transactions.copy()
+
         txs = self.df_to_transaction_list(transactions, mapping, inplace)
         transactions["_output_tx"] = self.add_transactions(
             txs,
