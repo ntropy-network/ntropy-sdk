@@ -16,6 +16,7 @@ from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
+from ntropy_sdk.income_check import IncomeReport
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -340,6 +341,20 @@ class AccountHolder(BaseModel):
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
         return self._sdk.get_account_holder_metrics(self.id, metrics, start, end)
+
+    def get_income_report(self):
+        """Returns the income report for the account holder.
+
+        Returns
+        -------
+        IncomeReport:
+            An IncomeReport object for this account holder's history
+        """
+        if not self._sdk:
+            raise ValueError(
+                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
+            )
+        return self._sdk.get_income_report(self.id)
 
     class Config:
         use_enum_values = True
@@ -1497,6 +1512,28 @@ class SDK:
 
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
+
+    def get_account_income_report(self, account_holder_id: str) -> dict:
+        """Returns the income report of an account holder's Transaction history
+
+        Parameters
+        ----------
+        account_holder_id : str
+            The unique identifier for the account holder.
+
+        Returns
+        -------
+        IncomeReport:
+            An IncomeReport object for this account holder's history
+        """
+
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id should be of type string")
+
+        url = f"/v2/account-holder/{account_holder_id}/income"
+
+        response = self.retry_ratelimited_request("POST", url, {})
+        return IncomeReport(response.json())
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
