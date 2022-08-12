@@ -3,8 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-
-No changes.
+- Allow subnormal float values in pydantic fields
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence
