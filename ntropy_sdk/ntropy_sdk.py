@@ -11,7 +11,7 @@ from typing import List
 from urllib.parse import urlencode
 
 import requests
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, NonNegativeFloat
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 from tqdm.auto import tqdm
 
@@ -72,7 +72,7 @@ class Transaction(BaseModel):
         "mcc",
     ]
 
-    amount: float = Field(ge=0, description="Amount of the transaction.")
+    amount: NonNegativeFloat = Field(description="Amount of the transaction.")
     entry_type: EntryType = Field(
         description="Either incoming or outgoing depending on the transaction."
     )
@@ -371,9 +371,7 @@ class EnrichedTransaction(BaseModel):
     recurrence: Optional[RecurrenceType] = Field(
         description="Indicates if the Transaction is recurring."
     )
-    confidence: Optional[float] = Field(
-        ge=0.0,
-        le=1.0,
+    confidence: Optional[NonNegativeFloat] = Field(
         description="A numerical score between 0.0 and 1.0 indicating the confidence",
     )
     transaction_type: Optional[TransactionType] = Field(
@@ -382,6 +380,12 @@ class EnrichedTransaction(BaseModel):
     mcc: Optional[List[int]] = Field(
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
     )
+
+    @validator("confidence")
+    def _confidence_validator(cls, v):
+        if v > 1:
+            raise ValueError("Confidence must be between 0.0 and 1.0")
+        return v
 
     def __init__(self, **kwargs):
         fields = {}
