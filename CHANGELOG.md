@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Updated scikit-compatible model to inherit from SDK Model class
 - Deprecated status() method for sci-kit model, use get_status() instead
 - Include original Transaction object in EnrichedTransaction
+- Support iterables in `add_transactions` and `add_transactions_async`
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence
@@ -16,7 +17,6 @@ All notable changes to this project will be documented in this file.
 ## [4.8.2] - 2022-08-01
 - Renamed `predicted_mcc` to `mcc` for simplicity.
 - Increased mcc range to 700-9999
-- Support iterables in `add_transactions` and `add_transactions_async`
 
 ## [4.8.1] - 2022-07-22
 - Fixed a bug with deprecated `model` parameter for custom models
