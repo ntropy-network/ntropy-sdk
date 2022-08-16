@@ -54,7 +54,7 @@ def test_model_status(sdk):
     model_name = f"test_{str(uuid.uuid4())[:20]}"
     model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
-    model.fit([tx_supermarket, tx_cloud], ["supermarket", "cloud"])
+    model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
     status = model.get_status()
 
     assert (
@@ -70,7 +70,7 @@ def test_model_fitting_sync(sdk):
     model_name = f"test_{str(uuid.uuid4())[:20]}"
     model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
-    model.fit([tx_supermarket, tx_cloud], ["supermarket", "cloud"])
+    model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
     assert model.predict([tx_supermarket2])[0][0] == "supermarket"
     # 1 right and 1 wrong; f1 score = 0.5
     assert (
@@ -92,7 +92,7 @@ def test_model_fitting_async(sdk):
     model.set_params(sync=False)
     assert not model.get_params()["sync"]
 
-    model.fit([tx_supermarket, tx_cloud], ["supermarket", "cloud"])
+    model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
     status = model.get_status()
 
     assert status["name"] == model_name and status["status"] == "enriching"
