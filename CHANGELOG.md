@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Added tests for models module
 - Updated scikit-compatible model to inherit from SDK Model class
 - Deprecated status() method for sci-kit model, use get_status() instead
+- Include original Transaction object in EnrichedTransaction
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence

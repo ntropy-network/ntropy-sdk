@@ -381,7 +381,7 @@ class EnrichedTransaction(BaseModel):
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
     )
     parent_tx: Optional[Transaction] = Field(
-        description="The original Transaction that this object corresponds to"
+        description="The original Transaction of the EnrichedTransaction."
     )
 
     @validator("confidence")
