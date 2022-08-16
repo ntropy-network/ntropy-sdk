@@ -75,7 +75,7 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
         txs: TransactionList, labels: List[str]
     ) -> List[LabeledTransaction]:
         """
-        Adds labels to TransactionList object, returns the corresponding list of LabeledTransactin objects
+        Adds labels to TransactionList object, returns the corresponding list of LabeledTransaction objects
         """
 
         if isinstance(txs, pd.DataFrame):

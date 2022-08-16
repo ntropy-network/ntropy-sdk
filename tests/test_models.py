@@ -93,14 +93,10 @@ def test_model_fitting_async(sdk):
     assert not model.get_params()["sync"]
 
     model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
-    status = model.get_status()
-
-    assert status["name"] == model_name and status["status"] == "enriching"
-    with pytest.raises(sklearn.exceptions.NotFittedError):
-        model.check_is_fitted()
 
     while model.get_status()["status"] == "enriching":
         time.sleep(1)
+
     assert model.predict([tx_supermarket2])[0][0] == "supermarket"
 
 
