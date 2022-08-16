@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+
+## [4.9.0] - 2022-08-16
 - Allow subnormal float values in pydantic fields
 - Fix bug with inplace=False for dataframe enrichment
 - Added tests for models module
