@@ -1,67 +1,27 @@
-import logging
 import pandas as pd
-import time
 
-from requests import HTTPError
-from typing import List, Union, Any, Dict
+from typing import List, Union, Any, ClassVar
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import f1_score
 from sklearn.exceptions import NotFittedError
 
-from ntropy_sdk import SDK, NtropyError, Transaction
-from tqdm.auto import tqdm
+from ntropy_sdk import SDK, Transaction, LabeledTransaction, Model
+from pydantic import Field
 
 TransactionList = Union[List[Union[dict, Transaction]], pd.DataFrame]
 
 
-class BaseModel(BaseEstimator, ClassifierMixin):
-    def __init__(
-        self,
-        name: str,
-        sync: bool = True,
-        poll_interval: int = 10,
-        labels_only: bool = True,
-        progress_bar: bool = True,
-        sdk: SDK = None,
-    ):
-        """Base wrapper for an Ntropy custom model that implements
-        the scikit-learn interfaces of BaseEstimator and ClassifierMixin
+class BaseModel(Model, BaseEstimator, ClassifierMixin):
 
-        Parameters
-        ----------
-        name : str
-            identifying name of the custom model
-        sync : bool, optional
-            if True the scikit-learn model will block during training
-            until it is complete or errors, by default True
-        poll_interval : int, optional
-            interval in seconds to use for polling the server when
-            listening for model status changes, by default 10
-        labels_only : bool, optional
-            if True, returns only the labels on the predict method
-            so that the interface is scikit-learn compatible, by default True
-        progress_bar : bool, optional
-            if True uses a progress bar to track progress of model training
-        sdk : SDK, optional
-            instantiated SDK object, if not provided and not set using
-            set_sdk, it will be created by reading the API key from
-            environment variables
-        """
-        self.name = name
-        self.sync = sync
-        self.poll_interval = poll_interval
-        self.labels_only = labels_only
-        self.progress_bar = progress_bar
-        self._sdk = sdk
-        self.params = {}
-
-        if not self._sdk:
-            # attempt initialization from environment variable
-            try:
-                self._sdk = SDK()
-            except NtropyError:
-                pass
+    sync: bool = Field(
+        True,
+        description="if True the scikit-learn model will block during training until it is complete or errors",
+    )
+    labels_only: bool = Field(
+        True,
+        description="if True, returns only the labels on the predict method so that the interface is scikit-learn compatible",
+    )
 
     @property
     def model_type(self):
@@ -86,38 +46,8 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         -------
         dict
         """
-        status = self.sdk.retry_ratelimited_request(
-            "GET", f"/v2/models/{self.name}", None
-        ).json()
-        return status
 
-    def status(self) -> Dict:
-        """Returns a json dictionary containing the status of model, checking for errors first
-
-        Returns
-        -------
-        dict
-
-        Raises
-        ------
-        ValueError
-            if status of the model is set to error by the server
-        RuntimeError
-            if the model fails with an unexpected error
-        """
-        try:
-            status = self.get_status()
-        except HTTPError as e:
-            if e.response.status_code == 404:
-                return False
-            raise
-
-        if "status" not in status:
-            raise ValueError("Unexpected response from server during fit")
-        if status["status"] == "error":
-            raise RuntimeError("Model training failed with an internal error")
-
-        return status
+        return super().poll()[0]
 
     def is_ready(self) -> bool:
         """Checks if the model is ready to be used for inference
@@ -126,11 +56,9 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         -------
         bool
         """
-        status = self.status()
-        if isinstance(status, bool):
-            return False
 
-        return status["status"] == "ready"
+        _, status, _ = super().poll()
+        return status == "ready"
 
     def check_is_fitted(self):
         """Checks if the model has been fitted before
@@ -143,29 +71,26 @@ class BaseModel(BaseEstimator, ClassifierMixin):
             raise NotFittedError()
 
     @staticmethod
-    def _process_transactions(txs: TransactionList, as_dict: bool = True) -> List[dict]:
+    def _process_transactions(
+        txs: TransactionList, labels: List[str]
+    ) -> List[LabeledTransaction]:
+        """
+        Adds labels to TransactionList object, returns the corresponding list of LabeledTransaction objects
+        """
+
         if isinstance(txs, pd.DataFrame):
-            txs = txs.to_dict(orient="records")
+            txs = txs.apply(Transaction.from_row, axis=1).to_list()
 
         uniform_txs = []
-        for tx in txs:
-            if not (isinstance(tx, dict) or isinstance(tx, Transaction)):
+        for tx, label in zip(txs, labels):
+            if not isinstance(tx, Transaction):
                 raise ValueError(f"Unsupported type for transaction: {type(tx)}")
 
-            if isinstance(tx, Transaction) and as_dict:
-                tx = tx.to_dict()
-            if isinstance(tx, dict) and not as_dict:
-                filtered_tx = {}
-                for field in Transaction._fields:
-                    if field in tx:
-                        filtered_tx[field] = tx[field]
+            tx_dict = tx.to_dict()
+            tx_dict["label"] = label
 
-                tx = Transaction.from_dict(filtered_tx)
+            uniform_txs.append(LabeledTransaction.from_dict(tx_dict))
 
-            if as_dict:
-                tx = tx.copy()
-
-            uniform_txs.append(tx)
         return uniform_txs
 
     def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
@@ -188,50 +113,15 @@ class BaseModel(BaseEstimator, ClassifierMixin):
 
         Raises
         ------
-        RuntimeError
+        NtropyError
             if the model errors out unexpectedly during training
         """
-        url = f"/v2/models/{self.name}"
-        self.params = params
 
-        X = self._process_transactions(X)
-        for tx, label in zip(X, y):
-            tx["label"] = label
-
-        self.sdk.retry_ratelimited_request(
-            "POST",
-            url,
-            payload={
-                "transactions": X,
-                "model_type": self.model_type,
-                "params": params,
-            },
-            log_level=logging.WARNING,
-        ).json()
+        X = self._process_transactions(X, y)
+        self.sdk.train_custom_model(X, self.model_name)
 
         if self.sync:
-            if self.progress_bar:
-                with tqdm(total=100, desc="starting") as pbar:
-                    ready = False
-                    while not ready:
-                        status = self.status()
-                        ready = status["status"] == "ready"
-                        diff_n = status["progress"] - pbar.n
-                        pbar.update(int(diff_n))
-                        pbar.desc = status["status"]
-                        if ready:
-                            break
-                        time.sleep(self.poll_interval)
-            else:
-                status = self.status()
-                while not status["status"] == "ready":
-                    status = self.status()
-
-                    if status["status"] == "error":
-                        # TODO: improve information
-                        raise RuntimeError("Unexpected error while training the model")
-
-                    time.sleep(self.poll_interval)
+            super().wait(with_progress=self.progress)
 
         return self
 
@@ -255,9 +145,8 @@ class BaseModel(BaseEstimator, ClassifierMixin):
         """
         self.check_is_fitted()
 
-        X = self._process_transactions(X, as_dict=False)
         y = self.sdk.add_transactions(
-            X, model=self.name, poll_interval=self.poll_interval
+            X, model_name=self.model_name, poll_interval=self.poll_interval
         )
 
         if self.labels_only:
@@ -287,7 +176,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
 
     def get_params(self, deep: bool = True) -> dict:
         return {
-            "name": self.name,
+            "model_name": self.model_name,
             "sync": self.sync,
             "poll_interval": self.poll_interval,
             "labels_only": self.labels_only,
@@ -300,7 +189,7 @@ class BaseModel(BaseEstimator, ClassifierMixin):
 
 
 class CustomTransactionClassifier(BaseModel):
-    model_type = "CustomTransactionClassifier"
+    model_type: ClassVar = "CustomTransactionClassifier"
 
     def fit(
         self,

@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 - Allow subnormal float values in pydantic fields
 - Fix bug with inplace=False for dataframe enrichment
+- Added tests for models module
+- Updated scikit-compatible model to inherit from SDK Model class
+- Deprecated status() method for sci-kit model, use get_status() instead
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence
