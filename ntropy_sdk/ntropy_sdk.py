@@ -380,6 +380,9 @@ class EnrichedTransaction(BaseModel):
     mcc: Optional[List[int]] = Field(
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
     )
+    parent_tx: Optional[Transaction] = Field(
+        description="The original Transaction of the EnrichedTransaction."
+    )
 
     @validator("confidence")
     def _confidence_validator(cls, v):
@@ -483,7 +486,7 @@ class EnrichedTransactionList(list):
                 writer.writerow(tx.to_dict())
 
     @classmethod
-    def from_list(cls, sdk, vals: list):
+    def from_list(cls, sdk, vals: list, parent_txs: list = []):
         """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
 
         Parameters
@@ -496,7 +499,10 @@ class EnrichedTransactionList(list):
         EnrichedTransactionList
             A corresponding EnrichedTransactionList object.
         """
-        return cls([EnrichedTransaction.from_dict(sdk, val) for val in vals])
+        etx_list = cls([EnrichedTransaction.from_dict(sdk, val) for val in vals])
+        for tx, etx in zip(parent_txs, etx_list):
+            etx.parent_tx = tx
+        return etx_list
 
 
 class Batch(BaseModel):
@@ -510,6 +516,9 @@ class Batch(BaseModel):
     poll_interval: int = Field(10, description="The interval between polling retries.")
     num_transactions: int = Field(
         0, description="The number of transactions in the batch."
+    )
+    transactions: list = Field(
+        [], description="The transactions submitted in this batch"
     )
 
     def __init__(self, **kwargs):
@@ -536,7 +545,10 @@ class Batch(BaseModel):
         status, results = json_resp.get("status"), json_resp.get("results", [])
 
         if status == "finished":
-            return EnrichedTransactionList.from_list(self.sdk, results), status
+            return (
+                EnrichedTransactionList.from_list(self.sdk, results, self.transactions),
+                status,
+            )
 
         if status == "error":
             raise NtropyBatchError(f"Batch failed: {results}", errors=results)
@@ -1159,7 +1171,7 @@ class SDK:
             if resp.status_code != 200:
                 raise NtropyBatchError("Batch failed", errors=resp.json())
 
-            return EnrichedTransactionList.from_list(self, resp.json())
+            return EnrichedTransactionList.from_list(self, resp.json(), transactions)
 
         except requests.HTTPError as e:
             if e.response.status_code == 404:
@@ -1274,6 +1286,7 @@ class SDK:
                 timeout=timeout,
                 poll_interval=poll_interval,
                 num_transactions=len(transactions),
+                transactions=transactions,
             )
 
         except requests.HTTPError as e:
