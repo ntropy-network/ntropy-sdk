@@ -145,7 +145,6 @@ def test_account_holder_type_or_id_pandas(sdk):
     assert "missing account holder information" in enriched.labels[0]
 
 
-
 def test_dataframe_inplace(sdk):
     df = pd.DataFrame(
         data={
@@ -167,6 +166,7 @@ def test_dataframe_inplace(sdk):
     # inplace = True should change the original dataframe
     sdk.add_transactions(df, inplace=True)
     assert "goods" in df.labels[0]
+
 
 def test_account_holder_type_or_id_iterable(sdk):
     id_tx = Transaction(
