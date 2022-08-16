@@ -145,6 +145,29 @@ def test_account_holder_type_or_id_pandas(sdk):
     assert "missing account holder information" in enriched.labels[0]
 
 
+def test_dataframe_inplace(sdk):
+    df = pd.DataFrame(
+        data={
+            "amount": [26],
+            "description": ["TARGET T- 5800 20th St 11/30/19 17:32"],
+            "entry_type": ["debit"],
+            "date": ["2012-12-10"],
+            "account_holder_id": [str(uuid.uuid4())],
+            "account_holder_type": ["consumer"],
+            "iso_currency_code": ["USD"],
+        }
+    )
+    original_columns = df.columns
+    # inplace = False should NOT change the original dataframe
+    enriched = sdk.add_transactions(df, inplace=False)
+    assert list(df.columns) == list(original_columns)
+    assert "goods" in enriched.labels[0]
+
+    # inplace = True should change the original dataframe
+    sdk.add_transactions(df, inplace=True)
+    assert "goods" in df.labels[0]
+
+
 def test_bad_date():
     def create_tx(date):
         return Transaction(
