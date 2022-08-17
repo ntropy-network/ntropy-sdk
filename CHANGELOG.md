@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - Fix bug with inplace=False for dataframe enrichment
 - Added tests for models module
 - Updated scikit-compatible model to inherit from SDK Model class
-- Deprecated status() method for sci-kit model, use get_status() instead
+- Deprecated status(), predict(), and get_status() methods for sci-kit api, use on the base model instead with get_base_model()
 - Include original Transaction object in EnrichedTransaction
 - Support iterables in `add_transactions` and `add_transactions_async`
 

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from typing import List, Union, Any, ClassVar
+from typing import List, Union, Any
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import f1_score
@@ -188,8 +188,13 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
         return self
 
 
-class CustomTransactionClassifier(BaseModel):
-    model_type: ClassVar = "CustomTransactionClassifier"
+class CustomTransactionClassifier:
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        self.model = BaseModel(**kwargs)
+        self.model_type = "CustomTransactionClassifier"
 
     def fit(
         self,
@@ -198,4 +203,16 @@ class CustomTransactionClassifier(BaseModel):
         n_epochs: int = 2,
         random_state: int = 42,
     ):
-        return super().fit(X, y, n_epochs=n_epochs, random_state=random_state)
+        return self.model.fit(X, y, n_epochs=n_epochs, random_state=random_state)
+
+    def score(self, X: TransactionList, y: List[str]) -> float:
+        return self.model.score(X, y)
+
+    def get_params(self, deep: bool = True) -> dict:
+        return self.model.get_params(deep)
+
+    def set_params(self, **parameters: Any) -> "BaseModel":
+        return self.model.set_params(**parameters)
+
+    def get_base_model(self):
+        return self.model
