@@ -6,8 +6,7 @@ import time
 import uuid
 import warnings
 from datetime import date
-from typing import Any, ClassVar, Generator, List, Optional, TypeVar
-from collections.abc import Iterable
+from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable
 from urllib.parse import urlencode
 from itertools import islice
 
