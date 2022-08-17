@@ -756,7 +756,9 @@ class Model(BaseModel):
             raise NtropyError("Model training wait timeout")
 
     @staticmethod
-    def from_response(sdk: "SDK", response) -> "Model":
+    def from_response(
+        sdk: "SDK", response, poll_interval=None, timeout=None
+    ) -> "Model":
         """Creates a model instance from an API response referencing a model
 
         Parameters
@@ -775,19 +777,22 @@ class Model(BaseModel):
         if name is None:
             raise ValueError("Invalid response for creating a model - missing name")
 
-        created_at = response.get("created_at")
-        account_holder_type = response.get("account_holder_type")
-        status = response.get("status")
-        progress = response.get("progress")
+        kwargs = {
+            "sdk": sdk,
+            "model_name": name,
+            "created_at": response.get("created_at"),
+            "account_holder_type": response.get("account_holder_type"),
+            "status": response.get("status"),
+            "progress": response.get("progress"),
+        }
 
-        return Model(
-            sdk=sdk,
-            model_name=name,
-            created_at=created_at,
-            account_holder_type=account_holder_type,
-            status=status,
-            progress=progress,
-        )
+        if poll_interval is not None:
+            kwargs["poll_interval"] = poll_interval
+
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+
+        return Model(**kwargs)
 
     class Config:
         arbitrary_types_allowed = True
@@ -1531,7 +1536,13 @@ class SDK:
         return resp.json()
 
     @singledispatchmethod
-    def train_custom_model(self, transactions, model_name: str) -> Model:
+    def train_custom_model(
+        self,
+        transactions,
+        model_name: str,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ) -> Model:
         """Trains a custom model for labeling transactions, using the provided transactions as training data,
         either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column.
         The model is associated with the provided name. Returns a Model instance that can be polled or waited for
@@ -1564,27 +1575,38 @@ class SDK:
             tx_class=LabeledTransaction,
         )
 
-        return self._train_custom_model(transactions, model_name)
+        return self._train_custom_model(
+            transactions, model_name, poll_interval=poll_interval, timeout=timeout
+        )
 
     @train_custom_model.register(list)
     def train_custom_model_list(
         self,
         transactions,
         model_name: str,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
     ) -> Model:
         return self._train_custom_model(
-            transactions,
-            model_name,
+            transactions, model_name, poll_interval=poll_interval, timeout=timeout
         )
 
-    def _train_custom_model(self, transactions, model_name: str) -> Model:
+    def _train_custom_model(
+        self,
+        transactions,
+        model_name: str,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ) -> Model:
         txs = [tx.to_dict() for tx in transactions]
 
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request(
             "POST", url, {"transactions": txs}
         ).json()
-        return Model.from_response(self, response)
+        return Model.from_response(
+            self, response, poll_interval=poll_interval, timeout=timeout
+        )
 
     def get_all_custom_models(self) -> List[Model]:
         """Returns a list of Model objects for all existing custom models previously trained

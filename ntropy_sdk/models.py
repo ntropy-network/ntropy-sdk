@@ -1,6 +1,7 @@
+from asyncore import poll
 import pandas as pd
 
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import f1_score
@@ -16,24 +17,36 @@ class CustomTransactionClassifier(BaseEstimator, ClassifierMixin):
         self,
         model_name: str,
         sync: bool = True,
+        progress: bool = True,
         labels_only: bool = True,
-        sdk: SDK = None,
+        sdk: Optional[SDK] = None,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
     ):
         """
         Parameters
         ----------
         model_name : str
             Unique name that identifies the trained model
+        poll_interval : int, optional
+            A timeout for retrieving the batch result.
+        timeout : int, optional
+            The interval between polling retries.
         sync : bool, optional
             if True the scikit-learn model will block during training until it is complete or errors
+        progress : bool, optional
+            if True displays a progress bar during the training process
         labels_only : bool, optional
             if True, returns only the labels on the predict method so that the interface is scikit-learn compatible
         sdk: SDK, optional
             if provided sets the SDK instance to use for this model's interaction with the API
         """
         self.model_name = model_name
-        self.sync = sync
         self.labels_only = labels_only
+        self.poll_interval = poll_interval
+        self.timeout = timeout
+        self.sync = sync
+        self.progress = progress
         self._sdk = sdk
         self._model = None
 
@@ -48,9 +61,14 @@ class CustomTransactionClassifier(BaseEstimator, ClassifierMixin):
 
     @property
     def model(self):
-        if self.model is None:
-            self.model = Model(sdk=self.sdk, model_name=self.model_name)
-        return self.model
+        if self._model is None:
+            self._model = Model(
+                sdk=self.sdk,
+                model_name=self.model_name,
+                poll_interval=self.poll_interval,
+                timeout=self.timeout,
+            )
+        return self._model
 
     def set_sdk(self, sdk: SDK):
         self._sdk = sdk
@@ -109,7 +127,9 @@ class CustomTransactionClassifier(BaseEstimator, ClassifierMixin):
 
         return uniform_txs
 
-    def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
+    def fit(
+        self, X: TransactionList, y: List[str], **params
+    ) -> "CustomTransactionClassifier":
         """Starts a training process for a custom labeling model given the provided
         input data. The model can be trained using a list of transactions or a
         dataframe with the same transactions
@@ -134,7 +154,12 @@ class CustomTransactionClassifier(BaseEstimator, ClassifierMixin):
         """
 
         X = self._process_transactions(X, y)
-        self.model = self.sdk.train_custom_model(X, self.model_name)
+        self._model = self.sdk.train_custom_model(
+            X,
+            self.model_name,
+            poll_interval=self.poll_interval,
+            timeout=self.timeout,
+        )
 
         if self.sync:
             self.model.wait(with_progress=self.progress)
