@@ -55,7 +55,7 @@ def test_model_status(sdk):
     model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
     model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
-    status = model.get_base_model().get_status()
+    status = model.get_status()
 
     assert (
         status["name"] == model_name
@@ -63,15 +63,13 @@ def test_model_status(sdk):
         and status["status"] == "ready"
     )
 
-    assert model.model_type == "CustomTransactionClassifier"
-
 
 def test_model_fitting_sync(sdk):
     model_name = f"test_{str(uuid.uuid4())[:20]}"
     model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
 
     model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
-    assert model.get_base_model().predict([tx_supermarket2])[0][0] == "supermarket"
+    assert model.predict([tx_supermarket2])[0][0] == "supermarket"
     # 1 right and 1 wrong; f1 score = 0.5
     assert (
         abs(
@@ -94,10 +92,10 @@ def test_model_fitting_async(sdk):
 
     model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
 
-    while model.get_base_model().get_status()["status"] == "enriching":
+    while model.get_status()["status"] == "enriching":
         time.sleep(1)
 
-    assert model.get_base_model().predict([tx_supermarket2])[0][0] == "supermarket"
+    assert model.predict([tx_supermarket2])[0][0] == "supermarket"
 
 
 def test_model_fitting_df(sdk):
@@ -108,5 +106,5 @@ def test_model_fitting_df(sdk):
     model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
     model.fit(df, ["supermarket", "cloud"])
 
-    assert model.get_base_model().predict([tx_supermarket])[0][0] == "supermarket"
-    assert model.get_base_model().predict([tx_cloud])[0][0] == "cloud"
+    assert model.predict([tx_supermarket])[0][0] == "supermarket"
+    assert model.predict([tx_cloud])[0][0] == "cloud"

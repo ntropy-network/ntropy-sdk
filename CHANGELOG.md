@@ -9,8 +9,7 @@ All notable changes to this project will be documented in this file.
 - Allow subnormal float values in pydantic fields
 - Fix bug with inplace=False for dataframe enrichment
 - Added tests for models module
-- Updated scikit-compatible model to inherit from SDK Model class
-- Deprecated status(), predict(), and get_status() methods for sci-kit api, use on the base model instead with get_base_model()
+- Updated scikit-compatible model to use SDK Model class
 - Include original Transaction object in EnrichedTransaction
 - Support iterables in `add_transactions` and `add_transactions_async`
 
