@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Deprecated status() method for sci-kit model, use get_status() instead
 - Include original Transaction object in EnrichedTransaction
 - Support iterables in `add_transactions` and `add_transactions_async`
+- confidence is an Optional field, add None check to validator
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence
