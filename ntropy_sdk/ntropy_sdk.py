@@ -398,7 +398,7 @@ class EnrichedTransaction(BaseModel):
 
     @validator("confidence")
     def _confidence_validator(cls, v):
-        if v > 1:
+        if v is not None and v > 1:
             raise ValueError("Confidence must be between 0.0 and 1.0")
         return v
 
