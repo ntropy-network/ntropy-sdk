@@ -182,7 +182,7 @@ class Transaction(BaseModel):
         dict
             A dictionary of the Transaction's fields.
         """
-        return self.dict()
+        return self.dict(exclude_none=True)
 
     class Config:
         use_enum_values = True
@@ -366,6 +366,7 @@ class EnrichedTransaction(BaseModel):
 
     _fields: ClassVar[List[str]] = [
         "sdk",
+        "returned_properties",
         "labels",
         "location",
         "logo",
@@ -409,6 +410,9 @@ class EnrichedTransaction(BaseModel):
     )
     parent_tx: Optional[Transaction] = Field(
         description="The original Transaction of the EnrichedTransaction."
+    )
+    returned_properties: List[str] = Field(
+        description="The list of returned properties by the API"
     )
 
     @validator("confidence")
@@ -462,7 +466,7 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        return cls(sdk=sdk, **val)
+        return cls(sdk=sdk, returned_properties=list(val.keys()), **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -473,7 +477,11 @@ class EnrichedTransaction(BaseModel):
             A dictionary of the EnrichedTransaction's fields.
         """
 
-        return self.dict()
+        return {
+            k: v
+            for k, v in self.dict().items()
+            if (k in self.returned_properties) or k == "kwargs"
+        }
 
     class Config:
         use_enum_values = True
