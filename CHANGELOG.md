@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 - Updated scikit-compatible model to use SDK Model class
 - Include original Transaction object in EnrichedTransaction
 - Support iterables in `add_transactions` and `add_transactions_async`
-- Ensure that `to_dict()` method always returns values even if None
+- Ensure that `to_dict()` method always returns values even if None, but only returned fields that the API returns
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence
