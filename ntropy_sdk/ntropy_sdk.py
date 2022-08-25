@@ -274,7 +274,7 @@ class LabeledTransaction(Transaction):
         dict
             A dictionary of the LabeledTransaction's fields.
         """
-        return self.dict()
+        return self.dict(exclude_none=True)
 
 
 class AccountHolder(BaseModel):
