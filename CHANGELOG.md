@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Include original Transaction object in EnrichedTransaction
 - Support iterables in `add_transactions` and `add_transactions_async`
 - Ensure that `to_dict()` method always returns values even if None, but only returned fields that the API returns
+- Added support for income checking API (IncomeReport, IncomeGroup)
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence
