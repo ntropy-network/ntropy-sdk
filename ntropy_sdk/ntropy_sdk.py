@@ -182,7 +182,7 @@ class Transaction(BaseModel):
         dict
             A dictionary of the Transaction's fields.
         """
-        return self.dict(exclude_none=True)
+        return self.dict()
 
     class Config:
         use_enum_values = True
@@ -274,7 +274,7 @@ class LabeledTransaction(Transaction):
         dict
             A dictionary of the LabeledTransaction's fields.
         """
-        return self.dict(exclude_none=True)
+        return self.dict()
 
 
 class AccountHolder(BaseModel):
@@ -473,7 +473,7 @@ class EnrichedTransaction(BaseModel):
             A dictionary of the EnrichedTransaction's fields.
         """
 
-        return self.dict(exclude_none=True)
+        return self.dict()
 
     class Config:
         use_enum_values = True
