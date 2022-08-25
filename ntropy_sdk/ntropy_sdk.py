@@ -366,7 +366,7 @@ class EnrichedTransaction(BaseModel):
 
     _fields: ClassVar[List[str]] = [
         "sdk",
-        "returned_properties",
+        "returned_fields",
         "labels",
         "location",
         "logo",
@@ -411,7 +411,7 @@ class EnrichedTransaction(BaseModel):
     parent_tx: Optional[Transaction] = Field(
         description="The original Transaction of the EnrichedTransaction."
     )
-    returned_properties: List[str] = Field(
+    returned_fields: List[str] = Field(
         description="The list of returned properties by the API"
     )
 
@@ -466,7 +466,7 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        return cls(sdk=sdk, returned_properties=list(val.keys()), **val)
+        return cls(sdk=sdk, returned_fields=list(val.keys()), **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -480,7 +480,7 @@ class EnrichedTransaction(BaseModel):
         return {
             k: v
             for k, v in self.dict().items()
-            if (k in self.returned_properties) or k == "kwargs"
+            if (k in self.returned_fields) or k == "kwargs"
         }
 
     class Config:
