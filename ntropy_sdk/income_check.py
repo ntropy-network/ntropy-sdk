@@ -70,7 +70,7 @@ class IncomeGroup(BaseModel):
         return cls(
             amount=income_group.get("amount", 0),
             date_of_first_payment=income_group.get("first_date"),
-            date_of_latest_payment=income_group.get("last_date", None),
+            date_of_latest_payment=income_group.get("latest_date", None),
             income_type=income_group.get("income_type", "unknown"),
             source=income_group.get("source", "unknown"),
             transaction_ids=income_group.get("transaction_ids", []),
