@@ -37,7 +37,7 @@ class IncomeGroup(BaseModel):
     pay_frequency: str
 
     @classmethod
-    def from_json(cls, income_group: Dict[str, Any]):
+    def from_dict(cls, income_group: Dict[str, Any]):
         return cls(
             amount=income_group["amount"] if "amount" in income_group else 0,
             date_of_first_payment=(
@@ -83,9 +83,9 @@ class IncomeReport(BaseModel):
     income_groups: List[IncomeGroup]
 
     @classmethod
-    def from_json(cls, income_report: List[Dict[str, Any]]):
+    def from_dics(cls, income_report: List[Dict[str, Any]]):
         income_groups = sorted(
-            [IncomeGroup.from_json(d) for d in income_report],
+            [IncomeGroup.from_dict(d) for d in income_report],
             key=lambda x: float(x.amount),
             reverse=True,
         )

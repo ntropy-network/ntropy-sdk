@@ -1546,7 +1546,7 @@ class SDK:
         url = f"/v2/account-holder/{account_holder_id}/income"
 
         response = self.retry_ratelimited_request("POST", url, {})
-        return IncomeReport.from_json(response.json())
+        return IncomeReport.from_dics(response.json())
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
