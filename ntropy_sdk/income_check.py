@@ -86,16 +86,18 @@ class IncomeReport(BaseModel):
     def from_json(cls, income_report: List[Dict[str, Any]]):
         income_groups = sorted(
             [IncomeGroup.from_json(d) for d in income_report],
-            key=lambda x: x.amount,
+            key=lambda x: float(x.amount),
             reverse=True,
         )
         return cls(income_groups=income_groups)
 
     def __repr__(self) -> str:
         with pd.option_context("expand_frame_repr", False):
-            return pd.DataFrame(
-                [ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups]
-            ).__repr__()
+            return str(
+                pd.DataFrame(
+                    [ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups]
+                )
+            )
 
     def get_income_groups(self):
         return self.income_groups

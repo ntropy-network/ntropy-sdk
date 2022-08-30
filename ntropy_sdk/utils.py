@@ -47,7 +47,8 @@ def assert_type(value, name, expected_type):
 
 def validate_date(value: Union[str, date, datetime]):
     try:
-        datetime.strptime(value, "%Y-%m-%d")
+        if isinstance(value, str):
+            datetime.strptime(value, "%Y-%m-%d")
         return value
     except ValueError:
         raise ValueError("date must be of the format %Y-%m-%d")

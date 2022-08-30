@@ -10,9 +10,9 @@ from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable
 from urllib.parse import urlencode
 from itertools import islice
 
-import requests
+import requests  # type: ignore
 from pydantic import BaseModel, Field, validator, NonNegativeFloat
-from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
+from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
