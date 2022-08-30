@@ -79,10 +79,6 @@ class IncomeClassSummary:
         return self.__repr__()
 
 
-# Create a generic variable that can be 'Parent', or any subclass.
-T = TypeVar("T", bound="IncomeReport")
-
-
 class IncomeReport(BaseModel):
     income_groups: List[IncomeGroup]
 
