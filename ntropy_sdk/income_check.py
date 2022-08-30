@@ -1,30 +1,67 @@
+from enum import Enum
 import pandas as pd
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Type, TypeVar, Union
 from pydantic import BaseModel
 
 
-INCOME_HIERARCHY = {
-    "earned": ["salary", "freelance", "rideshare & delivery", "donations"],
-    "passive": [
-        "child support",
-        "social security",
-        "unemployment insurance",
-        "government benefits",
-        "long term rent",
-        "short term rent",
-        "ecommerce",
-        "donations",
-        "interest and dividends",
-        "investment",
-        "retirement funds",
-    ],
-}
-INCOME_CLASSES = list(INCOME_HIERARCHY.keys())
-INCOME_LABELS = [
-    label for class_labels in list(INCOME_HIERARCHY.values()) for label in class_labels
-]
+UNDETERMINED_LABEL = "not enough information"
 
-UNDETERMINED_LABEL = "possible income - please verify"
+
+class IncomeLabel(BaseModel):
+    label: str
+    is_passive: bool
+
+
+class IncomeLabelEnum(Enum):
+    undetermined_label = IncomeLabel(label=UNDETERMINED_LABEL, is_passive=False)
+    child_support = IncomeLabel(label="child support", is_passive=True)
+    donations = IncomeLabel(label="donations", is_passive=True)
+    ecommerce = IncomeLabel(label="ecommerce", is_passive=True)
+    freelance = IncomeLabel(label="freelance", is_passive=False)
+    government_benefits = IncomeLabel(label="government benefits", is_passive=True)
+    interest_and_dividends = IncomeLabel(
+        label="interest and dividends", is_passive=True
+    )
+    investment = IncomeLabel(label="investment", is_passive=True)
+    long_term_rent = IncomeLabel(label="long term rent", is_passive=True)
+    retirement_funds = IncomeLabel(label="retirement funds", is_passive=True)
+    rideshare_and_delivery = IncomeLabel(
+        label="rideshare and delivery", is_passive=False
+    )
+    salary = IncomeLabel(label="salary", is_passive=False)
+    short_term_rent = IncomeLabel(label="short term rent", is_passive=True)
+    social_security = IncomeLabel(label="social security", is_passive=True)
+    unemployment_insurance = IncomeLabel(
+        label="unemployment insurance", is_passive=True
+    )
+
+    # @classmethod
+    # def passive_labels(cls) -> Set[str]:
+    #     res = []
+    #     for label in cls:
+    #         if label.value.is_passive:
+    #             res.append(label.value.label)
+    #     return res
+
+    @classmethod
+    def passive_labels(cls) -> Set[str]:
+        if not hasattr(cls, "_passive_labels"):
+            setattr(
+                cls,
+                "_passive_labels",
+                set([k.value.label for k in cls if k.value.is_passive]),
+            )
+        return getattr(cls, "_passive_labels")
+
+    @classmethod
+    def earnings_labels(cls) -> Set[str]:
+        if not hasattr(cls, "_earnings_labels"):
+            setattr(
+                cls,
+                "_earnings_labels",
+                set([k.value.label for k in cls if not k.value.is_passive]),
+            )
+        return getattr(cls, "_earnings_labels")
 
 
 class IncomeGroup(BaseModel):
@@ -65,25 +102,64 @@ class IncomeGroup(BaseModel):
         )
 
 
-class IncomeClassSummary:
-    def __init__(self, income_groups):
-        self.income_groups = income_groups
+class IncomeSummary(BaseModel):
+    total_amount: float
+    undetermined_amount: float
+    passive_income_sources: List[str]
+    passive_income_amount: float
+    earned_income_sources: List[str]
+    earned_income_amount: float
 
-        self.amount = sum([ig.amount for ig in self.income_groups])
-        self.sources = list(set([ig.source for ig in self.income_groups]))
-
-    def __repr__(self) -> str:
-        return f"{self.__class__}(amount={self.amount},sources={self.sources})"
-
-    def __str__(self) -> str:
-        return self.__repr__()
+    @classmethod
+    def from_igs(cls, igs: List[IncomeGroup]):
+        return cls(
+            total_amount=sum([ig.amount for ig in igs]),
+            undetermined_sources=list(
+                set([ig.source for ig in igs if ig.income_type == UNDETERMINED_LABEL])
+            ),
+            undetermined_amount=sum(
+                [ig.amount for ig in igs if ig.income_type == UNDETERMINED_LABEL]
+            ),
+            passive_income_sources=list(
+                set(
+                    [
+                        ig.source
+                        for ig in igs
+                        if ig.income_type in IncomeLabelEnum.passive_labels()
+                    ]
+                )
+            ),
+            passive_income_amount=sum(
+                [
+                    ig.amount
+                    for ig in igs
+                    if ig.income_type in IncomeLabelEnum.passive_labels()
+                ]
+            ),
+            earned_income_sources=list(
+                set(
+                    [
+                        ig.source
+                        for ig in igs
+                        if ig.income_type in IncomeLabelEnum.earnings_labels()
+                    ]
+                )
+            ),
+            earned_income_amount=sum(
+                [
+                    ig.amount
+                    for ig in igs
+                    if ig.income_type in IncomeLabelEnum.earnings_labels()
+                ]
+            ),
+        )
 
 
 class IncomeReport(BaseModel):
     income_groups: List[IncomeGroup]
 
     @classmethod
-    def from_dics(cls, income_report: List[Dict[str, Any]]):
+    def from_dicts(cls, income_report: List[Dict[str, Any]]):
         income_groups = sorted(
             [IncomeGroup.from_dict(d) for d in income_report],
             key=lambda x: float(x.amount),
@@ -99,39 +175,12 @@ class IncomeReport(BaseModel):
                 )
             )
 
-    def get_income_groups(self):
-        return self.income_groups
-
-    def get_main_income_type(self):
-        sources = {k: 0 for k in INCOME_LABELS}
-
-        for ig in self.income_groups:
-            sources[ig.income_type] += 1
-
-        return max(sources)
-
-    def get_income_types(self):
+    def get_report(self):
         sources = []
         for ig in self.income_groups:
             sources.append(ig.income_type)
 
         return list(set(sources))
 
-    def get_class_summary(self, income_class):
-        if income_class not in INCOME_CLASSES:
-            raise RuntimeError("Unsupported income class")
-
-        igs = []
-        for ig in self.income_groups:
-            if ig.income_type in INCOME_HIERARCHY[income_class]:
-                igs.append(ig)
-
-        return IncomeClassSummary(igs)
-
-    def get_undetermined_income(self):
-        igs = []
-        for ig in self.income_groups:
-            if ig.income_type == UNDETERMINED_LABEL:
-                igs.append(ig)
-        igs = sorted(igs, key=lambda x: x.amount, reverse=True)
-        return igs
+    def summarize(self):
+        return IncomeSummary.from_igs(self.income_groups)
