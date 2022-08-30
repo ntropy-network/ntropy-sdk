@@ -1,3 +1,8 @@
+import pandas as pd
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from pydantic import BaseModel
+
+
 INCOME_HIERARCHY = {
     "earned": ["salary", "freelance", "rideshare & delivery", "donations"],
     "passive": [
@@ -22,15 +27,82 @@ INCOME_LABELS = [
 UNDETERMINED_LABEL = "possible income - please verify"
 
 
-class IncomeReport:
-    def __init__(self, income_report_dict):
-        self.data = income_report_dict
-        self.income_groups = sorted(
-            [IncomeGroup(d) for d in self.data], key=lambda x: x.amount, reverse=True
+class IncomeGroup(BaseModel):
+    amount: float
+    date_of_first_payment: Optional[str]
+    date_of_last_payment: Optional[str]
+    income_type: str
+    source: str
+    transaction_ids: List[Union[int, str]]
+    pay_frequency: str
+
+    @classmethod
+    def from_json(cls, income_group: Dict[str, Any]):
+        return cls(
+            amount=income_group["amount"] if "amount" in income_group else 0,
+            date_of_first_payment=(
+                income_group["first_date"] if "first_date" in income_group else None
+            ),
+            date_of_last_payment=(
+                income_group["last_date"] if "last_date" in income_group else None
+            ),
+            income_type=(
+                income_group["income_type"]
+                if "income_type" in income_group
+                else "unknown"
+            ),
+            source=income_group["source"] if "source" in income_group else "unknown",
+            transaction_ids=(
+                income_group["transaction_ids"]
+                if "transaction_ids" in income_group
+                else []
+            ),
+            pay_frequency=(
+                income_group["periodicity"]
+                if "periodicity" in income_group
+                else "unknown"
+            ),
         )
 
+
+class IncomeClassSummary:
+    def __init__(self, income_groups):
+        self.income_groups = income_groups
+
+        self.amount = sum([ig.amount for ig in self.income_groups])
+        self.sources = list(set([ig.source for ig in self.income_groups]))
+
+    def __repr__(self) -> str:
+        return f"{self.__class__}(amount={self.amount},sources={self.sources})"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
+# Create a generic variable that can be 'Parent', or any subclass.
+T = TypeVar("T", bound="IncomeReport")
+
+
+class IncomeReport(BaseModel):
+    income_groups: List[IncomeGroup]
+
+    @classmethod
+    def from_json(cls, income_report: List[Dict[str, Any]]):
+        income_groups = sorted(
+            [IncomeGroup.from_json(d) for d in income_report],
+            key=lambda x: x.amount,
+            reverse=True,
+        )
+        return cls(income_groups=income_groups)
+
+    def __repr__(self) -> str:
+        with pd.option_context("expand_frame_repr", False):
+            return pd.DataFrame(
+                [ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups]
+            ).__repr__()
+
     def get_income_groups(self):
-        return self.igs
+        return self.income_groups
 
     def get_main_income_type(self):
         sources = {k: 0 for k in INCOME_LABELS}
@@ -65,40 +137,3 @@ class IncomeReport:
                 igs.append(ig)
         igs = sorted(igs, key=lambda x: x.amount, reverse=True)
         return igs
-
-
-class IncomeGroup:
-    def __init__(self, income_group_dict):
-        self.data = income_group_dict
-
-        self.amount = self.data["amount"] if "amount" in self.data else 0
-        self.date_of_first_payment = (
-            self.data["start_date"] if "start_date" in self.data else None
-        )
-        self.date_of_last_payment = (
-            self.data["end_date"] if "end_date" in self.data else None
-        )
-        self.income_type = (
-            self.data["income_type"] if "income_type" in self.data else "unknown"
-        )
-        self.source = self.data["source"] if "source" in self.data else "unknown"
-        self.transaction_ids = (
-            self.data["transaction_ids"] if "transaction_ids" in self.data else []
-        )
-        self.pay_frequency = (
-            self.data["periodicity"] if "periodicity" in self.data else "unknown"
-        )
-
-
-class IncomeClassSummary:
-    def __init__(self, income_groups):
-        self.income_groups = income_groups
-
-        self.amount = sum([ig.amount for ig in self.income_groups])
-        self.sources = list(set([ig.source for ig in self.income_groups]))
-
-    def __repr__(self) -> str:
-        return f"{self.__class__}(amount={self.amount},sources={self.sources})"
-
-    def __str__(self) -> str:
-        return self.__repr__()

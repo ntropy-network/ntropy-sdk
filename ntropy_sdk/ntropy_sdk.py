@@ -1526,7 +1526,7 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
 
-    def get_account_income_report(self, account_holder_id: str) -> dict:
+    def get_account_income_report(self, account_holder_id: str) -> IncomeReport:
         """Returns the income report of an account holder's Transaction history
 
         Parameters
@@ -1546,7 +1546,7 @@ class SDK:
         url = f"/v2/account-holder/{account_holder_id}/income"
 
         response = self.retry_ratelimited_request("POST", url, {})
-        return IncomeReport(response.json())
+        return IncomeReport.from_json(response.json())
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
