@@ -35,14 +35,6 @@ class IncomeLabelEnum(Enum):
         label="unemployment insurance", is_passive=True
     )
 
-    # @classmethod
-    # def passive_labels(cls) -> Set[str]:
-    #     res = []
-    #     for label in cls:
-    #         if label.value.is_passive:
-    #             res.append(label.value.label)
-    #     return res
-
     @classmethod
     def passive_labels(cls) -> Set[str]:
         if not hasattr(cls, "_passive_labels"):
