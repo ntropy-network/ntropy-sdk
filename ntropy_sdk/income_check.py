@@ -69,13 +69,13 @@ class IncomeGroup(BaseModel):
     @classmethod
     def from_dict(cls, income_group: Dict[str, Any]):
         return cls(
-            amount=income_group.get("amount", 0),
+            amount=income_group["amount"],
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],
-            income_type=income_group.get("income_type", DEFAULT_MISSING_VALUE_NAME),
-            source=income_group.get("source", DEFAULT_MISSING_VALUE_NAME),
-            transaction_ids=income_group.get("transaction_ids", []),
-            pay_frequency=income_group.get("pay_frequency", DEFAULT_MISSING_VALUE_NAME),
+            income_type=income_group["income_type"],
+            source=income_group["source"],
+            transaction_ids=income_group["transaction_ids"],
+            pay_frequency=income_group["pay_frequency"],
         )
 
 

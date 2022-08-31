@@ -87,10 +87,6 @@ def test_income_group():
     )
 
     assert IncomeGroup.from_dict(data) is not None
-    data.pop("pay_frequency")
-    assert IncomeGroup.from_dict(data).pay_frequency == DEFAULT_MISSING_VALUE_NAME
-    data.pop("amount")
-    assert IncomeGroup.from_dict(data).amount == 0
 
 
 def test_income_report(income_api_response):
