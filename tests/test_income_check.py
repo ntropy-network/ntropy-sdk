@@ -1,6 +1,11 @@
 import pytest
 import pandas as pd
-from ntropy_sdk.income_check import *
+from ntropy_sdk.income_check import (
+    UNDETERMINED_LABEL,
+    IncomeGroup,
+    IncomeLabelEnum,
+    IncomeReport,
+)
 
 
 @pytest.fixture
