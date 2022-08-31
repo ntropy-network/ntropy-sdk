@@ -45,13 +45,10 @@ def assert_type(value, name, expected_type):
     return True
 
 
-def validate_date(value: Union[str, date, datetime]):
-    try:
-        if isinstance(value, str):
-            datetime.strptime(value, "%Y-%m-%d")
-        return value
-    except ValueError:
-        raise ValueError("date must be of the format %Y-%m-%d")
+def validate_date(value: Union[str, date, datetime]) -> Union[date, datetime]:
+    if isinstance(value, str):
+        return datetime.strptime(value, "%Y-%m-%d")
+    return value
 
 
 def dict_to_str(dict):
