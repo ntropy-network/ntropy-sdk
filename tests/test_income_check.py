@@ -78,8 +78,8 @@ def test_income_check_enum():
 def test_income_group():
     data = dict(
         amount=35.2,
-        date_of_first_payment="2022-08-01",
-        date_of_latest_payment="2022-08-05",
+        first_payment_date="2022-08-01",
+        latest_payment_date="2022-08-05",
         income_type=IncomeLabelEnum.freelance.value.label,
         source="Kentucky Fried Chicken",
         transaction_ids=["id1", "id2"],
