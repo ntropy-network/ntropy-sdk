@@ -48,7 +48,9 @@ def assert_type(value, name, expected_type):
 def validate_date(value: Union[str, date, datetime]) -> Union[date, datetime]:
     if isinstance(value, str):
         return datetime.strptime(value, "%Y-%m-%d")
-    return value
+    elif isinstance(value, (date, datetime)):
+        return value
+    raise ValueError(f"Received incorrect type: {type(value)} for date field.")
 
 
 def dict_to_str(dict):
