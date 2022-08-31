@@ -59,8 +59,8 @@ class IncomeLabelEnum(Enum):
 
 class IncomeGroup(BaseModel):
     amount: float
-    date_of_first_payment: Optional[str]
-    date_of_latest_payment: Optional[str]
+    first_payment_date: Optional[str]
+    latest_payment_date: Optional[str]
     income_type: str
     source: str
     transaction_ids: List[Union[int, str]]
@@ -70,8 +70,8 @@ class IncomeGroup(BaseModel):
     def from_dict(cls, income_group: Dict[str, Any]):
         return cls(
             amount=income_group.get("amount", 0),
-            date_of_first_payment=income_group.get("first_date"),
-            date_of_latest_payment=income_group.get("last_date", None),
+            first_payment_date=income_group["first_payment_date"],
+            latest_payment_date=income_group["latest_payment_date"],
             income_type=income_group.get("income_type", DEFAULT_MISSING_VALUE_NAME),
             source=income_group.get("source", DEFAULT_MISSING_VALUE_NAME),
             transaction_ids=income_group.get("transaction_ids", []),

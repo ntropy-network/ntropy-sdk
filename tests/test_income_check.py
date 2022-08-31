@@ -14,9 +14,9 @@ def income_api_response():
     return [
         {
             "amount": 55266.34,
-            "first_date": "2021-03-18",
+            "first_payment_date": "2021-03-18",
             "income_type": "salary",
-            "last_date": "2022-08-02",
+            "latest_payment_date": "2022-08-02",
             "pay_frequency": "bi-weekly",
             "source": "Tesla Inc.",
             "transaction_ids": [
@@ -26,9 +26,9 @@ def income_api_response():
         },
         {
             "amount": 625.98,
-            "first_date": "2021-06-29",
+            "first_payment_date": "2021-06-29",
             "income_type": "rideshare and delivery",
-            "last_date": "2022-08-07",
+            "latest_payment_date": "2022-08-07",
             "pay_frequency": "other",
             "source": "Uber",
             "transaction_ids": [
@@ -38,9 +38,9 @@ def income_api_response():
         },
         {
             "amount": 1234.37,
-            "first_date": "2021-01-04",
+            "first_payment_date": "2021-01-04",
             "income_type": "possible income - please verify",
-            "last_date": "2022-08-01",
+            "latest_payment_date": "2022-08-01",
             "pay_frequency": "monthly",
             "source": "N/A",
             "transaction_ids": [
@@ -50,9 +50,9 @@ def income_api_response():
         },
         {
             "amount": 45600.00,
-            "first_date": "2021-08-01",
+            "first_payment_date": "2021-08-01",
             "income_type": "long term rent",
-            "last_date": "2022-08-01",
+            "latest_payment_date": "2022-08-01",
             "pay_frequency": "monthly",
             "source": "N/A",
             "transaction_ids": [
