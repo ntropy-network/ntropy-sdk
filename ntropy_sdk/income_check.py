@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Set, Union
 
 
 UNDETERMINED_LABEL = "possible income - please verify"
+DEFAULT_MISSING_VALUE_NAME = "unknown"
 
 
 class IncomeLabel(BaseModel):
@@ -71,10 +72,10 @@ class IncomeGroup(BaseModel):
             amount=income_group.get("amount", 0),
             date_of_first_payment=income_group.get("first_date"),
             date_of_latest_payment=income_group.get("last_date", None),
-            income_type=income_group.get("income_type", "unknown"),
-            source=income_group.get("source", "unknown"),
+            income_type=income_group.get("income_type", DEFAULT_MISSING_VALUE_NAME),
+            source=income_group.get("source", DEFAULT_MISSING_VALUE_NAME),
             transaction_ids=income_group.get("transaction_ids", []),
-            pay_frequency=income_group.get("pay_frequency", "unknown"),
+            pay_frequency=income_group.get("pay_frequency", DEFAULT_MISSING_VALUE_NAME),
         )
 
 
@@ -84,10 +85,10 @@ class IncomeSummary(BaseModel):
     total_income: float
     earned_income: float
     passive_income: float
-    undetermined_income: float
+    possible_income: float
     earned_income_sources: List[str]
     passive_income_sources: List[str]
-    undetermined_income_sources: List[str]
+    possible_income_sources: List[str]
 
     @classmethod
     def from_income_groups(cls, income_groups: List[IncomeGroup]):
@@ -142,10 +143,10 @@ class IncomeSummary(BaseModel):
             main_income_type=main_income_type,
             earned_income=round(sum(earned_income_amount), 2),
             passive_income=round(passive_income_amount, 2),
-            undetermined_income=round(undetermined_amount, 2),
+            possible_income=round(undetermined_amount, 2),
             earned_income_sources=sorted(set(earned_income_sources)),
             passive_income_sources=sorted(set(passive_income_source)),
-            undetermined_income_sources=sorted(set(undetermined_sources)),
+            possible_income_sources=sorted(set(undetermined_sources)),
         )
 
 
