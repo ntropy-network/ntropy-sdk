@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Set, Union
 
 
 UNDETERMINED_LABEL = "possible income - please verify"
-DEFAULT_MISSING_VALUE_NAME = "unknown"
 
 
 class IncomeLabel(BaseModel):
