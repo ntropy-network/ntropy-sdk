@@ -1614,6 +1614,35 @@ class SDK:
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
+   
+    def get_transactions_by_transaction_ids(self, transaction_ids: list) -> dict:
+        """Returns an AccountHolder object for the account holder with the provided id
+
+        Parameters
+        ----------
+        transaction_ids: list
+            List of transaction IDs
+
+        Returns
+        -------
+        transactions
+            List of transactions corresponding to the IDs
+        """
+
+        url = "/v2/account-holder/get_by_transaction_id/transactions?page=0&per_page=1000"
+
+        payload = {
+            "transaction_ids": transaction_ids,
+        }
+
+        try:
+            response = self.retry_ratelimited_request("POST", url, payload).json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+        return response  
 
     class Config:
         keep_untouched = (singledispatchmethod,)
