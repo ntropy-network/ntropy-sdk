@@ -48,17 +48,3 @@ def sdk():
         sdk.base_url = url
 
     return sdk
-
-
-def test_model_status(sdk):
-    model_name = f"test_{str(uuid.uuid4())[:20]}"
-    model = CustomTransactionClassifier(model_name=model_name, sdk=sdk)
-
-    model.fit([tx_supermarket, tx_cloud] * 5, ["supermarket", "cloud"] * 5)
-    status = model.get_status()
-
-    assert (
-        status["name"] == model_name
-        and status["progress"] == 100
-        and status["status"] == "ready"
-    )
