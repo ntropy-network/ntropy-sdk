@@ -8,11 +8,16 @@ UNDETERMINED_LABEL = "possible income - please verify"
 
 
 class IncomeLabel(BaseModel):
+    """A class conatining the income_type labels and their attributes"""
+
     label: str
     is_passive: bool
 
 
 class IncomeLabelEnum(Enum):
+    """An Enum containing the current list of income_type labels.
+    Each value is of type IncomeLabel"""
+
     undetermined_label = IncomeLabel(label=UNDETERMINED_LABEL, is_passive=False)
     child_support = IncomeLabel(label="child support", is_passive=True)
     donations = IncomeLabel(label="donations", is_passive=True)
@@ -57,6 +62,8 @@ class IncomeLabelEnum(Enum):
 
 
 class IncomeGroup(BaseModel):
+    """The basic unit for indicating a source of income"""
+
     amount: float
     first_payment_date: Optional[str]
     latest_payment_date: Optional[str]
@@ -67,6 +74,18 @@ class IncomeGroup(BaseModel):
 
     @classmethod
     def from_dict(cls, income_group: Dict[str, Any]):
+        """Converts a dictionary to and IncomeGroup
+
+        Parameters
+        ----------
+        income_group : dict
+            A dictionary containing keys for each IncomeGroup attribute.
+
+        Returns
+        -------
+        IncomeSummary
+            A corresponding IncomeGroup object.
+        """
         return cls(
             amount=income_group["amount"],
             first_payment_date=income_group["first_payment_date"],
@@ -79,6 +98,9 @@ class IncomeGroup(BaseModel):
 
 
 class IncomeSummary(BaseModel):
+    """An object containing aggregate statistics and metrics computed from a
+    complete list of income groups for a particular account"""
+
     main_income_source: str
     main_income_type: str
     total_income: float
@@ -91,6 +113,21 @@ class IncomeSummary(BaseModel):
 
     @classmethod
     def from_income_groups(cls, income_groups: List[IncomeGroup]):
+        """Converts a list of income groups to an IncomeSummary.
+
+        Parameters
+        ----------
+        income_groups : List[IncomeGroup]
+            A list of IncomeGroup objects.
+            The list must only contain groups from a single account holder.
+            The income group does not contain an `account_holder_id` field,
+            and so the user must ensure that this constraint is satisfied.
+
+        Returns
+        -------
+        IncomeSummary
+            A corresponding IncomeSummary object.
+        """
         igs = income_groups
         total_amount = sum([ig.amount for ig in igs])
         undetermined_sources = [
@@ -150,11 +187,27 @@ class IncomeSummary(BaseModel):
 
 
 class IncomeReport:
+    """The fundamental report object returned from the Ntropy Income Check API"""
+
     def __init__(self, income_groups: List[IncomeGroup]):
         self.income_groups = income_groups
 
     @classmethod
     def from_dicts(cls, income_report: List[Dict[str, Any]]):
+        """Converts a list of income groups to an IncomeReport.
+        Specifically, this converts the API output into a python object
+        with additional methods for reporting and summarization.
+
+        Parameters
+        ----------
+        income_groups : List[Dict[str, Any]])
+            A list of income groups represented as dicts. objects.
+
+        Returns
+        -------
+        IncomeReport
+            A corresponding IncomeSummary object.
+        """
         income_groups = sorted(
             [IncomeGroup.from_dict(d) for d in income_report],
             key=lambda x: float(x.amount),
@@ -163,9 +216,29 @@ class IncomeReport:
         return cls(income_groups=income_groups)
 
     def report(self) -> pd.DataFrame:
+        """Converts the API output into a pandas dataframe.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        report
+            A pandas DataFrame containing the information retrieved from the API.
+        """
         return pd.DataFrame([ig.dict() for ig in self.income_groups])
 
     def summarize(self) -> IncomeSummary:
+        """Returns an IncomeSummary object.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        IncomeSummary
+            A corresponding IncomeSummary object.
+        """
         return IncomeSummary.from_income_groups(self.income_groups)
 
     def __repr__(self) -> str:

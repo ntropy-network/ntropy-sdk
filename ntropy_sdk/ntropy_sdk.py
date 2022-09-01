@@ -1538,6 +1538,20 @@ class SDK:
         -------
         IncomeReport:
             An IncomeReport object for this account holder's history
+
+        Example usage
+        -------
+        >>> import pandas as pd
+        >>> from ntropy_sdk.ntropy_sdk import SDK
+        >>> account_holder_id = 'YOUR_ACCOUNT_HOLDER_ID'
+        >>> API_KEY = 'YOUR_API_KEY'
+        >>> sdk = SDK(token=API_KEY)
+        >>> report = sdk.get_account_income_report(my_id)
+        >>> report.summarize()
+        IncomeSummary(main_income_source='Walmart', main_income_type='salary',
+        total_income=64726.05, earned_income=61000.0, passive_income=3000,
+        possible_income=726.05, earned_income_sources=['Walmart'],
+        passive_income_sources=['N/A'], possible_income_sources=['Craigslist'])
         """
 
         if not isinstance(account_holder_id, str):
