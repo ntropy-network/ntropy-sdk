@@ -1086,6 +1086,55 @@ class SDK:
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
+    
+    @singledispatchmethod
+    def submit_transactions(
+        self,
+        transactions,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        labeling: bool = True,
+        create_account_holders: bool = True,
+        model_name: str = None,
+        model: str = None,
+        mapping: dict = None,
+        inplace: bool = False,
+    ):
+        """Enriches either an iterable of Transaction objects or a pandas dataframe synchronously.
+        Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
+
+        Parameters
+        ----------
+        transactions : Iterable[Transaction], pandas.DataFrame
+            An iterable of Transaction objects or a pandas DataFrame with the required
+            columns.
+        timeout : int, optional
+            Timeout for enriching the transactions.
+        poll_interval : int, optional
+            The interval between consecutive polling retries.
+        with_progress : bool, optional
+            True if progress bar should be displayed; False otherwise. By default,
+            progress is displayed only in interactive mode.
+        labeling : bool, optional
+            True if the enriched transactions should be labeled; False otherwise.
+        model_name: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler
+        model: str, optional
+            Deprecated. Use model_name instead.
+        mapping : dict, optional
+            A mapping from the column names of the provided dataframe and the
+            expected column names. Note: this only applies to DataFrame enrichment.
+        inplace : bool, optional
+            Enrich the dataframe inplace. Note: this only applies to DataFrame enrichment.
+
+        Returns
+        -------
+        List[EnrichedTransaction], pandas.DataFrame
+            A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
+        """
+        self.add_transactions(transactions, timeout, poll_interval, with_progress, labeling, create_account_holders, model_name, model, mapping, inplace)
 
     def _add_transactions_df(
         self,

@@ -32,7 +32,7 @@ tx = Transaction(
     account_holder_type = "business"
 )
 
-enriched_tx = sdk.add_transactions([tx])[0]
+enriched_tx = sdk.submit_transactions([tx])[0]
 print(enriched_tx.merchant)
 ```
 
