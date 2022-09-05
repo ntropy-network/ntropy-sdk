@@ -603,10 +603,14 @@ def test_parent_tx(sdk):
     enriched = sdk.add_transactions([id_tx])[0]
     assert enriched.parent_tx is id_tx
 
+
 def test_fetch_txs_by_transaction_id(sdk):
     tx_ids = ["get_by_transaction_id///1", "get_by_transaction_id///3"]
-    transactions = sdk.get_transactions_by_transaction_ids(tx_ids)
+    transactions = sdk.get_transaction_id_transactions(tx_ids, 0, 1000)
     transactions_ids = []
     for d in transactions:
         transactions_ids.append(d["transaction_id"])
-    assert "get_by_transaction_id///1" in transactions_ids and "get_by_transaction_id///3" in transactions_ids
+    assert (
+        "get_by_transaction_id///1" in transactions_ids
+        and "get_by_transaction_id///3" in transactions_ids
+    )
