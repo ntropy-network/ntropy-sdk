@@ -1086,7 +1086,7 @@ class SDK:
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
-    
+
     @singledispatchmethod
     def submit_transactions(
         self,
@@ -1134,7 +1134,18 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
-        self.add_transactions(transactions, timeout, poll_interval, with_progress, labeling, create_account_holders, model_name, model, mapping, inplace)
+        self.add_transactions(
+            transactions,
+            timeout,
+            poll_interval,
+            with_progress,
+            labeling,
+            create_account_holders,
+            model_name,
+            model,
+            mapping,
+            inplace,
+        )
 
     def _add_transactions_df(
         self,
@@ -1376,7 +1387,7 @@ class SDK:
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
-    
+
     @singledispatchmethod
     def submit_transactions_async(
         self,
@@ -1418,7 +1429,16 @@ class SDK:
             A Batch object that can be polled and awaited.
         """
 
-        self.add_transactions_async(transactions, timeout, poll_interval, labeling, create_account_holders, model_name, mapping, inplace)
+        self.add_transactions_async(
+            transactions,
+            timeout,
+            poll_interval,
+            labeling,
+            create_account_holders,
+            model_name,
+            mapping,
+            inplace,
+        )
 
     def _add_transactions_async_df(
         self,
