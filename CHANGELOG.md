@@ -3,13 +3,20 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+
+## [4.10.0] - 2022-08-31
+- Added income checking to Ntropy SDK
+
+## [4.9.0] - 2022-08-16
 - Allow subnormal float values in pydantic fields
 - Fix bug with inplace=False for dataframe enrichment
 - Added tests for models module
-- Updated scikit-compatible model to inherit from SDK Model class
-- Deprecated status() method for sci-kit model, use get_status() instead
+- Updated scikit-compatible model to use SDK Model class
 - Include original Transaction object in EnrichedTransaction
 - Support iterables in `add_transactions` and `add_transactions_async`
+- Ensure that `to_dict()` method always returns values even if None, but only returned fields that the API returns
+- Added support for income checking API (IncomeReport, IncomeGroup)
 
 ## [4.8.3] - 2022-08-05
 - Add repeating label to reccurence

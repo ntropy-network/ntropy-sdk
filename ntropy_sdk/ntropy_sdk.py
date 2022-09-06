@@ -10,12 +10,13 @@ from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable
 from urllib.parse import urlencode
 from itertools import islice
 
-import requests
+import requests  # type: ignore
 from pydantic import BaseModel, Field, validator, NonNegativeFloat
-from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
+from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
+from ntropy_sdk.income_check import IncomeReport
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -341,6 +342,20 @@ class AccountHolder(BaseModel):
             )
         return self._sdk.get_account_holder_metrics(self.id, metrics, start, end)
 
+    def get_income_report(self):
+        """Returns the income report for the account holder.
+
+        Returns
+        -------
+        IncomeReport:
+            An IncomeReport object for this account holder's history
+        """
+        if not self._sdk:
+            raise ValueError(
+                "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
+            )
+        return self._sdk.get_income_report(self.id)
+
     class Config:
         use_enum_values = True
         extra = "allow"
@@ -351,6 +366,7 @@ class EnrichedTransaction(BaseModel):
 
     _fields: ClassVar[List[str]] = [
         "sdk",
+        "returned_fields",
         "labels",
         "location",
         "logo",
@@ -395,10 +411,13 @@ class EnrichedTransaction(BaseModel):
     parent_tx: Optional[Transaction] = Field(
         description="The original Transaction of the EnrichedTransaction."
     )
+    returned_fields: List[str] = Field(
+        description="The list of returned properties by the API"
+    )
 
     @validator("confidence")
     def _confidence_validator(cls, v):
-        if v > 1:
+        if v is not None and v > 1:
             raise ValueError("Confidence must be between 0.0 and 1.0")
         return v
 
@@ -447,7 +466,7 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        return cls(sdk=sdk, **val)
+        return cls(sdk=sdk, returned_fields=list(val.keys()), **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -458,7 +477,11 @@ class EnrichedTransaction(BaseModel):
             A dictionary of the EnrichedTransaction's fields.
         """
 
-        return self.dict(exclude_none=True)
+        return {
+            k: v
+            for k, v in self.dict().items()
+            if (k in self.returned_fields) or k == "kwargs"
+        }
 
     class Config:
         use_enum_values = True
@@ -756,7 +779,9 @@ class Model(BaseModel):
             raise NtropyError("Model training wait timeout")
 
     @staticmethod
-    def from_response(sdk: "SDK", response) -> "Model":
+    def from_response(
+        sdk: "SDK", response, poll_interval=None, timeout=None
+    ) -> "Model":
         """Creates a model instance from an API response referencing a model
 
         Parameters
@@ -775,19 +800,22 @@ class Model(BaseModel):
         if name is None:
             raise ValueError("Invalid response for creating a model - missing name")
 
-        created_at = response.get("created_at")
-        account_holder_type = response.get("account_holder_type")
-        status = response.get("status")
-        progress = response.get("progress")
+        kwargs = {
+            "sdk": sdk,
+            "model_name": name,
+            "created_at": response.get("created_at"),
+            "account_holder_type": response.get("account_holder_type"),
+            "status": response.get("status"),
+            "progress": response.get("progress"),
+        }
 
-        return Model(
-            sdk=sdk,
-            model_name=name,
-            created_at=created_at,
-            account_holder_type=account_holder_type,
-            status=status,
-            progress=progress,
-        )
+        if poll_interval is not None:
+            kwargs["poll_interval"] = poll_interval
+
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+
+        return Model(**kwargs)
 
     class Config:
         arbitrary_types_allowed = True
@@ -1610,6 +1638,28 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
 
+    def get_account_income_report(self, account_holder_id: str) -> IncomeReport:
+        """Returns the income report of an account holder's Transaction history
+
+        Parameters
+        ----------
+        account_holder_id : str
+            The unique identifier for the account holder.
+
+        Returns
+        -------
+        IncomeReport:
+            An IncomeReport object for this account holder's history
+        """
+
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id should be of type string")
+
+        url = f"/v2/account-holder/{account_holder_id}/income"
+
+        response = self.retry_ratelimited_request("POST", url, {})
+        return IncomeReport.from_dicts(response.json())
+
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
 
@@ -1643,7 +1693,13 @@ class SDK:
         return resp.json()
 
     @singledispatchmethod
-    def train_custom_model(self, transactions, model_name: str) -> Model:
+    def train_custom_model(
+        self,
+        transactions,
+        model_name: str,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ) -> Model:
         """Trains a custom model for labeling transactions, using the provided transactions as training data,
         either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column.
         The model is associated with the provided name. Returns a Model instance that can be polled or waited for
@@ -1676,27 +1732,38 @@ class SDK:
             tx_class=LabeledTransaction,
         )
 
-        return self._train_custom_model(transactions, model_name)
+        return self._train_custom_model(
+            transactions, model_name, poll_interval=poll_interval, timeout=timeout
+        )
 
     @train_custom_model.register(list)
     def train_custom_model_list(
         self,
         transactions,
         model_name: str,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
     ) -> Model:
         return self._train_custom_model(
-            transactions,
-            model_name,
+            transactions, model_name, poll_interval=poll_interval, timeout=timeout
         )
 
-    def _train_custom_model(self, transactions, model_name: str) -> Model:
+    def _train_custom_model(
+        self,
+        transactions,
+        model_name: str,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ) -> Model:
         txs = [tx.to_dict() for tx in transactions]
 
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request(
             "POST", url, {"transactions": txs}
         ).json()
-        return Model.from_response(self, response)
+        return Model.from_response(
+            self, response, poll_interval=poll_interval, timeout=timeout
+        )
 
     def get_all_custom_models(self) -> List[Model]:
         """Returns a list of Model objects for all existing custom models previously trained

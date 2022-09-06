@@ -63,8 +63,6 @@ def test_model_status(sdk):
         and status["status"] == "ready"
     )
 
-    assert model.model_type == "CustomTransactionClassifier"
-
 
 def test_model_fitting_sync(sdk):
     model_name = f"test_{str(uuid.uuid4())[:20]}"
