@@ -1376,6 +1376,49 @@ class SDK:
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
+    
+    @singledispatchmethod
+    def submit_transactions_async(
+        self,
+        transactions,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 10,
+        labeling: bool = True,
+        create_account_holders: bool = True,
+        model_name: str = None,
+        mapping: dict = None,
+        inplace: bool = False,
+    ):
+        """Enriches either an iterable of Transaction objects or a pandas dataframe asynchronously.
+        Returns a list of EnrichedTransactions or dataframe with the same order as the provided input.
+
+        Parameters
+        ----------
+        transactions : Iterable[Transaction], pandas.DataFrame
+            An iterable of Transaction objects or a pandas DataFrame with the required
+            columns.
+        timeout : int, optional
+            Timeout for enriching the transactions.
+        poll_interval : int, optional
+            The interval between consecutive polling retries.
+        labeling : bool, optional
+            True if the enriched transactions should be labeled; False otherwise.
+        model_name: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler
+        mapping : dict, optional
+            A mapping from the column names of the provided dataframe and the
+            expected column names. Note: this only applies to DataFrame enrichment.
+        inplace : bool, optional
+            Enrich the dataframe inplace. Note: this only applies to DataFrame enrichment.
+
+        Returns
+        -------
+        Batch
+            A Batch object that can be polled and awaited.
+        """
+
+        self.add_transactions_async(transactions, timeout, poll_interval, labeling, create_account_holders, model_name, mapping, inplace)
 
     def _add_transactions_async_df(
         self,
