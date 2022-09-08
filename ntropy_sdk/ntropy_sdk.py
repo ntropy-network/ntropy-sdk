@@ -1162,18 +1162,33 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
-        self.add_transactions(
-            transactions,
-            timeout,
-            poll_interval,
-            with_progress,
-            labeling,
-            create_account_holders,
-            model_name,
-            model,
-            mapping,
-            inplace,
-        )
+        if self._is_dataframe(transactions):
+            return self._add_transactions_df(
+                transactions,
+                timeout,
+                poll_interval,
+                with_progress,
+                labeling,
+                create_account_holders,
+                model_name,
+                model,
+                mapping,
+                inplace,
+            )
+
+        if isinstance(transactions, Iterable):
+            return self._add_transactions_iterable(
+                transactions,
+                timeout,
+                poll_interval,
+                with_progress,
+                labeling,
+                create_account_holders,
+                model_name,
+                model,
+            )
+
+        raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
 
     def _add_transactions_df(
         self,
@@ -1457,16 +1472,33 @@ class SDK:
             A Batch object that can be polled and awaited.
         """
 
-        self.add_transactions_async(
-            transactions,
-            timeout,
-            poll_interval,
-            labeling,
-            create_account_holders,
-            model_name,
-            mapping,
-            inplace,
-        )
+        if self._is_dataframe(transactions):
+
+            if len(transactions) > self.MAX_BATCH_SIZE:
+                raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
+
+            return self._add_transactions_async_df(
+                transactions,
+                timeout,
+                poll_interval,
+                labeling,
+                create_account_holders,
+                model_name,
+                mapping,
+                inplace,
+            )
+
+        if isinstance(transactions, Iterable):
+            return self._add_transactions_async_iterable(
+                transactions,
+                timeout,
+                poll_interval,
+                labeling,
+                create_account_holders,
+                model_name,
+            )
+
+        raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
 
     def _add_transactions_async_df(
         self,
