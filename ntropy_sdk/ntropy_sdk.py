@@ -361,6 +361,23 @@ class AccountHolder(BaseModel):
         extra = "allow"
 
 
+class RecurrenceGroup(BaseModel):
+    """Information regarding the recurrence group of one transaction"""
+
+    date_of_first_tx: Optional[date]
+    date_of_last_tx: Optional[date]
+    frequency_in_days: Optional[int]
+    average_amount_per_tx: Optional[float]
+    other_party: Optional[str]
+    id: Optional[str]
+    transaction_ids: Optional[List[str]]
+
+    class Config:
+        use_enum_values = True
+        arbitrary_types_allowed = True
+        extra = "allow"
+
+
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
@@ -377,6 +394,7 @@ class EnrichedTransaction(BaseModel):
         "website",
         "chart_of_accounts",
         "recurrence",
+        "recurrence_group",
         "confidence",
         "transaction_type",
         "mcc",
@@ -397,7 +415,10 @@ class EnrichedTransaction(BaseModel):
         description="Label from the standard chart-of-accounts hierarchy."
     )
     recurrence: Optional[RecurrenceType] = Field(
-        description="Indicates if the Transaction is recurring."
+        description="Indicates if the Transaction is recurring and the type of recurrence"
+    )
+    recurrence_group: Optional[RecurrenceGroup] = Field(
+        description="Contains the information of the recurrence group if the transaction is recurrent"
     )
     confidence: Optional[NonNegativeFloat] = Field(
         description="A numerical score between 0.0 and 1.0 indicating the confidence",
