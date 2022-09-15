@@ -445,6 +445,10 @@ class EnrichedTransaction(BaseModel):
     def __init__(self, **kwargs):
         fields = {}
         extra = {}
+
+        if recurrence_group := self._parse_recurrence_group(kwargs):
+            fields["recurrence_group"] = recurrence_group
+
         for key in kwargs:
             if key in EnrichedTransaction._fields:
                 fields[key] = kwargs[key]
@@ -453,6 +457,38 @@ class EnrichedTransaction(BaseModel):
 
         super().__init__(**fields)
         self.kwargs = extra
+
+    def _parse_recurrence_group(self, kwargs: dict) -> Optional[RecurrenceGroup]:
+        def _from_recurrence_v1(kwargs):
+            return RecurrenceGroup(
+                id=kwargs["recurrence_group_id"],
+                transaction_ids=[
+                    x["transaction_id"] for x in kwargs["recurrence_group"]
+                ],
+            )
+
+        def _from_recurrence_v2(kwargs):
+            return RecurrenceGroup(**kwargs["recurrence_group"])
+
+        recurrence_group: Optional[RecurrenceGroup] = None
+        # parse recurrence api v1
+        if all(
+            [
+                x in kwargs
+                for x in ["recurrence", "recurrence_group", "recurrence_group_id"]
+            ]
+        ) and isinstance(kwargs["recurrence_group"], list):
+            recurrence_group = _from_recurrence_v1(kwargs)
+            del kwargs["recurrence_group"]
+            del kwargs["recurrence_group_id"]
+        # parse recurrence api v2
+        elif all(
+            [x in kwargs for x in ["recurrence", "recurrence_group"]]
+        ) and isinstance(kwargs["recurrence_group"], dict):
+            recurrence_group = _from_recurrence_v2(kwargs)
+            del kwargs["recurrence_group"]
+
+        return recurrence_group
 
     def __repr__(self):
         return f"EnrichedTransaction({dict_to_str(self.to_dict())})"
