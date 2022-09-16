@@ -1,4 +1,3 @@
-import pandas as pd
 from enum import Enum
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Set, Union
@@ -162,16 +161,15 @@ class IncomeReport:
         )
         return cls(income_groups=income_groups)
 
-    def report(self) -> pd.DataFrame:
+    def report_dataframe(self) -> "pandas.DataFrame":
+        try:
+            import pandas as pd
+        except:
+            raise RuntimeError("pandas is not installed")
         return pd.DataFrame([ig.dict() for ig in self.income_groups])
 
     def summarize(self) -> IncomeSummary:
         return IncomeSummary.from_income_groups(self.income_groups)
 
     def __repr__(self) -> str:
-        with pd.option_context("expand_frame_repr", False):
-            return str(
-                pd.DataFrame(
-                    [ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups]
-                )
-            )
+        return str([ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups])
