@@ -161,10 +161,10 @@ class IncomeReport:
         )
         return cls(income_groups=income_groups)
 
-    def report_dataframe(self) -> "pandas.DataFrame":
+    def report_dataframe(self) -> Any:
         try:
             import pandas as pd
-        except:
+        except ImportError:
             raise RuntimeError("pandas is not installed")
         return pd.DataFrame([ig.dict() for ig in self.income_groups])
 
