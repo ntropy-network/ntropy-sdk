@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 - Added RecurrenceGroup and recurrence_group for correct parsing of this information
+- Rename `IncomeReport.report()` to `IncomeReport.report_dataframe()`
 
 
 ## [4.10.0] - 2022-08-31
