@@ -494,6 +494,7 @@ def test_parent_tx(sdk):
     enriched = sdk.add_transactions([id_tx])[0]
     assert enriched.parent_tx is id_tx
 
+
 def test_single_transaction_enrich_error(sdk):
     tx = Transaction(
         amount=24.56,
@@ -508,4 +509,3 @@ def test_single_transaction_enrich_error(sdk):
         assert False
     except TypeError as e:
         assert str(e) == "transactions must be either a pandas.Dataframe or an iterable"
-    
