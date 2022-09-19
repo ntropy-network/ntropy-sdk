@@ -1258,6 +1258,8 @@ class SDK:
                 error = e.response.json()
                 raise ValueError(f"{error['detail']}")
             raise
+        except AttributeError:
+            raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
 
     @singledispatchmethod
     def add_transactions_async(

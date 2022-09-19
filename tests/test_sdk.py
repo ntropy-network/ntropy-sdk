@@ -602,3 +602,19 @@ def test_parent_tx(sdk):
     )
     enriched = sdk.add_transactions([id_tx])[0]
     assert enriched.parent_tx is id_tx
+
+def test_single_transaction_enrich_error(sdk):
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+    )
+    try:
+        sdk.add_transactions(tx)
+        assert False
+    except TypeError as e:
+        assert str(e) == "transactions must be either a pandas.Dataframe or an iterable"
+    
