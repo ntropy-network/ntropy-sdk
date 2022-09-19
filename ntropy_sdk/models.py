@@ -1,31 +1,54 @@
+from asyncore import poll
 import pandas as pd
 
-from typing import List, Union, Any, ClassVar
+from typing import List, Union, Any, Optional
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import f1_score
 from sklearn.exceptions import NotFittedError
 
 from ntropy_sdk import SDK, Transaction, LabeledTransaction, Model
-from pydantic import Field
 
 TransactionList = Union[List[Union[dict, Transaction]], pd.DataFrame]
 
 
-class BaseModel(Model, BaseEstimator, ClassifierMixin):
-
-    sync: bool = Field(
-        True,
-        description="if True the scikit-learn model will block during training until it is complete or errors",
-    )
-    labels_only: bool = Field(
-        True,
-        description="if True, returns only the labels on the predict method so that the interface is scikit-learn compatible",
-    )
-
-    @property
-    def model_type(self):
-        raise NotImplementedError("BaseModel cannot be used to train directly")
+class CustomTransactionClassifier(BaseEstimator, ClassifierMixin):
+    def __init__(
+        self,
+        model_name: str,
+        sync: bool = True,
+        progress: bool = True,
+        labels_only: bool = True,
+        sdk: Optional[SDK] = None,
+        poll_interval: Optional[int] = None,
+        timeout: Optional[int] = None,
+    ):
+        """
+        Parameters
+        ----------
+        model_name : str
+            Unique name that identifies the trained model
+        poll_interval : int, optional
+            A timeout for retrieving the batch result.
+        timeout : int, optional
+            The interval between polling retries.
+        sync : bool, optional
+            if True the scikit-learn model will block during training until it is complete or errors
+        progress : bool, optional
+            if True displays a progress bar during the training process
+        labels_only : bool, optional
+            if True, returns only the labels on the predict method so that the interface is scikit-learn compatible
+        sdk: SDK, optional
+            if provided sets the SDK instance to use for this model's interaction with the API
+        """
+        self.model_name = model_name
+        self.labels_only = labels_only
+        self.poll_interval = poll_interval
+        self.timeout = timeout
+        self.sync = sync
+        self.progress = progress
+        self._sdk = sdk
+        self._model = None
 
     @property
     def sdk(self):
@@ -35,6 +58,17 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
                 "API SDK is not set. You must either provide SDK on initialization, set the environment variable NTROPY_API_TOKEN or use the model's set_sdk method"
             )
         return self._sdk
+
+    @property
+    def model(self):
+        if self._model is None:
+            self._model = Model(
+                sdk=self.sdk,
+                model_name=self.model_name,
+                poll_interval=self.poll_interval,
+                timeout=self.timeout,
+            )
+        return self._model
 
     def set_sdk(self, sdk: SDK):
         self._sdk = sdk
@@ -47,7 +81,7 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
         dict
         """
 
-        return super().poll()[0]
+        return self.model.poll()[0]
 
     def is_ready(self) -> bool:
         """Checks if the model is ready to be used for inference
@@ -57,7 +91,7 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
         bool
         """
 
-        _, status, _ = super().poll()
+        _, status, _ = self.model.poll()
         return status == "ready"
 
     def check_is_fitted(self):
@@ -93,7 +127,9 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
 
         return uniform_txs
 
-    def fit(self, X: TransactionList, y: List[str], **params) -> "BaseModel":
+    def fit(
+        self, X: TransactionList, y: List[str], **params
+    ) -> "CustomTransactionClassifier":
         """Starts a training process for a custom labeling model given the provided
         input data. The model can be trained using a list of transactions or a
         dataframe with the same transactions
@@ -118,10 +154,15 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
         """
 
         X = self._process_transactions(X, y)
-        self.sdk.train_custom_model(X, self.model_name)
+        self._model = self.sdk.train_custom_model(
+            X,
+            self.model_name,
+            poll_interval=self.poll_interval,
+            timeout=self.timeout,
+        )
 
         if self.sync:
-            super().wait(with_progress=self.progress)
+            self.model.wait(with_progress=self.progress)
 
         return self
 
@@ -182,20 +223,7 @@ class BaseModel(Model, BaseEstimator, ClassifierMixin):
             "labels_only": self.labels_only,
         }
 
-    def set_params(self, **parameters: Any) -> "BaseModel":
+    def set_params(self, **parameters: Any) -> "CustomTransactionClassifier":
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
-
-
-class CustomTransactionClassifier(BaseModel):
-    model_type: ClassVar = "CustomTransactionClassifier"
-
-    def fit(
-        self,
-        X: TransactionList,
-        y: List[str],
-        n_epochs: int = 2,
-        random_state: int = 42,
-    ):
-        return super().fit(X, y, n_epochs=n_epochs, random_state=random_state)
