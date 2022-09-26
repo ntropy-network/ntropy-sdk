@@ -446,7 +446,8 @@ class EnrichedTransaction(BaseModel):
         fields = {}
         extra = {}
 
-        if recurrence_group := self._parse_recurrence_group(kwargs):
+        recurrence_group = self._parse_recurrence_group(kwargs)
+        if recurrence_group is not None:
             fields["recurrence_group"] = recurrence_group
 
         for key in kwargs:
@@ -1344,7 +1345,9 @@ class SDK:
                 raise ValueError(f"{error['detail']}")
             raise
         except AttributeError:
-            raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
+            raise TypeError(
+                "transactions must be either a pandas.Dataframe or an iterable"
+            )
 
     @singledispatchmethod
     def add_transactions_async(
