@@ -12,11 +12,15 @@ from ntropy_sdk.income_check import (
 def income_api_response():
     return [
         {
-            "amount": 55266.34,
+            "total_amount": 55266.34,
             "first_payment_date": "2021-03-18",
             "income_type": "salary",
             "latest_payment_date": "2022-08-02",
+            "duration": "1 year 4 months 15 day",
             "pay_frequency": "bi-weekly",
+            "is_active": False,
+            "projected_pay_date": "none",
+            "projected_pay_amount": "none",
             "source": "Tesla Inc.",
             "transaction_ids": [
                 "b6cdb5bb-4dee-435a-84db-5c99fda70e50",
@@ -24,11 +28,15 @@ def income_api_response():
             ],
         },
         {
-            "amount": 625.98,
+            "total_amount": 625.98,
             "first_payment_date": "2021-06-29",
             "income_type": "rideshare and delivery",
             "latest_payment_date": "2022-08-07",
+            "duration": "1 year 1 months 8 day",
             "pay_frequency": "other",
+            "is_active": False,
+            "projected_pay_date": "none",
+            "projected_pay_amount": "none",
             "source": "Uber",
             "transaction_ids": [
                 "752ec4e2-2dcc-49a6-9c22-64685dce400d",
@@ -36,10 +44,14 @@ def income_api_response():
             ],
         },
         {
-            "amount": 1234.37,
+            "total_amount": 1234.37,
             "first_payment_date": "2021-01-04",
             "income_type": "possible income - please verify",
             "latest_payment_date": "2022-08-01",
+            "duration": "1 year 6 months 28 day",
+            "is_active": False,
+            "projected_pay_date": "none",
+            "projected_pay_amount": "none",
             "pay_frequency": "monthly",
             "source": "N/A",
             "transaction_ids": [
@@ -48,10 +60,14 @@ def income_api_response():
             ],
         },
         {
-            "amount": 45600.00,
+            "total_amount": 45600.00,
             "first_payment_date": "2021-08-01",
             "income_type": "long term rent",
             "latest_payment_date": "2022-08-01",
+            "duration": "1 year",
+            "is_active": False,
+            "projected_pay_date": "none",
+            "projected_pay_amount": "none",
             "pay_frequency": "monthly",
             "source": "N/A",
             "transaction_ids": [
@@ -76,13 +92,17 @@ def test_income_check_enum():
 
 def test_income_group():
     data = dict(
-        amount=35.2,
+        is_active=False,
+        total_amount=35.2,
         first_payment_date="2022-08-01",
         latest_payment_date="2022-08-05",
+        duration="4 days",
+        pay_frequency="weekly",
+        projected_pay_date="none",
+        projected_pay_amount="none",
         income_type=IncomeLabelEnum.freelance.value.label,
         source="Kentucky Fried Chicken",
         transaction_ids=["id1", "id2"],
-        pay_frequency="weekly",
     )
 
     assert IncomeGroup.from_dict(data) is not None
