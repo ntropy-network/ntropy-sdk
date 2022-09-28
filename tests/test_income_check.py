@@ -12,7 +12,7 @@ from ntropy_sdk.income_check import (
 def income_api_response():
     return [
         {
-            "amount": 55266.34,
+            "total_amount": 55266.34,
             "first_payment_date": "2021-03-18",
             "income_type": "salary",
             "latest_payment_date": "2022-08-02",
@@ -24,7 +24,7 @@ def income_api_response():
             ],
         },
         {
-            "amount": 625.98,
+            "total_amount": 625.98,
             "first_payment_date": "2021-06-29",
             "income_type": "rideshare and delivery",
             "latest_payment_date": "2022-08-07",
@@ -36,7 +36,7 @@ def income_api_response():
             ],
         },
         {
-            "amount": 1234.37,
+            "total_amount": 1234.37,
             "first_payment_date": "2021-01-04",
             "income_type": "possible income - please verify",
             "latest_payment_date": "2022-08-01",
@@ -48,7 +48,7 @@ def income_api_response():
             ],
         },
         {
-            "amount": 45600.00,
+            "total_amount": 45600.00,
             "first_payment_date": "2021-08-01",
             "income_type": "long term rent",
             "latest_payment_date": "2022-08-01",
