@@ -457,7 +457,8 @@ class EnrichedTransaction(BaseModel):
             else:
                 extra[key] = kwargs[key]
 
-        super().__init__(**fields)
+        returned_fields = list(fields.keys())
+        super().__init__(**fields, returned_fields=returned_fields)
         self.kwargs = extra
 
     def _parse_recurrence_group(self, kwargs: dict) -> Optional[RecurrenceGroup]:
@@ -525,7 +526,7 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        return cls(sdk=sdk, returned_fields=list(val.keys()), **val)
+        return cls(sdk=sdk, **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -1611,7 +1612,9 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
 
-    def get_account_recurring_payments_report(self, account_holder_id: str) -> RecurringPaymentsReport:
+    def get_account_recurring_payments_report(
+        self, account_holder_id: str
+    ) -> RecurringPaymentsReport:
         """Returns the recurring payments report of an account holder's Transaction history
 
         Parameters
