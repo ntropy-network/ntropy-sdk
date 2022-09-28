@@ -17,7 +17,7 @@ from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
-from ntropy_sdk.subscription_management import SubscriptionReport
+from ntropy_sdk.recurring_payments import RecurringPaymentsReport
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -1611,8 +1611,8 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
 
-    def get_account_subscription_report(self, account_holder_id: str) -> dict:
-        """Returns the subscription report of an account holder's Transaction history
+    def get_account_recurring_payments_report(self, account_holder_id: str) -> RecurringPaymentsReport:
+        """Returns the recurring payments report of an account holder's Transaction history
 
         Parameters
         ----------
@@ -1621,17 +1621,17 @@ class SDK:
 
         Returns
         -------
-        SubscriptionReport:
-            An IncomeReport object for this account holder's history
+        RecurringPaymentsReport:
+            An RecurringPayments object for this account holder's history
         """
 
         if not isinstance(account_holder_id, str):
             raise ValueError("account_holder_id should be of type string")
 
-        url = f"/v2/account-holder/{account_holder_id}/subscription"
+        url = f"/v2/account-holder/{account_holder_id}/recurring-payments"
 
         response = self.retry_ratelimited_request("POST", url, {})
-        return SubscriptionReport(response.json())
+        return RecurringPaymentsReport(response.json())
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
