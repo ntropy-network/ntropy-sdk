@@ -3,7 +3,7 @@ class RecurringPaymentsReport:
         self.data = recurring_payments_dict
         self.recurring_payments_groups = sorted(
             [RecurringPaymentsGroup(d) for d in self.data],
-            key=lambda x: x.first_payment_date,
+            key=lambda x: x.latest_payment_date,
             reverse=True,
         )
 

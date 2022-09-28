@@ -1625,7 +1625,7 @@ class SDK:
         Returns
         -------
         RecurringPaymentsReport:
-            An RecurringPayments object for this account holder's history
+            An RecurringPaymentsReport object for this account holder's history
         """
 
         if not isinstance(account_holder_id, str):
