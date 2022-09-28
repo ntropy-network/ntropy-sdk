@@ -2,8 +2,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [4.10.1]  2020-09-26
+- Fixed support for Python 3.6
 
+## [4.10.1] - 2020-09-16
+- Added RecurrenceGroup and recurrence_group for correct parsing of this information
+- Rename `IncomeReport.report()` to `IncomeReport.report_dataframe()`
+
+## [4.10.0] - 2022-08-31
+- Added income checking to Ntropy SDK
 
 ## [4.9.0] - 2022-08-16
 - Allow subnormal float values in pydantic fields

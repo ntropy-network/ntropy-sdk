@@ -450,115 +450,6 @@ def test_batch(sdk):
     assert status == "finished" and resp[0].merchant == "Amazon Web Services"
 
 
-def test_train_custom_model(sdk):
-    tx_cloud = LabeledTransaction(
-        amount=102.04,
-        description="TARGET T- 5800 20th St 11/30/19 17:32",
-        entry_type="debit",
-        date="2012-12-10",
-        iso_currency_code="USD",
-        account_holder_type="business",
-        mcc=5432,
-        label="supermarket",
-    )
-    tx_supermarket = LabeledTransaction(
-        amount=24.56,
-        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
-        entry_type="debit",
-        date="2012-12-10",
-        account_holder_type="business",
-        iso_currency_code="USD",
-        label="cloud",
-    )
-    model_name = f"test_{str(uuid.uuid4())[:20]}"
-
-    model = sdk.train_custom_model([tx_cloud] * 10 + [tx_supermarket] * 10, model_name)
-    _, status, _ = model.poll()
-    assert status in ["enriching", "training", "queued"] and model.is_synced()
-
-    m = Model(sdk=sdk, model_name=model_name, poll_interval=1)
-    _, status, _ = model.poll()
-    assert status in ["enriching", "training", "queued"] and m.is_synced()
-
-    m.wait()
-    _, status, _ = model.poll()
-    assert status == "ready"
-
-    tx = Transaction(
-        amount=110.2,
-        description="TARGET T- 5800 20th St 11/30/19 17:32",
-        entry_type="debit",
-        date="2012-12-10",
-        account_holder_id="1",
-        iso_currency_code="USD",
-        transaction_id="one-two-three",
-        mcc=5432,
-    )
-    (e,) = sdk.add_transactions([tx], model_name=model_name)
-    assert "supermarket" in e.labels
-    with pytest.deprecated_call():
-        (e,) = sdk.add_transactions([tx], model=model_name)
-        assert "supermarket" in e.labels
-
-
-def test_train_custom_model_df(sdk):
-    txs = [
-        {
-            "amount": 102.04,
-            "description": "TARGET T- 5800 20th St 11/30/19 17:32",
-            "entry_type": "debit",
-            "date": "2012-12-10",
-            "iso_currency_code": "USD",
-            "account_holder_type": "business",
-            "mcc": 5432,
-            "label": "supermarket",
-        },
-        {
-            "amount": 24.56,
-            "description": "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
-            "entry_type": "debit",
-            "date": "2012-12-10",
-            "account_holder_type": "business",
-            "iso_currency_code": "USD",
-            "label": "cloud",
-            "mcc": 1234,
-        },
-    ] * 10
-
-    model_name = f"test_{str(uuid.uuid4())[:20]}"
-    df = pd.DataFrame(txs)
-
-    model = sdk.train_custom_model(df, model_name)
-    _, status, _ = model.poll()
-    assert status in ["enriching", "training", "queued"] and model.is_synced()
-
-    m = Model(sdk=sdk, model_name=model_name, poll_interval=1)
-    _, status, _ = model.poll()
-    assert status in ["enriching", "training", "queued"] and m.is_synced()
-
-    m.wait()
-    _, status, _ = model.poll()
-    assert status == "ready"
-
-    e = sdk.add_transactions(
-        [
-            Transaction(
-                amount=110.2,
-                description="TARGET T- 5800 20th St 11/30/19 17:32",
-                entry_type="debit",
-                date="2012-12-10",
-                account_holder_id="1",
-                iso_currency_code="USD",
-                transaction_id="one-two-three",
-                mcc=5432,
-            )
-        ],
-        model_name=model_name,
-    )[0]
-
-    assert "supermarket" in e.labels
-
-
 def test_numerical_support():
     tx = Transaction(
         amount=Decimal(24.56),
@@ -602,3 +493,19 @@ def test_parent_tx(sdk):
     )
     enriched = sdk.add_transactions([id_tx])[0]
     assert enriched.parent_tx is id_tx
+
+
+def test_single_transaction_enrich_error(sdk):
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_type="business",
+        iso_currency_code="USD",
+    )
+    try:
+        sdk.add_transactions(tx)
+        assert False
+    except TypeError as e:
+        assert str(e) == "transactions must be either a pandas.Dataframe or an iterable"
