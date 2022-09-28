@@ -56,24 +56,30 @@ class IncomeLabelEnum(Enum):
 
 
 class IncomeGroup(BaseModel):
-    amount: float
-    first_payment_date: Optional[str]
-    latest_payment_date: Optional[str]
+    total_amount: float
     income_type: str
     source: str
-    transaction_ids: List[Union[int, str]]
+    is_active: bool
+    first_payment_date: Optional[str]
+    latest_payment_date: Optional[str]
+    duration: str
     pay_frequency: str
+    projected_pay_date: Optional[str]
+    projected_pay_amount: Optional[str]
+    transaction_ids: List[Union[int, str]]
 
     @classmethod
     def from_dict(cls, income_group: Dict[str, Any]):
         return cls(
-            amount=income_group["amount"],
+            total_amount=income_group["total_amount"],
+            source=income_group["source"],
+            income_type=income_group["income_type"],
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],
-            income_type=income_group["income_type"],
-            source=income_group["source"],
+            duration=income_group["duration"],
+            projected_pay_date=income_group["projected_pay_date"],
+            projected_pay_amount=income_group["projected_pay_amount"],
             transaction_ids=income_group["transaction_ids"],
-            pay_frequency=income_group["pay_frequency"],
         )
 
 
@@ -91,12 +97,12 @@ class IncomeSummary(BaseModel):
     @classmethod
     def from_income_groups(cls, income_groups: List[IncomeGroup]):
         igs = income_groups
-        total_amount = sum([ig.amount for ig in igs])
+        total_amount = sum([ig.total_amount for ig in igs])
         undetermined_sources = [
             ig.source for ig in igs if ig.income_type == UNDETERMINED_LABEL
         ]
         undetermined_amount = sum(
-            [ig.amount for ig in igs if ig.income_type == UNDETERMINED_LABEL]
+            [ig.total_amount for ig in igs if ig.income_type == UNDETERMINED_LABEL]
         )
         passive_income_source = [
             ig.source
@@ -106,7 +112,7 @@ class IncomeSummary(BaseModel):
         ]
         passive_income_amount = sum(
             [
-                ig.amount
+                ig.total_amount
                 for ig in igs
                 if ig.income_type in IncomeLabelEnum.passive_labels()
                 and not ig.income_type == UNDETERMINED_LABEL
@@ -119,13 +125,13 @@ class IncomeSummary(BaseModel):
             and not ig.income_type == UNDETERMINED_LABEL
         ]
         earned_income_amount = [
-            ig.amount
+            ig.total_amount
             for ig in igs
             if ig.income_type in IncomeLabelEnum.earnings_labels()
             and not ig.income_type == UNDETERMINED_LABEL
         ]
         income_types = [ig.income_type for ig in igs]
-        amounts = [ig.amount for ig in igs]
+        amounts = [ig.total_amount for ig in igs]
         sources = [ig.source for ig in igs]
         if len(sources) > 0:
             main_income_source = max(list(zip(sources, amounts)), key=lambda z: z[1])[0]
@@ -156,7 +162,7 @@ class IncomeReport:
     def from_dicts(cls, income_report: List[Dict[str, Any]]):
         income_groups = sorted(
             [IncomeGroup.from_dict(d) for d in income_report],
-            key=lambda x: float(x.amount),
+            key=lambda x: float(x.total_amount),
             reverse=True,
         )
         return cls(income_groups=income_groups)
