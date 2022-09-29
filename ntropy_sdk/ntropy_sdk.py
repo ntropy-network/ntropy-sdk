@@ -6,18 +6,20 @@ import time
 import uuid
 import warnings
 from datetime import date
-from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable
+from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable, Union
 from urllib.parse import urlencode
 from itertools import islice
 
+import pandas as pd
 import requests  # type: ignore
 from pydantic import BaseModel, Field, validator, NonNegativeFloat
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
+from tabulate import tabulate
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
-from ntropy_sdk.recurring_payments import RecurringPaymentsReport
+from ntropy_sdk.recurring_payments import RecurringPaymentsList, RecurringPaymentsGroup
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -86,6 +88,10 @@ class Transaction(BaseModel):
         "mcc",
     ]
 
+    _date_validator = validator("date", pre=True, allow_reuse=True)(validate_date)
+    date: str = Field(
+        description="Transaction date in ISO-8601 format (i.e. YYYY-MM-DD)."
+    )
     amount: NonNegativeFloat = Field(description="Amount of the transaction.")
     entry_type: EntryType = Field(
         description="Either incoming or outgoing depending on the transaction."
@@ -95,10 +101,7 @@ class Transaction(BaseModel):
     )
     description: str = Field(description="Description text of the transaction.")
 
-    _date_validator = validator("date", pre=True, allow_reuse=True)(validate_date)
-    date: str = Field(
-        description="Transaction date in ISO-8601 format (i.e. YYYY-MM-DD)."
-    )
+
     account_holder_id: Optional[str] = Field(
         min_length=1,
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
@@ -598,6 +601,24 @@ class EnrichedTransactionList(list):
         for tx, etx in zip(parent_txs, etx_list):
             etx.parent_tx = tx
         return etx_list
+
+    def _repr_df(self):
+        txs = []
+        for tx in self.transactions:
+            parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
+            returned_fields = tx.returned_fields
+            enriched = {k: v for k, v in tx.to_dict().items() if k in returned_fields and k not in ['kwargs', 'returned_fields', 'sdk']}
+            txs.append({**parent, **enriched})
+        return pd.DataFrame(txs)
+
+    def _repr_html_(self) -> Union[str, None]:
+        df = self._repr_df()
+        return df._repr_html_()
+
+    def __repr__(self):
+        df = self._repr_df()
+        # keys = ["date", "amount", "merchant", "description"]
+        return tabulate(df, headers="keys", showindex=False)
 
 
 class Batch(BaseModel):
@@ -1612,9 +1633,9 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
 
-    def get_account_recurring_payments_report(
-        self, account_holder_id: str
-    ) -> RecurringPaymentsReport:
+    def get_account_recurring_payments(
+        self, account_holder_id: str, fetch_transactions = True
+    ) -> RecurringPaymentsList:
         """Returns the recurring payments report of an account holder's Transaction history
 
         Parameters
@@ -1633,8 +1654,46 @@ class SDK:
 
         url = f"/v2/account-holder/{account_holder_id}/recurring-payments"
 
-        response = self.retry_ratelimited_request("POST", url, {})
-        return RecurringPaymentsReport(response.json())
+        recurring_payments_response = self.retry_ratelimited_request("POST", url, {})
+        data = recurring_payments_response.json()
+        if fetch_transactions:
+            transactions = self.get_account_holder_transactions(account_holder_id)
+            transactions_dict = {tx.transaction_id: tx for tx in transactions}
+            data = [{**rpg, 'transactions': EnrichedTransactionList([transactions_dict[tx_id]
+                                                      for tx_id in rpg['transaction_ids']])} for rpg in data]
+        recurring_payments_groups = RecurringPaymentsList(sorted(
+            [RecurringPaymentsGroup(d) for d in data],
+            key=lambda x: x.latest_payment_date,
+            reverse=True,
+        ))
+
+        return RecurringPaymentsList(recurring_payments_groups)
+
+    def get_account_holder_transactions(self, account_holder_id: str) -> EnrichedTransactionList:
+        """Returns EnrichTransaction list for the account holder with the provided id
+
+        Parameters
+        ----------
+        account_holder_id : str
+            A unique identifier for the account holder.
+
+        Returns
+        -------
+        EnrichedTransactionList
+            The EnrichedTransactionList corresponding to the account holder id.
+        """
+
+        url = f"/v2/account-holder/{account_holder_id}/transactions"
+        try:
+            response = self.retry_ratelimited_request("GET", url, None).json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        return EnrichedTransactionList.from_list(self, response["transactions"], [Transaction(**tx) for tx in response["transactions"]])
+
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
