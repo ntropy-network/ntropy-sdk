@@ -357,7 +357,7 @@ class AccountHolder(BaseModel):
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self._sdk.get_income_report(self.id)
+        return self._sdk.get_account_income_report(self.id)
 
     class Config:
         use_enum_values = True
