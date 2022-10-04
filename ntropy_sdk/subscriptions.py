@@ -1,5 +1,4 @@
 from typing import List, Union
-
 import pandas as pd
 from tabulate import tabulate
 
