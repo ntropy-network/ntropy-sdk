@@ -12,15 +12,17 @@ class Subscription:
             self.data["periodicity"] if "periodicity" in self.data else "unknown"
         )
         self.amount = self.data["amount"] if "amount" in self.data else 0
-        self.total_amount = self.data["total_amount"] if "total_amount" in self.data else 0
-        self.type = self.data["type"] if "type" in self.data else 'unknown'
-        self.is_essential = self.data["is_essential"] if "is_essential" in self.data else False
+        self.total_amount = (
+            self.data["total_amount"] if "total_amount" in self.data else 0
+        )
+        self.type = self.data["type"] if "type" in self.data else "unknown"
+        self.is_essential = (
+            self.data["is_essential"] if "is_essential" in self.data else False
+        )
         self.merchant = self.data["merchant"] if "merchant" in self.data else "unknown"
         self.website = self.data["website"] if "website" in self.data else "unknown"
         self.logo = self.data["logo"] if "logo" in self.data else "unknown"
-        self.labels = (
-            self.data["labels"] if "labels" in self.data else []
-        )
+        self.labels = self.data["labels"] if "labels" in self.data else []
         self.first_payment_date = (
             self.data["first_payment_date"]
             if "first_payment_date" in self.data
@@ -35,7 +37,9 @@ class Subscription:
             self.data["transaction_ids"] if "transaction_ids" in self.data else []
         )
         self.transactions = (
-            self.data["transactions"] if "transactions" in self.data else EnrichedTransactionList()
+            self.data["transactions"]
+            if "transactions" in self.data
+            else EnrichedTransactionList()
         )
         self.is_active = self.data["is_active"] if "is_active" in self.data else False
         self.next_expected_payment_date = (
@@ -122,11 +126,11 @@ class SubscriptionList(list):
 
     def _repr_df(self):
         df = self.to_df()
-        df = df.fillna('')
+        df = df.fillna("")
         if df.empty:
             return f"{self.__class__.__name__}([])"
-        df.insert(0, '# txs', df['transaction_ids'].apply(lambda x: len(x)))
-        df = df.drop(columns=['transaction_ids'])
+        df.insert(0, "# txs", df["transaction_ids"].apply(lambda x: len(x)))
+        df = df.drop(columns=["transaction_ids"])
         return df
 
     def _repr_html_(self) -> Union[str, None]:
@@ -135,28 +139,52 @@ class SubscriptionList(list):
 
     def __repr__(self) -> str:
         df = self._repr_df()
-        df['labels'] = df['labels'].apply(lambda x: '\n'.join(x))
-        return tabulate(df, showindex=False, headers="keys",
-                        maxcolwidths=[2, 16, 16, 16, 16, 12, 12, 12, 12, 12, 20, 12])
+        df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
+        return tabulate(
+            df,
+            showindex=False,
+            headers="keys",
+            maxcolwidths=[2, 16, 16, 16, 16, 12, 12, 12, 12, 12, 20, 12],
+        )
         # return df.to_string(max_rows=10, max_cols=20, max_colwidth=30, col_space={'next_expected_payment_date': 3}, justify='left', index=False)
 
     def essential(self):
-        return SubscriptionList([subscription for subscription in self.list if subscription.is_essential])
+        return SubscriptionList(
+            [subscription for subscription in self.list if subscription.is_essential]
+        )
 
     def non_essential(self):
-        return SubscriptionList([subscription for subscription in self.list if not subscription.is_essential])
+        return SubscriptionList(
+            [
+                subscription
+                for subscription in self.list
+                if not subscription.is_essential
+            ]
+        )
 
     def active(self):
-        return SubscriptionList([subscription for subscription in self.list if subscription.is_active])
+        return SubscriptionList(
+            [subscription for subscription in self.list if subscription.is_active]
+        )
 
     def inactive(self):
-        return SubscriptionList([subscription for subscription in self.list if not subscription.is_active])
+        return SubscriptionList(
+            [subscription for subscription in self.list if not subscription.is_active]
+        )
 
     def subscriptions(self):
-        return SubscriptionList([subscription for subscription in self.list if subscription.type == 'subscription'])
+        return SubscriptionList(
+            [
+                subscription
+                for subscription in self.list
+                if subscription.type == "subscription"
+            ]
+        )
 
     def recurring_bills(self):
-        return SubscriptionList([subscription for subscription in self.list if subscription.type == 'bill'])
+        return SubscriptionList(
+            [subscription for subscription in self.list if subscription.type == "bill"]
+        )
 
     def total_amount(self):
         return round(sum([subscription.total_amount for subscription in self.list]), 2)

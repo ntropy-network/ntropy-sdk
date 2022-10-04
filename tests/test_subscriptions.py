@@ -14,6 +14,7 @@ def sdk():
 
     return sdk
 
+
 @pytest.fixture
 def subscriptions_api_response():
     return [
@@ -52,14 +53,15 @@ def subscriptions_api_response():
                 "b6cdb5bb-4dee-435a-84db-5c99fda70e12",
                 "b6cdb5bb-4dee-435a-84db-5c99fda70e13",
             ],
-        }
+        },
     ]
+
 
 @pytest.fixture
 def subscription_transactions():
 
     return [
-    Transaction(
+        Transaction(
             amount=17.99,
             description="Netflix",
             entry_type="debit",
@@ -139,7 +141,7 @@ def subscription_transactions():
             account_holder_type="consumer",
             account_holder_id="rec-1",
         ),
-     Transaction(
+        Transaction(
             amount=1000,
             description="Rent",
             entry_type="debit",
@@ -149,7 +151,7 @@ def subscription_transactions():
             account_holder_type="consumer",
             account_holder_id="rec-1",
         ),
-     Transaction(
+        Transaction(
             amount=1000,
             description="Rent",
             entry_type="debit",
@@ -179,4 +181,3 @@ def test_subscription(sdk, subscription_transactions):
     assert len(subscriptions) == 5
     print(subscriptions)
     print(subscriptions[0].transactions)
-

@@ -101,7 +101,6 @@ class Transaction(BaseModel):
     )
     description: str = Field(description="Description text of the transaction.")
 
-
     account_holder_id: Optional[str] = Field(
         min_length=1,
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
@@ -607,7 +606,12 @@ class EnrichedTransactionList(list):
         for tx in self.transactions:
             parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
             returned_fields = tx.returned_fields
-            enriched = {k: v for k, v in tx.to_dict().items() if k in returned_fields and k not in ['kwargs', 'returned_fields', 'sdk']}
+            enriched = {
+                k: v
+                for k, v in tx.to_dict().items()
+                if k in returned_fields
+                and k not in ["kwargs", "returned_fields", "sdk"]
+            }
             txs.append({**parent, **enriched})
         return pd.DataFrame(txs)
 
@@ -1634,7 +1638,7 @@ class SDK:
         return IncomeReport.from_dicts(response.json())
 
     def get_account_subscriptions(
-        self, account_holder_id: str, fetch_transactions = True
+        self, account_holder_id: str, fetch_transactions=True
     ) -> SubscriptionList:
         """Returns the recurring payments report of an account holder's Transaction history
 
@@ -1659,17 +1663,31 @@ class SDK:
         if fetch_transactions:
             transactions = self.get_account_holder_transactions(account_holder_id)
             transactions_dict = {tx.transaction_id: tx for tx in transactions}
-            data = [{**subscription, 'transactions': EnrichedTransactionList([transactions_dict.get(tx_id, [])
-                                                      for tx_id in subscription['transaction_ids']])} for subscription in data]
-        subscriptions = SubscriptionList(sorted(
-            [Subscription(d) for d in data],
-            key=lambda x: x.latest_payment_date,
-            reverse=True,
-        ))
+            data = [
+                {
+                    **subscription,
+                    "transactions": EnrichedTransactionList(
+                        [
+                            transactions_dict.get(tx_id, [])
+                            for tx_id in subscription["transaction_ids"]
+                        ]
+                    ),
+                }
+                for subscription in data
+            ]
+        subscriptions = SubscriptionList(
+            sorted(
+                [Subscription(d) for d in data],
+                key=lambda x: x.latest_payment_date,
+                reverse=True,
+            )
+        )
 
         return SubscriptionList(subscriptions)
 
-    def get_account_holder_transactions(self, account_holder_id: str) -> EnrichedTransactionList:
+    def get_account_holder_transactions(
+        self, account_holder_id: str
+    ) -> EnrichedTransactionList:
         """Returns EnrichTransaction list for the account holder with the provided id
 
         Parameters
@@ -1692,8 +1710,11 @@ class SDK:
                 raise ValueError(f"{error['detail']}")
             raise
 
-        return EnrichedTransactionList.from_list(self, response["transactions"], [Transaction(**tx) for tx in response["transactions"]])
-
+        return EnrichedTransactionList.from_list(
+            self,
+            response["transactions"],
+            [Transaction(**tx) for tx in response["transactions"]],
+        )
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
