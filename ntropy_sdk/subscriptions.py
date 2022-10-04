@@ -3,6 +3,7 @@ from typing import List, Union
 import pandas as pd
 from tabulate import tabulate
 
+
 class Subscription:
     def __init__(self, subscriptions_dict):
         self.data = subscriptions_dict
@@ -36,9 +37,7 @@ class Subscription:
             self.data["transaction_ids"] if "transaction_ids" in self.data else []
         )
         self.transactions = (
-            self.data["transactions"]
-            if "transactions" in self.data
-            else []
+            self.data["transactions"] if "transactions" in self.data else []
         )
         self.is_active = self.data["is_active"] if "is_active" in self.data else False
         self.next_expected_payment_date = (
