@@ -174,7 +174,9 @@ def subscription_transactions():
     ]
 
 
-@pytest.mark.skip(reason="Only run this test if have an API key with recurrence and subscriptions enabled")
+@pytest.mark.skip(
+    reason="Only run this test if have an API key with recurrence and subscriptions enabled"
+)
 def test_subscriptions(sdk, subscription_transactions):
     account_holder_id = subscription_transactions[0].account_holder_id
     enriched_txs = sdk.add_transactions(subscription_transactions)

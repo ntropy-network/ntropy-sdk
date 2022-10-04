@@ -63,6 +63,7 @@ class Subscription:
             "first_payment_date",
             "latest_payment_date",
             "next_expected_payment_date",
+            "total_amount",
         ]
         data = []
         d = vars(self)
@@ -111,6 +112,7 @@ class SubscriptionList(list):
                     "type": subscription.type,
                     "is_essential": subscription.is_essential,
                     "transaction_ids": subscription.transaction_ids,
+                    "total_amount": subscription.total_amount,
                 }
             )
 

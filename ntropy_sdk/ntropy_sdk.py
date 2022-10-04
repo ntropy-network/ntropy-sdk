@@ -1685,6 +1685,20 @@ class SDK:
 
         return SubscriptionList(subscriptions)
 
+    def _get_account_holder_transactions(
+        self, account_holder_id: str, page=0, per_page=1000
+    ):
+        url = f"/v2/account-holder/{account_holder_id}/transactions?page={page}&per_page={per_page}"
+        try:
+            response = self.retry_ratelimited_request("GET", url, None).json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        return response
+
     def get_account_holder_transactions(
         self, account_holder_id: str
     ) -> EnrichedTransactionList:
@@ -1700,20 +1714,17 @@ class SDK:
         EnrichedTransactionList
             The EnrichedTransactionList corresponding to the account holder id.
         """
-
-        url = f"/v2/account-holder/{account_holder_id}/transactions"
-        try:
-            response = self.retry_ratelimited_request("GET", url, None).json()
-        except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                error = e.response.json()
-                raise ValueError(f"{error['detail']}")
-            raise
+        txs = []
+        page = 0
+        while True:
+            response = self._get_account_holder_transactions(account_holder_id, page)
+            txs += response["transactions"]
+            if response["pages"] == page + 1:
+                break
+            page += 1
 
         return EnrichedTransactionList.from_list(
-            self,
-            response["transactions"],
-            [Transaction(**tx) for tx in response["transactions"]],
+            self, txs, [Transaction(**tx) for tx in txs]
         )
 
     def get_labels(self, account_holder_type: str) -> dict:
