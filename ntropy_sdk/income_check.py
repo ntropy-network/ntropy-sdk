@@ -79,8 +79,8 @@ class IncomeGroup(BaseModel):
             latest_payment_date=income_group["latest_payment_date"],
             duration=income_group["duration"],
             pay_frequency=income_group["pay_frequency"],
-            projected_pay_date=income_group["projected_pay_date"],
-            projected_pay_amount=income_group["projected_pay_amount"],
+            next_expected_payment_date=income_group["next_expected_payment_date"],
+            next_expected_payment_amount=income_group["next_expected_payment_amount"],
             transaction_ids=income_group["transaction_ids"],
         )
 
@@ -169,12 +169,15 @@ class IncomeReport:
         )
         return cls(income_groups=income_groups)
 
-    def report_dataframe(self) -> Any:
+    def to_df(self) -> Any:
         try:
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        return pd.DataFrame([ig.dict() for ig in self.income_groups])
+        return pd.DataFrame(self.to_json())
+
+    def to_json(self) -> List[Dict[str, Any]]:
+        return [ig.dict() for ig in self.income_groups]
 
     def summarize(self) -> IncomeSummary:
         return IncomeSummary.from_income_groups(self.income_groups)
