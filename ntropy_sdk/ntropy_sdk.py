@@ -19,7 +19,7 @@ from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
-from ntropy_sdk.recurring_payments import RecurringPaymentsList, RecurringPaymentsGroup
+from ntropy_sdk.subscriptions import SubscriptionList, Subscription
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -1633,9 +1633,9 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
 
-    def get_account_recurring_payments(
+    def get_account_subscriptions(
         self, account_holder_id: str, fetch_transactions = True
-    ) -> RecurringPaymentsList:
+    ) -> SubscriptionList:
         """Returns the recurring payments report of an account holder's Transaction history
 
         Parameters
@@ -1645,8 +1645,8 @@ class SDK:
 
         Returns
         -------
-        RecurringPaymentsReport:
-            An RecurringPaymentsReport object for this account holder's history
+        SubscriptionList:
+            A list of Subscription objects for this account holder's history
         """
 
         if not isinstance(account_holder_id, str):
@@ -1654,20 +1654,20 @@ class SDK:
 
         url = f"/v2/account-holder/{account_holder_id}/recurring-payments"
 
-        recurring_payments_response = self.retry_ratelimited_request("POST", url, {})
-        data = recurring_payments_response.json()
+        subscriptions_response = self.retry_ratelimited_request("POST", url, {})
+        data = subscriptions_response.json()
         if fetch_transactions:
             transactions = self.get_account_holder_transactions(account_holder_id)
             transactions_dict = {tx.transaction_id: tx for tx in transactions}
-            data = [{**rpg, 'transactions': EnrichedTransactionList([transactions_dict[tx_id]
-                                                      for tx_id in rpg['transaction_ids']])} for rpg in data]
-        recurring_payments_groups = RecurringPaymentsList(sorted(
-            [RecurringPaymentsGroup(d) for d in data],
+            data = [{**subscription, 'transactions': EnrichedTransactionList([transactions_dict.get(tx_id, [])
+                                                      for tx_id in subscription['transaction_ids']])} for subscription in data]
+        subscriptions = SubscriptionList(sorted(
+            [Subscription(d) for d in data],
             key=lambda x: x.latest_payment_date,
             reverse=True,
         ))
 
-        return RecurringPaymentsList(recurring_payments_groups)
+        return SubscriptionList(subscriptions)
 
     def get_account_holder_transactions(self, account_holder_id: str) -> EnrichedTransactionList:
         """Returns EnrichTransaction list for the account holder with the provided id

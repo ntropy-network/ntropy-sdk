@@ -15,7 +15,7 @@ def sdk():
     return sdk
 
 @pytest.fixture
-def recurring_payments_api_response():
+def subscriptions_api_response():
     return [
         {
             "amount": 9.99,
@@ -56,7 +56,7 @@ def recurring_payments_api_response():
     ]
 
 @pytest.fixture
-def recurring_payment_transactions():
+def subscription_transactions():
 
     return [
     Transaction(
@@ -172,10 +172,11 @@ def recurring_payment_transactions():
     ]
 
 
-def test_recurring_payments(sdk, recurring_payment_transactions):
-    account_holder_id = recurring_payment_transactions[0].account_holder_id
-    enriched_txs = sdk.add_transactions(recurring_payment_transactions)
-    recurring_payments = sdk.get_account_recurring_payments(account_holder_id)
-    assert len(recurring_payments) > 1
-    print(recurring_payments[0].transactions)
+def test_subscription(sdk, subscription_transactions):
+    account_holder_id = subscription_transactions[0].account_holder_id
+    enriched_txs = sdk.add_transactions(subscription_transactions)
+    subscriptions = sdk.get_account_subscriptions(account_holder_id)
+    assert len(subscriptions) == 5
+    print(subscriptions)
+    print(subscriptions[0].transactions)
 
