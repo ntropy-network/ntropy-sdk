@@ -78,11 +78,7 @@ class Subscription:
 
     def __repr__(self) -> str:
         df = self._repr_df()
-        # return df.to_string(index=False)
         return tabulate(df, showindex=False)
-
-    # def __repr__(self) -> str:
-    #     return f"{self.__class__.__name__}(periodicity={self.periodicity}, merchant={self.merchant}, amount={self.amount}, is_active={self.is_active})"
 
 
 class SubscriptionList(list):
@@ -143,7 +139,6 @@ class SubscriptionList(list):
             headers="keys",
             maxcolwidths=[2, 16, 16, 16, 16, 12, 12, 12, 12, 12, 20, 12],
         )
-        # return df.to_string(max_rows=10, max_cols=20, max_colwidth=30, col_space={'next_expected_payment_date': 3}, justify='left', index=False)
 
     def essential(self):
         return SubscriptionList(
