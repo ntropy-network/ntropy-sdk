@@ -366,10 +366,10 @@ class RecurrenceGroup(BaseModel):
 
     first_payment_date: Optional[date]
     latest_payment_date: Optional[date]
-    periodicity: str
-    periodicity_in_days: int
-    average_amount: float
-    other_party: str
+    periodicity: Optional[str]
+    periodicity_in_days: Optional[int]
+    average_amount: Optional[float]
+    other_party: Optional[str]
     id: str
     transaction_ids: List[str]
 
