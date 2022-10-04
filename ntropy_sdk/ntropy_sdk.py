@@ -364,13 +364,14 @@ class AccountHolder(BaseModel):
 class RecurrenceGroup(BaseModel):
     """Information regarding the recurrence group of one transaction"""
 
-    date_of_first_tx: Optional[date]
-    date_of_last_tx: Optional[date]
-    frequency_in_days: Optional[int]
-    average_amount_per_tx: Optional[float]
-    other_party: Optional[str]
-    id: Optional[str]
-    transaction_ids: Optional[List[str]]
+    first_payment_date: Optional[date]
+    latest_payment_date: Optional[date]
+    periodicity: str
+    periodicity_in_days: int
+    average_amount: float
+    other_party: str
+    id: str
+    transaction_ids: List[str]
 
     class Config:
         use_enum_values = True
