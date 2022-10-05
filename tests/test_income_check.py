@@ -19,8 +19,8 @@ def income_api_response():
             "duration": "1 year 4 months 15 day",
             "pay_frequency": "bi-weekly",
             "is_active": False,
-            "projected_pay_date": "none",
-            "projected_pay_amount": "none",
+            "next_expected_payment_date": None,
+            "next_expected_payment_amount": None,
             "source": "Tesla Inc.",
             "transaction_ids": [
                 "b6cdb5bb-4dee-435a-84db-5c99fda70e50",
@@ -35,8 +35,8 @@ def income_api_response():
             "duration": "1 year 1 months 8 day",
             "pay_frequency": "other",
             "is_active": False,
-            "projected_pay_date": "none",
-            "projected_pay_amount": "none",
+            "next_expected_payment_date": None,
+            "next_expected_payment_amount": None,
             "source": "Uber",
             "transaction_ids": [
                 "752ec4e2-2dcc-49a6-9c22-64685dce400d",
@@ -50,8 +50,8 @@ def income_api_response():
             "latest_payment_date": "2022-08-01",
             "duration": "1 year 6 months 28 day",
             "is_active": False,
-            "projected_pay_date": "none",
-            "projected_pay_amount": "none",
+            "next_expected_payment_date": None,
+            "next_expected_payment_amount": None,
             "pay_frequency": "monthly",
             "source": "N/A",
             "transaction_ids": [
@@ -66,8 +66,8 @@ def income_api_response():
             "latest_payment_date": "2022-08-01",
             "duration": "1 year",
             "is_active": False,
-            "projected_pay_date": "none",
-            "projected_pay_amount": "none",
+            "next_expected_payment_date": None,
+            "next_expected_payment_amount": None,
             "pay_frequency": "monthly",
             "source": "N/A",
             "transaction_ids": [
@@ -98,8 +98,8 @@ def test_income_group():
         latest_payment_date="2022-08-05",
         duration="4 days",
         pay_frequency="weekly",
-        projected_pay_date="none",
-        projected_pay_amount="none",
+        next_expected_payment_date="none",
+        next_expected_payment_amount="none",
         income_type=IncomeLabelEnum.freelance.value.label,
         source="Kentucky Fried Chicken",
         transaction_ids=["id1", "id2"],
@@ -110,7 +110,7 @@ def test_income_group():
 
 def test_income_report(income_api_response):
     report = IncomeReport.from_dicts(income_api_response)
-    df = report.report_dataframe()
+    df = report.to_df()
     assert isinstance(df, pd.DataFrame)
     assert len(df) == len(income_api_response)
     for k in df.columns:
