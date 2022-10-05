@@ -3,9 +3,9 @@ import pandas as pd
 from tabulate import tabulate
 
 
-class Subscription:
-    def __init__(self, subscriptions_dict):
-        self.data = subscriptions_dict
+class RecurringPaymentsGroup:
+    def __init__(self, recurring_payments_dict):
+        self.data = recurring_payments_dict
 
         self.periodicity = (
             self.data["periodicity"] if "periodicity" in self.data else "unknown"
@@ -82,41 +82,41 @@ class Subscription:
         return tabulate(df, showindex=False)
 
 
-class SubscriptionList(list):
-    """A list of Subscription objects."""
+class RecurringPaymentsGroups(list):
+    """A list of RecurringPaymentsGroup objects."""
 
-    def __init__(self, subscriptions: List[Subscription]):
+    def __init__(self, recurring_payments_groups: List[RecurringPaymentsGroup]):
         """Parameters
         ----------
-        subscriptions : List[Subscription]
-            A list of Subscription objects.
+        recurring_payments_groups : List[RecurringPaymentsGroup]
+            A list of RecurringPaymentsGroup objects.
         """
 
-        super().__init__(subscriptions)
-        self.list = subscriptions
+        super().__init__(recurring_payments_groups)
+        self.list = recurring_payments_groups
 
     def to_df(self):
-        subscriptions = []
-        for subscription in self.list:
-            subscriptions.append(
+        recurring_payments_groups = []
+        for rpg in self.list:
+            recurring_payments_groups.append(
                 {
-                    "amount": subscription.amount,
-                    "merchant": subscription.merchant,
-                    "website": subscription.website,
-                    "labels": subscription.labels,
-                    "periodicity": subscription.periodicity,
-                    "is_active": subscription.is_active,
-                    "first_payment_date": subscription.first_payment_date,
-                    "latest_payment_date": subscription.latest_payment_date,
-                    "next_expected_payment_date": subscription.next_expected_payment_date,
-                    "type": subscription.type,
-                    "is_essential": subscription.is_essential,
-                    "transaction_ids": subscription.transaction_ids,
-                    "total_amount": subscription.total_amount,
+                    "amount": rpg.amount,
+                    "merchant": rpg.merchant,
+                    "website": rpg.website,
+                    "labels": rpg.labels,
+                    "periodicity": rpg.periodicity,
+                    "is_active": rpg.is_active,
+                    "first_payment_date": rpg.first_payment_date,
+                    "latest_payment_date": rpg.latest_payment_date,
+                    "next_expected_payment_date": rpg.next_expected_payment_date,
+                    "type": rpg.type,
+                    "is_essential": rpg.is_essential,
+                    "transaction_ids": rpg.transaction_ids,
+                    "total_amount": rpg.total_amount,
                 }
             )
 
-        df = pd.DataFrame(subscriptions)
+        df = pd.DataFrame(recurring_payments_groups)
         return df
 
     def _repr_df(self):
@@ -143,42 +143,42 @@ class SubscriptionList(list):
         )
 
     def essential(self):
-        return SubscriptionList(
-            [subscription for subscription in self.list if subscription.is_essential]
+        return RecurringPaymentsGroups(
+            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.is_essential]
         )
 
     def non_essential(self):
-        return SubscriptionList(
+        return RecurringPaymentsGroups(
             [
-                subscription
-                for subscription in self.list
-                if not subscription.is_essential
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if not recurring_payments_group.is_essential
             ]
         )
 
     def active(self):
-        return SubscriptionList(
-            [subscription for subscription in self.list if subscription.is_active]
+        return RecurringPaymentsGroups(
+            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.is_active]
         )
 
     def inactive(self):
-        return SubscriptionList(
-            [subscription for subscription in self.list if not subscription.is_active]
+        return RecurringPaymentsGroups(
+            [recurring_payments_group for recurring_payments_group in self.list if not recurring_payments_group.is_active]
         )
 
     def subscriptions(self):
-        return SubscriptionList(
+        return RecurringPaymentsGroups(
             [
-                subscription
-                for subscription in self.list
-                if subscription.type == "subscription"
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.type == "subscription"
             ]
         )
 
     def recurring_bills(self):
-        return SubscriptionList(
-            [subscription for subscription in self.list if subscription.type == "bill"]
+        return RecurringPaymentsGroups(
+            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.type == "bill"]
         )
 
     def total_amount(self):
-        return round(sum([subscription.total_amount for subscription in self.list]), 2)
+        return round(sum([recurring_payments_group.total_amount for recurring_payments_group in self.list]), 2)

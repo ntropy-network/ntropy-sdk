@@ -19,7 +19,7 @@ from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
-from ntropy_sdk.subscriptions import SubscriptionList, Subscription
+from ntropy_sdk.recurring_payments import RecurringPaymentsGroups, RecurringPaymentsGroup
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -1637,9 +1637,9 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
 
-    def get_account_subscriptions(
+    def get_account_recurring_payments(
         self, account_holder_id: str, fetch_transactions=True
-    ) -> SubscriptionList:
+    ) -> RecurringPaymentsGroups:
         """Returns the recurring payments report of an account holder's Transaction history
 
         Parameters
@@ -1649,7 +1649,7 @@ class SDK:
 
         Returns
         -------
-        SubscriptionList:
+        RecurringPaymentsGroups:
             A list of Subscription objects for this account holder's history
         """
 
@@ -1658,32 +1658,34 @@ class SDK:
 
         url = f"/v2/account-holder/{account_holder_id}/recurring-payments"
 
-        subscriptions_response = self.retry_ratelimited_request("POST", url, {})
-        data = subscriptions_response.json()
+        recurring_payments_response = self.retry_ratelimited_request("POST", url, {})
+        data = recurring_payments_response.json()
+
+        df = pd.DataFrame(data)
         if fetch_transactions:
             transactions = self.get_account_holder_transactions(account_holder_id)
             transactions_dict = {tx.transaction_id: tx for tx in transactions}
             data = [
                 {
-                    **subscription,
+                    **recurring_payments_group,
                     "transactions": EnrichedTransactionList(
                         [
                             transactions_dict.get(tx_id, [])
-                            for tx_id in subscription["transaction_ids"]
+                            for tx_id in recurring_payments_group["transaction_ids"]
                         ]
                     ),
                 }
-                for subscription in data
+                for recurring_payments_group in data
             ]
-        subscriptions = SubscriptionList(
+        recurring_payments_groups = RecurringPaymentsGroups(
             sorted(
-                [Subscription(d) for d in data],
+                [RecurringPaymentsGroup(d) for d in data],
                 key=lambda x: x.latest_payment_date,
                 reverse=True,
             )
         )
 
-        return SubscriptionList(subscriptions)
+        return RecurringPaymentsGroups(recurring_payments_groups)
 
     def _get_account_holder_transactions(
         self, account_holder_id: str, page=0, per_page=1000
