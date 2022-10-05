@@ -17,6 +17,7 @@ from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
+from ntropy_sdk.recurring_payments import RecurringPaymentsReport
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -457,7 +458,8 @@ class EnrichedTransaction(BaseModel):
             else:
                 extra[key] = kwargs[key]
 
-        super().__init__(**fields)
+        returned_fields = list(fields.keys())
+        super().__init__(**fields, returned_fields=returned_fields)
         self.kwargs = extra
 
     def _parse_recurrence_group(self, kwargs: dict) -> Optional[RecurrenceGroup]:
@@ -525,7 +527,7 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        return cls(sdk=sdk, returned_fields=list(val.keys()), **val)
+        return cls(sdk=sdk, **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -1610,6 +1612,30 @@ class SDK:
 
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
+
+    def get_account_recurring_payments_report(
+        self, account_holder_id: str
+    ) -> RecurringPaymentsReport:
+        """Returns the recurring payments report of an account holder's Transaction history
+
+        Parameters
+        ----------
+        account_holder_id : str
+            The unique identifier for the account holder.
+
+        Returns
+        -------
+        RecurringPaymentsReport:
+            An RecurringPayments object for this account holder's history
+        """
+
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id should be of type string")
+
+        url = f"/v2/account-holder/{account_holder_id}/recurring-payments"
+
+        response = self.retry_ratelimited_request("POST", url, {})
+        return RecurringPaymentsReport(response.json())
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
