@@ -57,13 +57,14 @@ class IncomeLabelEnum(Enum):
 
 class IncomeGroup(BaseModel):
     total_amount: float
+    iso_currency_code: str
     income_type: str
-    source: str
+    source: Optional[str]
     is_active: bool
     first_payment_date: Optional[str]
     latest_payment_date: Optional[str]
-    duration: str
-    pay_frequency: str
+    latest_payment_description: str
+    periodicity: str
     projected_pay_date: Optional[str]
     projected_pay_amount: Optional[str]
     transaction_ids: List[Union[int, str]]
@@ -74,11 +75,10 @@ class IncomeGroup(BaseModel):
             total_amount=income_group["total_amount"],
             source=income_group["source"],
             income_type=income_group["income_type"],
-            is_active=income_group["is_active"],
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],
-            duration=income_group["duration"],
-            pay_frequency=income_group["pay_frequency"],
+            latest_payment_description=income_group["latest_payment_description"],
+            periodicity=income_group["periodicity"],
             next_expected_payment_date=income_group["next_expected_payment_date"],
             next_expected_payment_amount=income_group["next_expected_payment_amount"],
             transaction_ids=income_group["transaction_ids"],
