@@ -65,3 +65,8 @@ def test_recurring_payments(sdk, recurring_payments_transactions):
     assert len(recurring_payments_groups) == 5
     print(recurring_payments_groups)
     print(recurring_payments_groups[0].transactions)
+    assert recurring_payments_groups.inactive() == []
+    print(recurring_payments_groups.inactive())
+    assert len(recurring_payments_groups.subscriptions()) == 3
+    print(recurring_payments_groups.subscriptions())
+    assert len(recurring_payments_groups.recurring_bills()) == 2
