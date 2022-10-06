@@ -1686,7 +1686,7 @@ class SDK:
             ]
         recurring_payments_groups = RecurringPaymentsGroups(
             sorted(
-                [RecurringPaymentsGroup(d) for d in data],
+                [RecurringPaymentsGroup.from_dict(d) for d in data],
                 key=lambda x: x.latest_payment_date,
                 reverse=True,
             )
