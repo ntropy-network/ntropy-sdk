@@ -10,7 +10,8 @@ class RecurringPaymentsGroup:
         self.periodicity = (
             self.data["periodicity"] if "periodicity" in self.data else "unknown"
         )
-        self.amount = self.data["amount"] if "amount" in self.data else 0
+        self.latest_payment_amount = self.data["latest_payment_amount"] if "latest_payment_amount" in self.data else \
+            self['amount'] if "amount" in self.data else 0
         self.total_amount = (
             self.data["total_amount"] if "total_amount" in self.data else 0
         )
@@ -54,15 +55,10 @@ class RecurringPaymentsGroup:
             if "next_expected_payment_date" in self.data
             else None
         )
-        self.next_expected_payment_amount = (
-            self.data["next_expected_payment_amount"]
-            if "next_expected_payment_amount" in self.data
-            else 0
-        )
 
     def _repr_df(self):
         labels = [
-            "amount",
+            "latest_payment_amount",
             "merchant",
             "website",
             "labels",
@@ -112,7 +108,7 @@ class RecurringPaymentsGroups(list):
         for rpg in self.list:
             recurring_payments_groups.append(
                 {
-                    "amount": rpg.amount,
+                    "latest_payment_amount": rpg.latest_payment_amount,
                     "merchant": rpg.merchant,
                     "website": rpg.website,
                     "labels": rpg.labels,
