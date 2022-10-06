@@ -164,9 +164,8 @@ class IncomeSummary(BaseModel):
         )
 
 
-class IncomeReport:
-    def __init__(self, income_groups: List[IncomeGroup]):
-        self.income_groups = income_groups
+class IncomeReport(BaseModel):
+    income_groups: List[IncomeGroup]
 
     @classmethod
     def from_dicts(cls, income_report: List[Dict[str, Any]]):
