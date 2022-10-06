@@ -19,7 +19,10 @@ from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
-from ntropy_sdk.recurring_payments import RecurringPaymentsGroups, RecurringPaymentsGroup
+from ntropy_sdk.recurring_payments import (
+    RecurringPaymentsGroups,
+    RecurringPaymentsGroup,
+)
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -618,11 +621,14 @@ class EnrichedTransactionList(list):
 
     def _repr_html_(self) -> Union[str, None]:
         df = self._repr_df()
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
         return df._repr_html_()
 
     def __repr__(self):
         df = self._repr_df()
-        # keys = ["date", "amount", "merchant", "description"]
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
         return tabulate(df, headers="keys", showindex=False)
 
 

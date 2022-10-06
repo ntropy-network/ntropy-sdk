@@ -14,7 +14,11 @@ class RecurringPaymentsGroup:
         self.total_amount = (
             self.data["total_amount"] if "total_amount" in self.data else 0
         )
-        self.iso_currency_code = self.data["iso_currency_code"] if "iso_currency_code" in self.data else "unknown"
+        self.iso_currency_code = (
+            self.data["iso_currency_code"]
+            if "iso_currency_code" in self.data
+            else "unknown"
+        )
         self.type = self.data["type"] if "type" in self.data else "unknown"
         self.is_essential = (
             self.data["is_essential"] if "is_essential" in self.data else False
@@ -33,8 +37,11 @@ class RecurringPaymentsGroup:
             if "latest_payment_date" in self.data
             else None
         )
-        self.latest_payment_description = self.data["latest_payment_description"] \
-            if "latest_payment_description" in self.data else ""
+        self.latest_payment_description = (
+            self.data["latest_payment_description"]
+            if "latest_payment_description" in self.data
+            else ""
+        )
         self.transaction_ids = (
             self.data["transaction_ids"] if "transaction_ids" in self.data else []
         )
@@ -130,18 +137,24 @@ class RecurringPaymentsGroups(list):
         df = self.to_df()
         df = df.fillna("")
         if df.empty:
-            return f"{self.__class__.__name__}([])"
+            return df
         df.insert(0, "# txs", df["transaction_ids"].apply(lambda x: len(x)))
         df = df.drop(columns=["transaction_ids"])
         return df
 
     def _repr_html_(self) -> Union[str, None]:
         df = self._repr_df()
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
         return df._repr_html_()
 
     def __repr__(self) -> str:
         df = self._repr_df()
-        df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
+
+        if "labels" in df.columns:
+            df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
         return tabulate(
             df,
             showindex=False,
@@ -151,7 +164,11 @@ class RecurringPaymentsGroups(list):
 
     def essential(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.is_essential]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.is_essential
+            ]
         )
 
     def non_essential(self):
@@ -165,12 +182,20 @@ class RecurringPaymentsGroups(list):
 
     def active(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.is_active]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.is_active
+            ]
         )
 
     def inactive(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if not recurring_payments_group.is_active]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if not recurring_payments_group.is_active
+            ]
         )
 
     def subscriptions(self):
@@ -184,8 +209,20 @@ class RecurringPaymentsGroups(list):
 
     def recurring_bills(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.type == "bill"]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.type == "bill"
+            ]
         )
 
     def total_amount(self):
-        return round(sum([recurring_payments_group.total_amount for recurring_payments_group in self.list]), 2)
+        return round(
+            sum(
+                [
+                    recurring_payments_group.total_amount
+                    for recurring_payments_group in self.list
+                ]
+            ),
+            2,
+        )

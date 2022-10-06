@@ -14,27 +14,28 @@ def sdk():
 
     return sdk
 
+
 @pytest.fixture
 def recurring_payments_transactions():
     transactions = [
-        ("2021-01-01", 17.99, "Netflix",),
+        (
+            "2021-01-01",
+            17.99,
+            "Netflix",
+        ),
         ("2021-02-01", 17.99, "Netflix"),
         ("2021-03-01", 17.99, "Netflix"),
         ("2021-04-01", 17.99, "Netflix"),
-
         ("2021-01-15", 9.99, "Spotify"),
         ("2021-02-15", 9.99, "Spotify"),
         ("2021-03-15", 9.99, "Spotify"),
-
         ("2021-03-15", 11.99, "Dropbox"),
-
         ("2021-01-01", 100.0, "Consolidated Edison"),
         ("2021-02-01", 100.0, "Consolidated Edison"),
         ("2021-03-01", 100.0, "Consolidated Edison"),
-
-        ("2021-01-01", 1000.0, 'Rent'),
-        ("2021-02-01", 1000.0, 'Rent'),
-        ("2021-03-01", 1000.0, 'Rent'),
+        ("2021-01-01", 1000.0, "Rent"),
+        ("2021-02-01", 1000.0, "Rent"),
+        ("2021-03-01", 1000.0, "Rent"),
     ]
 
     transactions = [
@@ -46,12 +47,13 @@ def recurring_payments_transactions():
             iso_currency_code="USD",
             transaction_id=f"tx-{i}",
             account_holder_type="consumer",
-            account_holder_id='rec-ah-1',
+            account_holder_id="rec-ah-1",
         )
         for i, tx in enumerate(transactions)
     ]
 
     return transactions
+
 
 @pytest.mark.skip(
     reason="Only run this test if have an API key with recurrence and subscriptions enabled"
@@ -63,3 +65,8 @@ def test_recurring_payments(sdk, recurring_payments_transactions):
     assert len(recurring_payments_groups) == 5
     print(recurring_payments_groups)
     print(recurring_payments_groups[0].transactions)
+    assert recurring_payments_groups.inactive() == []
+    print(recurring_payments_groups.inactive())
+    assert len(recurring_payments_groups.subscriptions()) == 3
+    print(recurring_payments_groups.subscriptions())
+    assert len(recurring_payments_groups.recurring_bills()) == 2
