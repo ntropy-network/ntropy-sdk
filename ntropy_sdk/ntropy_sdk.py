@@ -19,7 +19,10 @@ from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
 from ntropy_sdk.income_check import IncomeReport
-from ntropy_sdk.recurring_payments import RecurringPaymentsGroups, RecurringPaymentsGroup
+from ntropy_sdk.recurring_payments import (
+    RecurringPaymentsGroups,
+    RecurringPaymentsGroup,
+)
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,

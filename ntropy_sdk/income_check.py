@@ -60,7 +60,6 @@ class IncomeGroup(BaseModel):
     iso_currency_code: str
     income_type: str
     source: Optional[str]
-    is_active: bool
     first_payment_date: Optional[str]
     latest_payment_date: Optional[str]
     latest_payment_description: str
@@ -73,6 +72,7 @@ class IncomeGroup(BaseModel):
     def from_dict(cls, income_group: Dict[str, Any]):
         return cls(
             total_amount=income_group["total_amount"],
+            iso_currency_code=income_group["iso_currency_code"],
             source=income_group["source"],
             income_type=income_group["income_type"],
             first_payment_date=income_group["first_payment_date"],
@@ -101,15 +101,18 @@ class IncomeSummary(BaseModel):
         igs = income_groups
         total_amount = sum([ig.total_amount for ig in igs])
         undetermined_sources = [
-            ig.source for ig in igs if ig.income_type == UNDETERMINED_LABEL
+            ig.source
+            for ig in igs
+            if ig.source is not None and ig.income_type == UNDETERMINED_LABEL
         ]
         undetermined_amount = sum(
             [ig.total_amount for ig in igs if ig.income_type == UNDETERMINED_LABEL]
         )
-        passive_income_source = [
+        passive_income_sources = [
             ig.source
             for ig in igs
-            if ig.income_type in IncomeLabelEnum.passive_labels()
+            if ig.source is not None
+            and ig.income_type in IncomeLabelEnum.passive_labels()
             and not ig.income_type == UNDETERMINED_LABEL
         ]
         passive_income_amount = sum(
@@ -123,7 +126,8 @@ class IncomeSummary(BaseModel):
         earned_income_sources = [
             ig.source
             for ig in igs
-            if ig.income_type in IncomeLabelEnum.earnings_labels()
+            if ig.source is not None
+            and ig.income_type in IncomeLabelEnum.earnings_labels()
             and not ig.income_type == UNDETERMINED_LABEL
         ]
         earned_income_amount = [
@@ -140,6 +144,8 @@ class IncomeSummary(BaseModel):
             main_income_type = max(
                 list(zip(income_types, amounts)), key=lambda z: z[1]
             )[0]
+            if main_income_source is None:
+                main_income_source = "N/A"
         else:
             main_income_source = "N/A"
             main_income_type = "N/A"
@@ -151,7 +157,7 @@ class IncomeSummary(BaseModel):
             passive_income=round(passive_income_amount, 2),
             possible_income=round(undetermined_amount, 2),
             earned_income_sources=sorted(set(earned_income_sources)),
-            passive_income_sources=sorted(set(passive_income_source)),
+            passive_income_sources=sorted(set(passive_income_sources)),
             possible_income_sources=sorted(set(undetermined_sources)),
         )
 

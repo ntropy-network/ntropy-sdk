@@ -68,7 +68,7 @@ def income_api_response():
             "latest_payment_description": "Rent transfer to REMAX",
             "next_expected_payment_date": None,
             "next_expected_payment_amount": None,
-            "pay_frequency": "monthly",
+            "periodicity": "monthly",
             "source": None,
             "transaction_ids": [
                 "40352870-aa3a-4866-bead-db7a163f3cf0",
@@ -124,5 +124,7 @@ def test_income_report(income_api_response):
     assert summary.passive_income > 0
     assert summary.possible_income > 0
     assert len(summary.earned_income_sources) > 0
-    assert len(summary.passive_income_sources) > 0
-    assert len(summary.possible_income_sources) > 0
+    assert len(summary.passive_income_sources) == 0
+    assert len(summary.possible_income_sources) == 0
+    assert summary.passive_income > 0
+    assert summary.possible_income > 0
