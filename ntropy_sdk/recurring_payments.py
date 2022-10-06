@@ -14,6 +14,7 @@ class RecurringPaymentsGroup:
         self.total_amount = (
             self.data["total_amount"] if "total_amount" in self.data else 0
         )
+        self.iso_currency_code = self.data["iso_currency_code"] if "iso_currency_code" in self.data else "unknown"
         self.type = self.data["type"] if "type" in self.data else "unknown"
         self.is_essential = (
             self.data["is_essential"] if "is_essential" in self.data else False
@@ -32,6 +33,8 @@ class RecurringPaymentsGroup:
             if "latest_payment_date" in self.data
             else None
         )
+        self.latest_payment_description = self.data["latest_payment_description"] \
+            if "latest_payment_description" in self.data else ""
         self.transaction_ids = (
             self.data["transaction_ids"] if "transaction_ids" in self.data else []
         )
@@ -63,7 +66,9 @@ class RecurringPaymentsGroup:
             "first_payment_date",
             "latest_payment_date",
             "next_expected_payment_date",
+            "latest_payment_description",
             "total_amount",
+            "iso_currency_code",
         ]
         data = []
         d = vars(self)
@@ -109,10 +114,12 @@ class RecurringPaymentsGroups(list):
                     "first_payment_date": rpg.first_payment_date,
                     "latest_payment_date": rpg.latest_payment_date,
                     "next_expected_payment_date": rpg.next_expected_payment_date,
+                    "latest_payment_description": rpg.latest_payment_description,
                     "type": rpg.type,
                     "is_essential": rpg.is_essential,
                     "transaction_ids": rpg.transaction_ids,
                     "total_amount": rpg.total_amount,
+                    "iso_currency_code": rpg.iso_currency_code,
                 }
             )
 
