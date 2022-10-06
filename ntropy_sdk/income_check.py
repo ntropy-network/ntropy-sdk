@@ -60,12 +60,13 @@ class IncomeGroup(BaseModel):
     iso_currency_code: str
     income_type: str
     source: Optional[str]
-    first_payment_date: Optional[str]
-    latest_payment_date: Optional[str]
+    first_payment_date: str
+    latest_payment_date: str
+    duration: str
     latest_payment_description: str
-    periodicity: str
-    projected_pay_date: Optional[str]
-    projected_pay_amount: Optional[str]
+    pay_frequency: Optional[str]
+    next_expected_payment_date: Optional[str]
+    next_expected_payment_amount: Optional[str]
     transaction_ids: List[Union[int, str]]
 
     @classmethod
@@ -77,8 +78,9 @@ class IncomeGroup(BaseModel):
             income_type=income_group["income_type"],
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],
+            duration=income_group["duration"],
             latest_payment_description=income_group["latest_payment_description"],
-            periodicity=income_group["periodicity"],
+            pay_frequency=income_group["pay_frequency"],
             next_expected_payment_date=income_group["next_expected_payment_date"],
             next_expected_payment_amount=income_group["next_expected_payment_amount"],
             transaction_ids=income_group["transaction_ids"],
