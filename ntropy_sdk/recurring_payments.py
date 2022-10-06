@@ -144,7 +144,11 @@ class RecurringPaymentsGroups(list):
 
     def essential(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.is_essential]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.is_essential
+            ]
         )
 
     def non_essential(self):
@@ -158,12 +162,20 @@ class RecurringPaymentsGroups(list):
 
     def active(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.is_active]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.is_active
+            ]
         )
 
     def inactive(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if not recurring_payments_group.is_active]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if not recurring_payments_group.is_active
+            ]
         )
 
     def subscriptions(self):
@@ -177,8 +189,20 @@ class RecurringPaymentsGroups(list):
 
     def recurring_bills(self):
         return RecurringPaymentsGroups(
-            [recurring_payments_group for recurring_payments_group in self.list if recurring_payments_group.type == "bill"]
+            [
+                recurring_payments_group
+                for recurring_payments_group in self.list
+                if recurring_payments_group.type == "bill"
+            ]
         )
 
     def total_amount(self):
-        return round(sum([recurring_payments_group.total_amount for recurring_payments_group in self.list]), 2)
+        return round(
+            sum(
+                [
+                    recurring_payments_group.total_amount
+                    for recurring_payments_group in self.list
+                ]
+            ),
+            2,
+        )
