@@ -20,7 +20,6 @@ from typing import (
 from urllib.parse import urlencode
 from itertools import islice
 
-import pandas as pd
 import requests  # type: ignore
 from pydantic import BaseModel, Field, validator, NonNegativeFloat
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
@@ -647,7 +646,7 @@ class EnrichedTransactionList(list):
     def _repr_html_(self) -> Union[str, None]:
         # used by ipython/jupyter to render
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
@@ -659,7 +658,7 @@ class EnrichedTransactionList(list):
 
     def __repr__(self) -> str:
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
@@ -1138,7 +1137,10 @@ class SDK:
         inplace : bool, optional
             Enrich the dataframe inplace.
         """
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
 
         assert isinstance(df, pd.DataFrame)
 

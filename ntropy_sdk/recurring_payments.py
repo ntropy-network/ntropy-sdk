@@ -1,5 +1,4 @@
 from typing import List, Union, Optional, Dict, Any
-import pandas as pd
 from pydantic import BaseModel
 from tabulate import tabulate
 
@@ -70,7 +69,7 @@ class RecurringPaymentsGroup(BaseModel):
     def _repr_html_(self) -> Union[str, None]:
         # used by ipython/jupyter to render
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
@@ -82,7 +81,7 @@ class RecurringPaymentsGroup(BaseModel):
 
     def __repr__(self) -> str:
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
@@ -132,7 +131,7 @@ class RecurringPaymentsGroups(list):
     def _repr_html_(self) -> Union[str, None]:
         # used by ipython/jupyter to render
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
@@ -144,7 +143,7 @@ class RecurringPaymentsGroups(list):
 
     def __repr__(self) -> str:
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:

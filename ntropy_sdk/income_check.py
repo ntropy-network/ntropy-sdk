@@ -209,7 +209,7 @@ class IncomeReport(list):
     def _repr_html_(self) -> Union[str, None]:
         # used by ipython/jupyter to render
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
@@ -221,7 +221,7 @@ class IncomeReport(list):
 
     def __repr__(self) -> str:
         try:
-            import pandas
+            import pandas as pd
 
             df = self._repr_df()
             if df.empty:
