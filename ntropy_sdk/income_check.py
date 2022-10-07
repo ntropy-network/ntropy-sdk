@@ -194,3 +194,6 @@ class IncomeReport(list):
 
     def __repr__(self) -> str:
         return str([ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups])
+
+    def active(self):
+        return IncomeReport([g for g in self.list if g.is_active])
