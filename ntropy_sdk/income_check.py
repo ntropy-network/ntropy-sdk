@@ -63,6 +63,7 @@ class IncomeGroup(BaseModel):
     first_payment_date: str
     latest_payment_date: str
     duration: str
+    is_active: bool
     latest_payment_description: str
     pay_frequency: Optional[str]
     next_expected_payment_date: Optional[str]
@@ -79,6 +80,7 @@ class IncomeGroup(BaseModel):
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],
             duration=income_group["duration"],
+            is_active=income_group["is_active"],
             latest_payment_description=income_group["latest_payment_description"],
             pay_frequency=income_group["pay_frequency"],
             next_expected_payment_date=income_group["next_expected_payment_date"],

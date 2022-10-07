@@ -1,58 +1,53 @@
-from typing import List, Union
+from typing import List, Union, Optional, Dict, Any
 import pandas as pd
+from pydantic import BaseModel
 from tabulate import tabulate
 
 
-class RecurringPaymentsGroup:
-    def __init__(self, recurring_payments_dict):
-        self.data = recurring_payments_dict
+class RecurringPaymentsGroup(BaseModel):
+    merchant: Optional[str]
+    website: Optional[str]
+    labels: Optional[List[str]]
+    logo: Optional[str]
+    periodicity: str
+    latest_payment_amount: float
+    type: str
+    is_essential: bool
+    is_active: bool
+    first_payment_date: str
+    latest_payment_date: str
+    next_expected_payment_date: Optional[str]
+    latest_payment_description: str
+    transaction_ids: List[Union[int, str]]
+    transactions: Any
+    total_amount: float
+    iso_currency_code: Optional[str]
 
-        self.periodicity = (
-            self.data["periodicity"] if "periodicity" in self.data else "unknown"
-        )
-        self.amount = self.data["amount"] if "amount" in self.data else 0
-        self.total_amount = (
-            self.data["total_amount"] if "total_amount" in self.data else 0
-        )
-        self.type = self.data["type"] if "type" in self.data else "unknown"
-        self.is_essential = (
-            self.data["is_essential"] if "is_essential" in self.data else False
-        )
-        self.merchant = self.data["merchant"] if "merchant" in self.data else "unknown"
-        self.website = self.data["website"] if "website" in self.data else "unknown"
-        self.logo = self.data["logo"] if "logo" in self.data else "unknown"
-        self.labels = self.data["labels"] if "labels" in self.data else []
-        self.first_payment_date = (
-            self.data["first_payment_date"]
-            if "first_payment_date" in self.data
-            else None
-        )
-        self.latest_payment_date = (
-            self.data["latest_payment_date"]
-            if "latest_payment_date" in self.data
-            else None
-        )
-        self.transaction_ids = (
-            self.data["transaction_ids"] if "transaction_ids" in self.data else []
-        )
-        self.transactions = (
-            self.data["transactions"] if "transactions" in self.data else []
-        )
-        self.is_active = self.data["is_active"] if "is_active" in self.data else False
-        self.next_expected_payment_date = (
-            self.data["next_expected_payment_date"]
-            if "next_expected_payment_date" in self.data
-            else None
-        )
-        self.next_expected_payment_amount = (
-            self.data["next_expected_payment_amount"]
-            if "next_expected_payment_amount" in self.data
-            else 0
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(
+            periodicity=data.get('periodicity'),
+            latest_payment_amount=data.get('latest_payment_amount', data.get('amount', 0)),
+            merchant=data.get('merchant'),
+            website=data.get('website'),
+            logo=data.get('website'),
+            labels=data.get('labels', []),
+            type=data.get('type'),
+            is_essential=data.get('is_essential'),
+            is_active=data.get('is_active'),
+            first_payment_date=data.get('first_payment_date'),
+            latest_payment_date=data.get('latest_payment_date'),
+            next_expected_payment_date=data.get('next_expected_payment_date'),
+            latest_payment_description=data.get('latest_payment_description', ''),
+            transaction_ids=data.get('transaction_ids', []),
+            transactions=data.get('transactions', []),
+            total_amount=data.get('total_amount', 0),
+            iso_currency_code=data.get('iso_currency_code'),
         )
 
     def _repr_df(self):
         labels = [
-            "amount",
+            "latest_payment_amount",
             "merchant",
             "website",
             "labels",
@@ -63,7 +58,9 @@ class RecurringPaymentsGroup:
             "first_payment_date",
             "latest_payment_date",
             "next_expected_payment_date",
+            "latest_payment_description",
             "total_amount",
+            "iso_currency_code",
         ]
         data = []
         d = vars(self)
@@ -100,7 +97,7 @@ class RecurringPaymentsGroups(list):
         for rpg in self.list:
             recurring_payments_groups.append(
                 {
-                    "amount": rpg.amount,
+                    "latest_payment_amount": rpg.latest_payment_amount,
                     "merchant": rpg.merchant,
                     "website": rpg.website,
                     "labels": rpg.labels,
@@ -109,10 +106,12 @@ class RecurringPaymentsGroups(list):
                     "first_payment_date": rpg.first_payment_date,
                     "latest_payment_date": rpg.latest_payment_date,
                     "next_expected_payment_date": rpg.next_expected_payment_date,
+                    "latest_payment_description": rpg.latest_payment_description,
                     "type": rpg.type,
                     "is_essential": rpg.is_essential,
                     "transaction_ids": rpg.transaction_ids,
                     "total_amount": rpg.total_amount,
+                    "iso_currency_code": rpg.iso_currency_code,
                 }
             )
 
@@ -123,18 +122,24 @@ class RecurringPaymentsGroups(list):
         df = self.to_df()
         df = df.fillna("")
         if df.empty:
-            return f"{self.__class__.__name__}([])"
+            return df
         df.insert(0, "# txs", df["transaction_ids"].apply(lambda x: len(x)))
         df = df.drop(columns=["transaction_ids"])
         return df
 
     def _repr_html_(self) -> Union[str, None]:
         df = self._repr_df()
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
         return df._repr_html_()
 
     def __repr__(self) -> str:
         df = self._repr_df()
-        df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
+
+        if "labels" in df.columns:
+            df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
         return tabulate(
             df,
             showindex=False,

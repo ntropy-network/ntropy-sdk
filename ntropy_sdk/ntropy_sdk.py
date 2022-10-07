@@ -621,11 +621,14 @@ class EnrichedTransactionList(list):
 
     def _repr_html_(self) -> Union[str, None]:
         df = self._repr_df()
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
         return df._repr_html_()
 
     def __repr__(self):
         df = self._repr_df()
-        # keys = ["date", "amount", "merchant", "description"]
+        if df.empty:
+            return f"{self.__class__.__name__}([])"
         return tabulate(df, headers="keys", showindex=False)
 
 
@@ -1683,7 +1686,7 @@ class SDK:
             ]
         recurring_payments_groups = RecurringPaymentsGroups(
             sorted(
-                [RecurringPaymentsGroup(d) for d in data],
+                [RecurringPaymentsGroup.from_dict(d) for d in data],
                 key=lambda x: x.latest_payment_date,
                 reverse=True,
             )
