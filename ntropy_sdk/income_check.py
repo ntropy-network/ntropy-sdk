@@ -90,8 +90,8 @@ class IncomeGroup(BaseModel):
 
 
 class IncomeSummary(BaseModel):
-    main_income_source: str
-    main_income_type: str
+    main_income_source: Optional[str]
+    main_income_type: Optional[str]
     total_income: float
     earned_income: float
     passive_income: float
@@ -148,11 +148,9 @@ class IncomeSummary(BaseModel):
             main_income_type = max(
                 list(zip(income_types, amounts)), key=lambda z: z[1]
             )[0]
-            if main_income_source is None:
-                main_income_source = "N/A"
         else:
-            main_income_source = "N/A"
-            main_income_type = "N/A"
+            main_income_source = None
+            main_income_type = None
         return cls(
             total_income=round(total_amount, 2),
             main_income_source=main_income_source,
@@ -166,17 +164,20 @@ class IncomeSummary(BaseModel):
         )
 
 
-class IncomeReport(BaseModel):
-    income_groups: List[IncomeGroup]
-
-    @classmethod
-    def from_dicts(cls, income_report: List[Dict[str, Any]]):
+class IncomeReport(list):
+    def __init__(self, income_groups: List[IncomeGroup]):
+        """Parameters
+        ----------
+        income_groups : List[IncomeGroup]
+            A list of IncomeGroup objects.
+        """
         income_groups = sorted(
-            [IncomeGroup.from_dict(d) for d in income_report],
+            [IncomeGroup.from_dict(d) for d in income_groups],
             key=lambda x: float(x.total_amount),
             reverse=True,
         )
-        return cls(income_groups=income_groups)
+        super().__init__(income_groups)
+        self.list = income_groups
 
     def to_df(self) -> Any:
         try:

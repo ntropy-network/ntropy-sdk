@@ -26,23 +26,25 @@ class RecurringPaymentsGroup(BaseModel):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         return cls(
-            periodicity=data.get('periodicity'),
-            latest_payment_amount=data.get('latest_payment_amount', data.get('amount', 0)),
-            merchant=data.get('merchant'),
-            website=data.get('website'),
-            logo=data.get('website'),
-            labels=data.get('labels', []),
-            type=data.get('type'),
-            is_essential=data.get('is_essential'),
-            is_active=data.get('is_active'),
-            first_payment_date=data.get('first_payment_date'),
-            latest_payment_date=data.get('latest_payment_date'),
-            next_expected_payment_date=data.get('next_expected_payment_date'),
-            latest_payment_description=data.get('latest_payment_description', ''),
-            transaction_ids=data.get('transaction_ids', []),
-            transactions=data.get('transactions', []),
-            total_amount=data.get('total_amount', 0),
-            iso_currency_code=data.get('iso_currency_code'),
+            periodicity=data.get("periodicity"),
+            latest_payment_amount=data.get(
+                "latest_payment_amount", data.get("amount", 0)
+            ),
+            merchant=data.get("merchant"),
+            website=data.get("website"),
+            logo=data.get("website"),
+            labels=data.get("labels", []),
+            type=data.get("type"),
+            is_essential=data.get("is_essential"),
+            is_active=data.get("is_active"),
+            first_payment_date=data.get("first_payment_date"),
+            latest_payment_date=data.get("latest_payment_date"),
+            next_expected_payment_date=data.get("next_expected_payment_date"),
+            latest_payment_description=data.get("latest_payment_description", ""),
+            transaction_ids=data.get("transaction_ids", []),
+            transactions=data.get("transactions", []),
+            total_amount=data.get("total_amount", 0),
+            iso_currency_code=data.get("iso_currency_code"),
         )
 
     def _repr_df(self):

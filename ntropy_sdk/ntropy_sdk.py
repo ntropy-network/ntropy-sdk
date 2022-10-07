@@ -1642,7 +1642,7 @@ class SDK:
         url = f"/v2/account-holder/{account_holder_id}/income"
 
         response = self.retry_ratelimited_request("POST", url, {})
-        return IncomeReport.from_dicts(response.json())
+        return IncomeReport(response.json())
 
     def get_recurring_payments(
         self, account_holder_id: str, fetch_transactions=True
@@ -1668,7 +1668,6 @@ class SDK:
         recurring_payments_response = self.retry_ratelimited_request("POST", url, {})
         data = recurring_payments_response.json()
 
-        df = pd.DataFrame(data)
         if fetch_transactions:
             transactions = self.get_account_holder_transactions(account_holder_id)
             transactions_dict = {tx.transaction_id: tx for tx in transactions}
