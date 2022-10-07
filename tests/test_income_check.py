@@ -119,7 +119,12 @@ def test_income_group():
 
 
 def test_income_report(income_api_response):
-    report = IncomeReport(income_api_response)
+    income_groups = sorted(
+        [IncomeGroup.from_dict(d) for d in income_api_response],
+        key=lambda x: float(x.total_amount),
+        reverse=True,
+    )
+    report = IncomeReport(income_groups)
     df = report.to_df()
     assert isinstance(df, pd.DataFrame)
     assert len(df) == len(income_api_response)

@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Set, Union
+from tabulate import tabulate
 
 
 UNDETERMINED_LABEL = "possible income - please verify"
@@ -69,6 +70,7 @@ class IncomeGroup(BaseModel):
     next_expected_payment_date: Optional[str]
     next_expected_payment_amount: Optional[str]
     transaction_ids: List[Union[int, str]]
+    transactions: List[Any]  # List[EnrichedTransaction]
 
     @classmethod
     def from_dict(cls, income_group: Dict[str, Any]):
@@ -86,6 +88,7 @@ class IncomeGroup(BaseModel):
             next_expected_payment_date=income_group["next_expected_payment_date"],
             next_expected_payment_amount=income_group["next_expected_payment_amount"],
             transaction_ids=income_group["transaction_ids"],
+            transactions=income_group.get("transactions", []),
         )
 
 
@@ -171,11 +174,6 @@ class IncomeReport(list):
         income_groups : List[IncomeGroup]
             A list of IncomeGroup objects.
         """
-        income_groups = sorted(
-            [IncomeGroup.from_dict(d) for d in income_groups],
-            key=lambda x: float(x.total_amount),
-            reverse=True,
-        )
         super().__init__(income_groups)
         self.income_groups = income_groups
 
@@ -184,16 +182,57 @@ class IncomeReport(list):
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        return pd.DataFrame(self.to_json())
+        df = pd.DataFrame(self.json())
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
+        return df
 
-    def to_json(self) -> List[Dict[str, Any]]:
+    def json(self) -> List[Dict[str, Any]]:
         return [ig.dict() for ig in self.income_groups]
 
     def summarize(self) -> IncomeSummary:
         return IncomeSummary.from_income_groups(self.income_groups)
 
+    def _repr_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        df = self.to_df()
+        if df.empty:
+            return df
+        df = df.fillna("N/A")
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
+        return df
+
+    def _repr_html_(self) -> Union[str, None]:
+        # used by ipython/jupyter to render
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return df._repr_html_()
+        except ImportError:
+            # pandas not installed
+            return self.__repr__()
+
     def __repr__(self) -> str:
-        return str([ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups])
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return tabulate(df, showindex=False)
+        except ImportError:
+            # pandas not installed
+            repr = str(
+                [ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups]
+            )
+            return f"{self.__class__.__name__}({repr})"
 
     def active(self):
         return IncomeReport([g for g in self.income_groups if g.is_active])

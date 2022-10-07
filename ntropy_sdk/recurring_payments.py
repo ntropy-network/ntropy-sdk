@@ -19,7 +19,7 @@ class RecurringPaymentsGroup(BaseModel):
     next_expected_payment_date: Optional[str]
     latest_payment_description: str
     transaction_ids: List[Union[int, str]]
-    transactions: Any
+    transactions: List[Any]  # List[EnrichedTransaction]
     total_amount: float
     iso_currency_code: Optional[str]
 
@@ -47,38 +47,51 @@ class RecurringPaymentsGroup(BaseModel):
             iso_currency_code=data.get("iso_currency_code"),
         )
 
-    def _repr_df(self):
-        labels = [
-            "latest_payment_amount",
-            "merchant",
-            "website",
-            "labels",
-            "type",
-            "is_essential",
-            "periodicity",
-            "is_active",
-            "first_payment_date",
-            "latest_payment_date",
-            "next_expected_payment_date",
-            "latest_payment_description",
-            "total_amount",
-            "iso_currency_code",
-        ]
-        data = []
-        d = vars(self)
-        for label in labels:
-            data.append({"key": label, "value": d[label]})
-        data.insert(0, {"key": "# txs", "value": len(self.transaction_ids)})
-        df = pd.DataFrame(data)
+    def to_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        return pd.DataFrame(self.json())
+
+    def _repr_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        df = self.to_df()
+        if df.empty:
+            return df
+        df = df.fillna("N/A")
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
         return df
 
     def _repr_html_(self) -> Union[str, None]:
-        df = self._repr_df()
-        return df._repr_html_()
+        # used by ipython/jupyter to render
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return df._repr_html_()
+        except ImportError:
+            # pandas not installed
+            return self.__repr__()
 
     def __repr__(self) -> str:
-        df = self._repr_df()
-        return tabulate(df, showindex=False)
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return tabulate(df, showindex=False)
+        except ImportError:
+            # pandas not installed
+            repr = str([ig.dict(exclude={"transaction_ids"}) for ig in self.list])
+            return f"{self.__class__.__name__}({repr})"
 
 
 class RecurringPaymentsGroups(list):
@@ -90,64 +103,64 @@ class RecurringPaymentsGroups(list):
         recurring_payments_groups : List[RecurringPaymentsGroup]
             A list of RecurringPaymentsGroup objects.
         """
-
         super().__init__(recurring_payments_groups)
         self.list = recurring_payments_groups
 
-    def to_df(self):
-        recurring_payments_groups = []
-        for rpg in self.list:
-            recurring_payments_groups.append(
-                {
-                    "latest_payment_amount": rpg.latest_payment_amount,
-                    "merchant": rpg.merchant,
-                    "website": rpg.website,
-                    "labels": rpg.labels,
-                    "periodicity": rpg.periodicity,
-                    "is_active": rpg.is_active,
-                    "first_payment_date": rpg.first_payment_date,
-                    "latest_payment_date": rpg.latest_payment_date,
-                    "next_expected_payment_date": rpg.next_expected_payment_date,
-                    "latest_payment_description": rpg.latest_payment_description,
-                    "type": rpg.type,
-                    "is_essential": rpg.is_essential,
-                    "transaction_ids": rpg.transaction_ids,
-                    "total_amount": rpg.total_amount,
-                    "iso_currency_code": rpg.iso_currency_code,
-                }
-            )
+    def json(self) -> List[Dict[str, Any]]:
+        return [rpg.dict() for rpg in self.list]
 
-        df = pd.DataFrame(recurring_payments_groups)
-        return df
+    def to_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        return pd.DataFrame(self.json())
 
-    def _repr_df(self):
+    def _repr_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
         df = self.to_df()
-        df = df.fillna("")
         if df.empty:
             return df
-        df.insert(0, "# txs", df["transaction_ids"].apply(lambda x: len(x)))
-        df = df.drop(columns=["transaction_ids"])
+        df = df.fillna("N/A")
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
         return df
 
     def _repr_html_(self) -> Union[str, None]:
-        df = self._repr_df()
-        if df.empty:
-            return f"{self.__class__.__name__}([])"
-        return df._repr_html_()
+        # used by ipython/jupyter to render
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return df._repr_html_()
+        except ImportError:
+            # pandas not installed
+            return self.__repr__()
 
     def __repr__(self) -> str:
-        df = self._repr_df()
-        if df.empty:
-            return f"{self.__class__.__name__}([])"
+        try:
+            import pandas
 
-        if "labels" in df.columns:
-            df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
-        return tabulate(
-            df,
-            showindex=False,
-            headers="keys",
-            maxcolwidths=[2, 16, 16, 16, 16, 12, 12, 12, 12, 12, 20, 12],
-        )
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            if "labels" in df.columns:
+                df["labels"] = df["labels"].apply(lambda x: "\n".join(x))
+            return tabulate(
+                df,
+                showindex=False,
+                headers="keys",
+                maxcolwidths=[2, 16, 16, 16, 16, 12, 12, 12, 12, 12, 20, 12],
+            )
+        except ImportError:
+            # pandas not installed
+            repr = str([ig.dict(exclude={"transaction_ids"}) for ig in self.list])
+            return f"{self.__class__.__name__}({repr})"
 
     def essential(self):
         return RecurringPaymentsGroups(

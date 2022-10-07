@@ -6,7 +6,17 @@ import time
 import uuid
 import warnings
 from datetime import date
-from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable, Union
+from typing import (
+    Any,
+    ClassVar,
+    Generator,
+    List,
+    Dict,
+    Optional,
+    TypeVar,
+    Iterable,
+    Union,
+)
 from urllib.parse import urlencode
 from itertools import islice
 
@@ -18,7 +28,7 @@ from tabulate import tabulate
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
-from ntropy_sdk.income_check import IncomeReport
+from ntropy_sdk.income_check import IncomeReport, IncomeGroup
 from ntropy_sdk.recurring_payments import (
     RecurringPaymentsGroups,
     RecurringPaymentsGroup,
@@ -605,7 +615,11 @@ class EnrichedTransactionList(list):
             etx.parent_tx = tx
         return etx_list
 
-    def _repr_df(self):
+    def to_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
         txs = []
         for tx in self.transactions:
             parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
@@ -619,17 +633,42 @@ class EnrichedTransactionList(list):
             txs.append({**parent, **enriched})
         return pd.DataFrame(txs)
 
-    def _repr_html_(self) -> Union[str, None]:
-        df = self._repr_df()
+    def _repr_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        df = self.to_df()
         if df.empty:
-            return f"{self.__class__.__name__}([])"
-        return df._repr_html_()
+            return df
+        df = df.fillna("N/A")
+        return df
 
-    def __repr__(self):
-        df = self._repr_df()
-        if df.empty:
-            return f"{self.__class__.__name__}([])"
-        return tabulate(df, headers="keys", showindex=False)
+    def _repr_html_(self) -> Union[str, None]:
+        # used by ipython/jupyter to render
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return df._repr_html_()
+        except ImportError:
+            # pandas not installed
+            return self.__repr__()
+
+    def __repr__(self) -> str:
+        try:
+            import pandas
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return tabulate(df, headers="keys", showindex=False)
+        except ImportError:
+            # pandas not installed
+            repr = str([ig.dict() for ig in self.transactions])
+            return f"{self.__class__.__name__}({repr})"
 
 
 class Batch(BaseModel):
@@ -1622,7 +1661,9 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
 
-    def get_income_report(self, account_holder_id: str) -> IncomeReport:
+    def get_income_report(
+        self, account_holder_id: str, fetch_transactions=True
+    ) -> IncomeReport:
         """Returns the income report of an account holder's Transaction history
 
         Parameters
@@ -1642,7 +1683,29 @@ class SDK:
         url = f"/v2/account-holder/{account_holder_id}/income"
 
         response = self.retry_ratelimited_request("POST", url, {})
-        return IncomeReport(response.json())
+
+        data = response.json()
+        if fetch_transactions:
+            transactions = self.get_account_holder_transactions(account_holder_id)
+            transactions_dict = {tx.transaction_id: tx for tx in transactions}
+            data = [
+                {
+                    **income_group,
+                    "transactions": EnrichedTransactionList(
+                        [
+                            transactions_dict.get(tx_id, [])
+                            for tx_id in income_group["transaction_ids"]
+                        ]
+                    ),
+                }
+                for income_group in data
+            ]
+        income_groups = sorted(
+            [IncomeGroup.from_dict(d) for d in data],
+            key=lambda x: float(x.total_amount),
+            reverse=True,
+        )
+        return IncomeReport(income_groups)
 
     def get_recurring_payments(
         self, account_holder_id: str, fetch_transactions=True
