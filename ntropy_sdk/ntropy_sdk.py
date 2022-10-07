@@ -360,7 +360,7 @@ class AccountHolder(BaseModel):
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self._sdk.get_account_income_report(self.id)
+        return self._sdk.get_income_report(self.id)
 
     class Config:
         use_enum_values = True
@@ -1619,7 +1619,7 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
 
-    def get_account_income_report(self, account_holder_id: str) -> IncomeReport:
+    def get_income_report(self, account_holder_id: str) -> IncomeReport:
         """Returns the income report of an account holder's Transaction history
 
         Parameters
@@ -1641,7 +1641,7 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, {})
         return IncomeReport.from_dicts(response.json())
 
-    def get_account_recurring_payments(
+    def get_recurring_payments(
         self, account_holder_id: str, fetch_transactions=True
     ) -> RecurringPaymentsGroups:
         """Returns the recurring payments report of an account holder's Transaction history

@@ -61,7 +61,7 @@ def recurring_payments_transactions():
 def test_recurring_payments(sdk, recurring_payments_transactions):
     account_holder_id = recurring_payments_transactions[0].account_holder_id
     enriched_txs = sdk.add_transactions(recurring_payments_transactions)
-    recurring_payments_groups = sdk.get_account_recurring_payments(account_holder_id)
+    recurring_payments_groups = sdk.get_recurring_payments(account_holder_id)
     assert len(recurring_payments_groups) == 5
     print(recurring_payments_groups)
     print(recurring_payments_groups[0].transactions)
