@@ -177,7 +177,7 @@ class IncomeReport(list):
             reverse=True,
         )
         super().__init__(income_groups)
-        self.list = income_groups
+        self.income_groups = income_groups
 
     def to_df(self) -> Any:
         try:
@@ -196,4 +196,4 @@ class IncomeReport(list):
         return str([ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups])
 
     def active(self):
-        return IncomeReport([g for g in self.list if g.is_active])
+        return IncomeReport([g for g in self.income_groups if g.is_active])

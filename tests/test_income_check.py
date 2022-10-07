@@ -119,7 +119,7 @@ def test_income_group():
 
 
 def test_income_report(income_api_response):
-    report = IncomeReport.from_dicts(income_api_response)
+    report = IncomeReport(income_api_response)
     df = report.to_df()
     assert isinstance(df, pd.DataFrame)
     assert len(df) == len(income_api_response)
