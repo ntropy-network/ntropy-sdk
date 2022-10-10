@@ -4,12 +4,12 @@ from tabulate import tabulate
 
 
 class RecurringPaymentsGroup(BaseModel):
+    latest_payment_amount: float
+    periodicity: str
     merchant: Optional[str]
     website: Optional[str]
     labels: Optional[List[str]]
     logo: Optional[str]
-    periodicity: str
-    latest_payment_amount: float
     type: str
     is_essential: bool
     is_active: bool
@@ -18,7 +18,7 @@ class RecurringPaymentsGroup(BaseModel):
     next_expected_payment_date: Optional[str]
     latest_payment_description: str
     transaction_ids: List[Union[int, str]]
-    transactions: List[Any]  # List[EnrichedTransaction]
+    transactions: Any  # EnrichedTransactionList
     total_amount: float
     iso_currency_code: Optional[str]
 
@@ -51,7 +51,9 @@ class RecurringPaymentsGroup(BaseModel):
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        return pd.DataFrame(self.json())
+        return pd.DataFrame(
+            self.dict(exclude={"transactions"}).items(), columns=["key", "value"]
+        )
 
     def _repr_df(self) -> Any:
         try:
@@ -62,8 +64,6 @@ class RecurringPaymentsGroup(BaseModel):
         if df.empty:
             return df
         df = df.fillna("N/A")
-        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
-        df = df.rename({"transaction_ids": "# transactions"})
         return df
 
     def _repr_html_(self) -> Union[str, None]:
@@ -73,11 +73,14 @@ class RecurringPaymentsGroup(BaseModel):
 
             df = self._repr_df()
             if df.empty:
-                return f"{self.__class__.__name__}([])"
+                return self.__repr__()
             return df._repr_html_()
         except ImportError:
             # pandas not installed
             return self.__repr__()
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
     def __repr__(self) -> str:
         try:
@@ -85,11 +88,12 @@ class RecurringPaymentsGroup(BaseModel):
 
             df = self._repr_df()
             if df.empty:
-                return f"{self.__class__.__name__}([])"
+                repr = self.dict(exclude={"transactions"})
+                return f"{self.__class__.__name__}({repr})"
             return tabulate(df, showindex=False)
         except ImportError:
             # pandas not installed
-            repr = str([ig.dict(exclude={"transaction_ids"}) for ig in self.list])
+            repr = self.dict(exclude={"transactions"})
             return f"{self.__class__.__name__}({repr})"
 
 
@@ -103,17 +107,13 @@ class RecurringPaymentsGroups(list):
             A list of RecurringPaymentsGroup objects.
         """
         super().__init__(recurring_payments_groups)
-        self.list = recurring_payments_groups
-
-    def json(self) -> List[Dict[str, Any]]:
-        return [rpg.dict() for rpg in self.list]
 
     def to_df(self) -> Any:
         try:
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        return pd.DataFrame(self.json())
+        return pd.DataFrame([rpg.dict(exclude={"transactions"}) for rpg in self])
 
     def _repr_df(self) -> Any:
         try:
@@ -124,8 +124,8 @@ class RecurringPaymentsGroups(list):
         if df.empty:
             return df
         df = df.fillna("N/A")
-        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
-        df = df.rename({"transaction_ids": "# transactions"})
+        df.insert(0, "# transactions", df.transaction_ids.apply(lambda x: len(x)))
+        df = df.drop(columns=["transaction_ids"])
         return df
 
     def _repr_html_(self) -> Union[str, None]:
@@ -154,18 +154,18 @@ class RecurringPaymentsGroups(list):
                 df,
                 showindex=False,
                 headers="keys",
-                maxcolwidths=[2, 16, 16, 16, 16, 12, 12, 12, 12, 12, 20, 12],
+                maxcolwidths=[2, 12, 12, 16, 16, 16, 16, 12, 12, 12, 20, 12],
             )
         except ImportError:
             # pandas not installed
-            repr = str([ig.dict(exclude={"transaction_ids"}) for ig in self.list])
+            repr = str([ig.dict(exclude={"transactions"}) for ig in self])
             return f"{self.__class__.__name__}({repr})"
 
     def essential(self):
         return RecurringPaymentsGroups(
             [
                 recurring_payments_group
-                for recurring_payments_group in self.list
+                for recurring_payments_group in self
                 if recurring_payments_group.is_essential
             ]
         )
@@ -174,7 +174,7 @@ class RecurringPaymentsGroups(list):
         return RecurringPaymentsGroups(
             [
                 recurring_payments_group
-                for recurring_payments_group in self.list
+                for recurring_payments_group in self
                 if not recurring_payments_group.is_essential
             ]
         )
@@ -183,7 +183,7 @@ class RecurringPaymentsGroups(list):
         return RecurringPaymentsGroups(
             [
                 recurring_payments_group
-                for recurring_payments_group in self.list
+                for recurring_payments_group in self
                 if recurring_payments_group.is_active
             ]
         )
@@ -192,7 +192,7 @@ class RecurringPaymentsGroups(list):
         return RecurringPaymentsGroups(
             [
                 recurring_payments_group
-                for recurring_payments_group in self.list
+                for recurring_payments_group in self
                 if not recurring_payments_group.is_active
             ]
         )
@@ -201,7 +201,7 @@ class RecurringPaymentsGroups(list):
         return RecurringPaymentsGroups(
             [
                 recurring_payments_group
-                for recurring_payments_group in self.list
+                for recurring_payments_group in self
                 if recurring_payments_group.type == "subscription"
             ]
         )
@@ -210,7 +210,7 @@ class RecurringPaymentsGroups(list):
         return RecurringPaymentsGroups(
             [
                 recurring_payments_group
-                for recurring_payments_group in self.list
+                for recurring_payments_group in self
                 if recurring_payments_group.type == "bill"
             ]
         )
@@ -220,7 +220,7 @@ class RecurringPaymentsGroups(list):
             sum(
                 [
                     recurring_payments_group.total_amount
-                    for recurring_payments_group in self.list
+                    for recurring_payments_group in self
                 ]
             ),
             2,

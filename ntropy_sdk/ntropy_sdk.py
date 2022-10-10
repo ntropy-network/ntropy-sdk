@@ -416,7 +416,9 @@ class EnrichedTransaction(BaseModel):
         "mcc",
     ]
 
-    sdk: "SDK" = Field(description="An SDK to use with the EnrichedTransaction.")
+    sdk: "SDK" = Field(
+        description="An SDK to use with the EnrichedTransaction.", exclude=True
+    )
     labels: Optional[List[str]] = Field(description="Label for the transaction.")
     location: Optional[str] = Field(description="Location of the merchant.")
     logo: Optional[str] = Field(description="A link to the logo of the merchant.")
@@ -575,7 +577,6 @@ class EnrichedTransactionList(list):
         """
 
         super().__init__(transactions)
-        self.transactions = transactions
 
     def to_csv(self, filepath: str):
         """Writes the list of EnrichedTransaction objects to a CSV file.
@@ -620,7 +621,7 @@ class EnrichedTransactionList(list):
         except ImportError:
             raise RuntimeError("pandas is not installed")
         txs = []
-        for tx in self.transactions:
+        for tx in self:
             parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
             returned_fields = tx.returned_fields
             enriched = {
@@ -666,7 +667,7 @@ class EnrichedTransactionList(list):
             return tabulate(df, headers="keys", showindex=False)
         except ImportError:
             # pandas not installed
-            repr = str([ig.dict() for ig in self.transactions])
+            repr = str([ig.dict() for ig in self])
             return f"{self.__class__.__name__}({repr})"
 
 
@@ -1791,11 +1792,13 @@ class SDK:
         page = 0
         total_pages = 1
         while page < total_pages:
-            response = self._get_account_holder_transactions(account_holder_id, page)
-            
+            response = self._get_account_holder_transactions_page(
+                account_holder_id, page
+            )
+
             if "pages" in response and total_pages < response["pages"]:
                 total_pages = response["pages"]
-            
+
             txs += response["transactions"]
             page += 1
 

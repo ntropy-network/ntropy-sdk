@@ -18,11 +18,7 @@ def sdk():
 @pytest.fixture
 def recurring_payments_transactions():
     transactions = [
-        (
-            "2021-01-01",
-            17.99,
-            "Netflix",
-        ),
+        ("2021-01-01", 17.99, "Netflix"),
         ("2021-02-01", 17.99, "Netflix"),
         ("2021-03-01", 17.99, "Netflix"),
         ("2021-04-01", 17.99, "Netflix"),
@@ -64,6 +60,7 @@ def test_recurring_payments(sdk, recurring_payments_transactions):
     recurring_payments_groups = sdk.get_recurring_payments(account_holder_id)
     assert len(recurring_payments_groups) == 5
     print(recurring_payments_groups)
+    print(recurring_payments_groups[0])
     print(recurring_payments_groups[0].transactions)
     assert recurring_payments_groups.inactive() == []
     print(recurring_payments_groups.inactive())

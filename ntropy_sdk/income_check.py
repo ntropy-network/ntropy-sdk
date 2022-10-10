@@ -175,7 +175,6 @@ class IncomeReport(list):
             A list of IncomeGroup objects.
         """
         super().__init__(income_groups)
-        self.income_groups = income_groups
 
     def to_df(self) -> Any:
         try:
@@ -188,10 +187,10 @@ class IncomeReport(list):
         return df
 
     def json(self) -> List[Dict[str, Any]]:
-        return [ig.dict() for ig in self.income_groups]
+        return [ig.dict() for ig in self]
 
     def summarize(self) -> IncomeSummary:
-        return IncomeSummary.from_income_groups(self.income_groups)
+        return IncomeSummary.from_income_groups(self)
 
     def _repr_df(self) -> Any:
         try:
@@ -229,10 +228,8 @@ class IncomeReport(list):
             return tabulate(df, showindex=False)
         except ImportError:
             # pandas not installed
-            repr = str(
-                [ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups]
-            )
+            repr = str([ig.dict(exclude={"transaction_ids"}) for ig in self])
             return f"{self.__class__.__name__}({repr})"
 
     def active(self):
-        return IncomeReport([g for g in self.income_groups if g.is_active])
+        return IncomeReport([g for g in self if g.is_active])
