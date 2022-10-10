@@ -1758,7 +1758,7 @@ class SDK:
 
         return RecurringPaymentsGroups(recurring_payments_groups)
 
-    def _get_account_holder_transactions(
+    def _get_account_holder_transactions_page(
         self, account_holder_id: str, page=0, per_page=1000
     ):
         url = f"/v2/account-holder/{account_holder_id}/transactions?page={page}&per_page={per_page}"
