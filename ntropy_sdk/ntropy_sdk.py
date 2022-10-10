@@ -1789,11 +1789,14 @@ class SDK:
         """
         txs = []
         page = 0
-        while True:
+        total_pages = 1
+        while page < total_pages:
             response = self._get_account_holder_transactions(account_holder_id, page)
+            
+            if "pages" in response and total_pages < response["pages"]:
+                total_pages = response["pages"]
+            
             txs += response["transactions"]
-            if response["pages"] == page + 1:
-                break
             page += 1
 
         return EnrichedTransactionList.from_list(
