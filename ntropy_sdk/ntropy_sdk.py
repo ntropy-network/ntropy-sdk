@@ -633,6 +633,9 @@ class EnrichedTransactionList(list):
             txs.append({**parent, **enriched})
         return pd.DataFrame(txs)
 
+    def dict(self) -> List[Dict[str, Any]]:
+        return [t.dict() for t in self]
+
     def _repr_df(self) -> Any:
         try:
             import pandas as pd
@@ -667,7 +670,7 @@ class EnrichedTransactionList(list):
             return tabulate(df, headers="keys", showindex=False)
         except ImportError:
             # pandas not installed
-            repr = str([ig.dict() for ig in self])
+            repr = str(self.dict())
             return f"{self.__class__.__name__}({repr})"
 
 

@@ -115,6 +115,9 @@ class RecurringPaymentsGroups(list):
             raise RuntimeError("pandas is not installed")
         return pd.DataFrame([rpg.dict(exclude={"transactions"}) for rpg in self])
 
+    def dict(self) -> List[Dict[str, Any]]:
+        return [rpg.dict(exclude={"transactions"}) for rpg in self]
+
     def _repr_df(self) -> Any:
         try:
             import pandas as pd
@@ -158,7 +161,7 @@ class RecurringPaymentsGroups(list):
             )
         except ImportError:
             # pandas not installed
-            repr = str([ig.dict(exclude={"transactions"}) for ig in self])
+            repr = str(self.dict())
             return f"{self.__class__.__name__}({repr})"
 
     def essential(self):

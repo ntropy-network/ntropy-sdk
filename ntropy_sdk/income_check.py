@@ -181,13 +181,11 @@ class IncomeReport(list):
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        df = pd.DataFrame(self.json())
-        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
-        df = df.rename({"transaction_ids": "# transactions"})
+        df = pd.DataFrame(self.dict())
         return df
 
-    def json(self) -> List[Dict[str, Any]]:
-        return [ig.dict() for ig in self]
+    def dict(self) -> List[Dict[str, Any]]:
+        return [ig.dict(exclude={"transactions"}) for ig in self]
 
     def summarize(self) -> IncomeSummary:
         return IncomeSummary.from_income_groups(self)
@@ -198,11 +196,11 @@ class IncomeReport(list):
         except ImportError:
             raise RuntimeError("pandas is not installed")
         df = self.to_df()
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
         if df.empty:
             return df
         df = df.fillna("N/A")
-        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
-        df = df.rename({"transaction_ids": "# transactions"})
         return df
 
     def _repr_html_(self) -> Union[str, None]:
@@ -228,7 +226,7 @@ class IncomeReport(list):
             return tabulate(df, showindex=False)
         except ImportError:
             # pandas not installed
-            repr = str([ig.dict(exclude={"transaction_ids"}) for ig in self])
+            repr = str(self.dict())
             return f"{self.__class__.__name__}({repr})"
 
     def active(self):
