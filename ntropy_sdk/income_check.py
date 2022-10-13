@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Set, Union
+from tabulate import tabulate
 
 
 UNDETERMINED_LABEL = "possible income - please verify"
@@ -57,37 +58,43 @@ class IncomeLabelEnum(Enum):
 
 class IncomeGroup(BaseModel):
     total_amount: float
+    iso_currency_code: str
     income_type: str
-    source: str
-    is_active: bool
-    first_payment_date: Optional[str]
-    latest_payment_date: Optional[str]
+    source: Optional[str]
+    first_payment_date: str
+    latest_payment_date: str
     duration: str
-    pay_frequency: str
-    projected_pay_date: Optional[str]
-    projected_pay_amount: Optional[str]
+    is_active: bool
+    latest_payment_description: str
+    pay_frequency: Optional[str]
+    next_expected_payment_date: Optional[str]
+    next_expected_payment_amount: Optional[str]
     transaction_ids: List[Union[int, str]]
+    transactions: List[Any]  # List[EnrichedTransaction]
 
     @classmethod
     def from_dict(cls, income_group: Dict[str, Any]):
         return cls(
             total_amount=income_group["total_amount"],
+            iso_currency_code=income_group["iso_currency_code"],
             source=income_group["source"],
             income_type=income_group["income_type"],
-            is_active=income_group["is_active"],
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],
             duration=income_group["duration"],
+            is_active=income_group["is_active"],
+            latest_payment_description=income_group["latest_payment_description"],
             pay_frequency=income_group["pay_frequency"],
             next_expected_payment_date=income_group["next_expected_payment_date"],
             next_expected_payment_amount=income_group["next_expected_payment_amount"],
             transaction_ids=income_group["transaction_ids"],
+            transactions=income_group.get("transactions", []),
         )
 
 
 class IncomeSummary(BaseModel):
-    main_income_source: str
-    main_income_type: str
+    main_income_source: Optional[str]
+    main_income_type: Optional[str]
     total_income: float
     earned_income: float
     passive_income: float
@@ -101,15 +108,18 @@ class IncomeSummary(BaseModel):
         igs = income_groups
         total_amount = sum([ig.total_amount for ig in igs])
         undetermined_sources = [
-            ig.source for ig in igs if ig.income_type == UNDETERMINED_LABEL
+            ig.source
+            for ig in igs
+            if ig.source is not None and ig.income_type == UNDETERMINED_LABEL
         ]
         undetermined_amount = sum(
             [ig.total_amount for ig in igs if ig.income_type == UNDETERMINED_LABEL]
         )
-        passive_income_source = [
+        passive_income_sources = [
             ig.source
             for ig in igs
-            if ig.income_type in IncomeLabelEnum.passive_labels()
+            if ig.source is not None
+            and ig.income_type in IncomeLabelEnum.passive_labels()
             and not ig.income_type == UNDETERMINED_LABEL
         ]
         passive_income_amount = sum(
@@ -123,7 +133,8 @@ class IncomeSummary(BaseModel):
         earned_income_sources = [
             ig.source
             for ig in igs
-            if ig.income_type in IncomeLabelEnum.earnings_labels()
+            if ig.source is not None
+            and ig.income_type in IncomeLabelEnum.earnings_labels()
             and not ig.income_type == UNDETERMINED_LABEL
         ]
         earned_income_amount = [
@@ -141,8 +152,8 @@ class IncomeSummary(BaseModel):
                 list(zip(income_types, amounts)), key=lambda z: z[1]
             )[0]
         else:
-            main_income_source = "N/A"
-            main_income_type = "N/A"
+            main_income_source = None
+            main_income_type = None
         return cls(
             total_income=round(total_amount, 2),
             main_income_source=main_income_source,
@@ -151,36 +162,72 @@ class IncomeSummary(BaseModel):
             passive_income=round(passive_income_amount, 2),
             possible_income=round(undetermined_amount, 2),
             earned_income_sources=sorted(set(earned_income_sources)),
-            passive_income_sources=sorted(set(passive_income_source)),
+            passive_income_sources=sorted(set(passive_income_sources)),
             possible_income_sources=sorted(set(undetermined_sources)),
         )
 
 
-class IncomeReport:
+class IncomeReport(list):
     def __init__(self, income_groups: List[IncomeGroup]):
-        self.income_groups = income_groups
-
-    @classmethod
-    def from_dicts(cls, income_report: List[Dict[str, Any]]):
-        income_groups = sorted(
-            [IncomeGroup.from_dict(d) for d in income_report],
-            key=lambda x: float(x.total_amount),
-            reverse=True,
-        )
-        return cls(income_groups=income_groups)
+        """Parameters
+        ----------
+        income_groups : List[IncomeGroup]
+            A list of IncomeGroup objects.
+        """
+        super().__init__(income_groups)
 
     def to_df(self) -> Any:
         try:
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        return pd.DataFrame(self.to_json())
+        df = pd.DataFrame(self.dict())
+        return df
 
-    def to_json(self) -> List[Dict[str, Any]]:
-        return [ig.dict() for ig in self.income_groups]
+    def dict(self) -> List[Dict[str, Any]]:
+        return [ig.dict(exclude={"transactions"}) for ig in self]
 
     def summarize(self) -> IncomeSummary:
-        return IncomeSummary.from_income_groups(self.income_groups)
+        return IncomeSummary.from_income_groups(self)
+
+    def _repr_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        df = self.to_df()
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
+        if df.empty:
+            return df
+        df = df.fillna("N/A")
+        return df
+
+    def _repr_html_(self) -> Union[str, None]:
+        # used by ipython/jupyter to render
+        try:
+            import pandas as pd
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return df._repr_html_()
+        except ImportError:
+            # pandas not installed
+            return self.__repr__()
 
     def __repr__(self) -> str:
-        return str([ig.dict(exclude={"transaction_ids"}) for ig in self.income_groups])
+        try:
+            import pandas as pd
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return tabulate(df, showindex=False)
+        except ImportError:
+            # pandas not installed
+            repr = str(self.dict())
+            return f"{self.__class__.__name__}({repr})"
+
+    def active(self):
+        return IncomeReport([g for g in self if g.is_active])

@@ -6,17 +6,32 @@ import time
 import uuid
 import warnings
 from datetime import date
-from typing import Any, ClassVar, Generator, List, Optional, TypeVar, Iterable
+from typing import (
+    Any,
+    ClassVar,
+    Generator,
+    List,
+    Dict,
+    Optional,
+    TypeVar,
+    Iterable,
+    Union,
+)
 from urllib.parse import urlencode
 from itertools import islice
 
 import requests  # type: ignore
 from pydantic import BaseModel, Field, validator, NonNegativeFloat
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
+from tabulate import tabulate
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
-from ntropy_sdk.income_check import IncomeReport
+from ntropy_sdk.income_check import IncomeReport, IncomeGroup
+from ntropy_sdk.recurring_payments import (
+    RecurringPaymentsGroups,
+    RecurringPaymentsGroup,
+)
 from ntropy_sdk.utils import (
     AccountHolderType,
     EntryType,
@@ -85,6 +100,10 @@ class Transaction(BaseModel):
         "mcc",
     ]
 
+    _date_validator = validator("date", pre=True, allow_reuse=True)(validate_date)
+    date: str = Field(
+        description="Transaction date in ISO-8601 format (i.e. YYYY-MM-DD)."
+    )
     amount: NonNegativeFloat = Field(description="Amount of the transaction.")
     entry_type: EntryType = Field(
         description="Either incoming or outgoing depending on the transaction."
@@ -94,10 +113,6 @@ class Transaction(BaseModel):
     )
     description: str = Field(description="Description text of the transaction.")
 
-    _date_validator = validator("date", pre=True, allow_reuse=True)(validate_date)
-    date: str = Field(
-        description="Transaction date in ISO-8601 format (i.e. YYYY-MM-DD)."
-    )
     account_holder_id: Optional[str] = Field(
         min_length=1,
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
@@ -366,10 +381,10 @@ class RecurrenceGroup(BaseModel):
 
     first_payment_date: Optional[date]
     latest_payment_date: Optional[date]
-    periodicity: str
-    periodicity_in_days: int
-    average_amount: float
-    other_party: str
+    periodicity: Optional[str]
+    periodicity_in_days: Optional[int]
+    average_amount: Optional[float]
+    other_party: Optional[str]
     id: str
     transaction_ids: List[str]
 
@@ -401,7 +416,9 @@ class EnrichedTransaction(BaseModel):
         "mcc",
     ]
 
-    sdk: "SDK" = Field(description="An SDK to use with the EnrichedTransaction.")
+    sdk: "SDK" = Field(
+        description="An SDK to use with the EnrichedTransaction.", exclude=True
+    )
     labels: Optional[List[str]] = Field(description="Label for the transaction.")
     location: Optional[str] = Field(description="Location of the merchant.")
     logo: Optional[str] = Field(description="A link to the logo of the merchant.")
@@ -457,7 +474,8 @@ class EnrichedTransaction(BaseModel):
             else:
                 extra[key] = kwargs[key]
 
-        super().__init__(**fields)
+        returned_fields = list(fields.keys())
+        super().__init__(**fields, returned_fields=returned_fields)
         self.kwargs = extra
 
     def _parse_recurrence_group(self, kwargs: dict) -> Optional[RecurrenceGroup]:
@@ -525,7 +543,7 @@ class EnrichedTransaction(BaseModel):
         EnrichedTransaction
             A corresponding EnrichedTransaction object.
         """
-        return cls(sdk=sdk, returned_fields=list(val.keys()), **val)
+        return cls(sdk=sdk, **val)
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an EnrichedTransaction.
@@ -559,7 +577,6 @@ class EnrichedTransactionList(list):
         """
 
         super().__init__(transactions)
-        self.transactions = transactions
 
     def to_csv(self, filepath: str):
         """Writes the list of EnrichedTransaction objects to a CSV file.
@@ -597,6 +614,64 @@ class EnrichedTransactionList(list):
         for tx, etx in zip(parent_txs, etx_list):
             etx.parent_tx = tx
         return etx_list
+
+    def to_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        txs = []
+        for tx in self:
+            parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
+            returned_fields = tx.returned_fields
+            enriched = {
+                k: v
+                for k, v in tx.to_dict().items()
+                if k in returned_fields
+                and k not in ["kwargs", "returned_fields", "sdk"]
+            }
+            txs.append({**parent, **enriched})
+        return pd.DataFrame(txs)
+
+    def dict(self) -> List[Dict[str, Any]]:
+        return [t.dict() for t in self]
+
+    def _repr_df(self) -> Any:
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+        df = self.to_df()
+        if df.empty:
+            return df
+        df = df.fillna("N/A")
+        return df
+
+    def _repr_html_(self) -> Union[str, None]:
+        # used by ipython/jupyter to render
+        try:
+            import pandas as pd
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return df._repr_html_()
+        except ImportError:
+            # pandas not installed
+            return self.__repr__()
+
+    def __repr__(self) -> str:
+        try:
+            import pandas as pd
+
+            df = self._repr_df()
+            if df.empty:
+                return f"{self.__class__.__name__}([])"
+            return tabulate(df, headers="keys", showindex=False)
+        except ImportError:
+            # pandas not installed
+            repr = str(self.dict())
+            return f"{self.__class__.__name__}({repr})"
 
 
 class Batch(BaseModel):
@@ -1066,7 +1141,10 @@ class SDK:
         inplace : bool, optional
             Enrich the dataframe inplace.
         """
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
 
         assert isinstance(df, pd.DataFrame)
 
@@ -1589,7 +1667,9 @@ class SDK:
         response = self.retry_ratelimited_request("POST", url, payload)
         return response.json()
 
-    def get_account_income_report(self, account_holder_id: str) -> IncomeReport:
+    def get_income_report(
+        self, account_holder_id: str, fetch_transactions=True
+    ) -> IncomeReport:
         """Returns the income report of an account holder's Transaction history
 
         Parameters
@@ -1609,7 +1689,125 @@ class SDK:
         url = f"/v2/account-holder/{account_holder_id}/income"
 
         response = self.retry_ratelimited_request("POST", url, {})
-        return IncomeReport.from_dicts(response.json())
+
+        data = response.json()
+        if fetch_transactions:
+            transactions = self.get_account_holder_transactions(account_holder_id)
+            transactions_dict = {tx.transaction_id: tx for tx in transactions}
+            data = [
+                {
+                    **income_group,
+                    "transactions": EnrichedTransactionList(
+                        [
+                            transactions_dict.get(tx_id, [])
+                            for tx_id in income_group["transaction_ids"]
+                        ]
+                    ),
+                }
+                for income_group in data
+            ]
+        income_groups = sorted(
+            [IncomeGroup.from_dict(d) for d in data],
+            key=lambda x: float(x.total_amount),
+            reverse=True,
+        )
+        return IncomeReport(income_groups)
+
+    def get_recurring_payments(
+        self, account_holder_id: str, fetch_transactions=True
+    ) -> RecurringPaymentsGroups:
+        """Returns the recurring payments report of an account holder's Transaction history
+
+        Parameters
+        ----------
+        account_holder_id : str
+            The unique identifier for the account holder.
+
+        Returns
+        -------
+        RecurringPaymentsGroups:
+            A list of Subscription objects for this account holder's history
+        """
+
+        if not isinstance(account_holder_id, str):
+            raise ValueError("account_holder_id should be of type string")
+
+        url = f"/v2/account-holder/{account_holder_id}/recurring-payments"
+
+        recurring_payments_response = self.retry_ratelimited_request("POST", url, {})
+        data = recurring_payments_response.json()
+
+        if fetch_transactions:
+            transactions = self.get_account_holder_transactions(account_holder_id)
+            transactions_dict = {tx.transaction_id: tx for tx in transactions}
+            data = [
+                {
+                    **recurring_payments_group,
+                    "transactions": EnrichedTransactionList(
+                        [
+                            transactions_dict.get(tx_id, [])
+                            for tx_id in recurring_payments_group["transaction_ids"]
+                        ]
+                    ),
+                }
+                for recurring_payments_group in data
+            ]
+        recurring_payments_groups = RecurringPaymentsGroups(
+            sorted(
+                [RecurringPaymentsGroup.from_dict(d) for d in data],
+                key=lambda x: x.latest_payment_date,
+                reverse=True,
+            )
+        )
+
+        return RecurringPaymentsGroups(recurring_payments_groups)
+
+    def _get_account_holder_transactions_page(
+        self, account_holder_id: str, page=0, per_page=1000
+    ):
+        url = f"/v2/account-holder/{account_holder_id}/transactions?page={page}&per_page={per_page}"
+        try:
+            response = self.retry_ratelimited_request("GET", url, None).json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        return response
+
+    def get_account_holder_transactions(
+        self, account_holder_id: str
+    ) -> EnrichedTransactionList:
+        """Returns EnrichTransaction list for the account holder with the provided id
+
+        Parameters
+        ----------
+        account_holder_id : str
+            A unique identifier for the account holder.
+
+        Returns
+        -------
+        EnrichedTransactionList
+            The EnrichedTransactionList corresponding to the account holder id.
+        """
+        txs = []
+        page = 0
+        total_pages = 1
+        while page < total_pages:
+            response = self._get_account_holder_transactions_page(
+                account_holder_id, page
+            )
+
+            if "pages" in response and total_pages < response["pages"]:
+                total_pages = response["pages"]
+
+            txs += response["transactions"]
+            page += 1
+
+        return EnrichedTransactionList.from_list(
+            self, txs, [Transaction(**tx) for tx in txs]
+        )
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.

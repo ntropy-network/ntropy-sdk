@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 with open("README.md") as readme_file:
     readme = readme_file.read()
 
-requirements = ["requests", "tqdm", "requests_toolbelt", "pydantic"]
+requirements = ["requests", "tqdm", "requests_toolbelt", "pydantic", "tabulate"]
 
 EXTRAS_REQUIRE = {
     "models": ["pandas", "scikit-learn", "numpy"],
@@ -48,6 +48,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="4.10.3rc3",
+    version="4.10.3rc13",
     zip_safe=False,
 )

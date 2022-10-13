@@ -13,10 +13,12 @@ def income_api_response():
     return [
         {
             "total_amount": 55266.34,
+            "iso_currency_code": "USD",
             "first_payment_date": "2021-03-18",
             "income_type": "salary",
             "latest_payment_date": "2022-08-02",
             "duration": "1 year 4 months 15 day",
+            "latest_payment_description": "Tesla PAYROLL",
             "pay_frequency": "bi-weekly",
             "is_active": False,
             "next_expected_payment_date": None,
@@ -29,10 +31,12 @@ def income_api_response():
         },
         {
             "total_amount": 625.98,
+            "iso_currency_code": "USD",
             "first_payment_date": "2021-06-29",
             "income_type": "rideshare and delivery",
             "latest_payment_date": "2022-08-07",
             "duration": "1 year 1 months 8 day",
+            "latest_payment_description": "Uber transfer",
             "pay_frequency": "other",
             "is_active": False,
             "next_expected_payment_date": None,
@@ -45,15 +49,17 @@ def income_api_response():
         },
         {
             "total_amount": 1234.37,
+            "iso_currency_code": "USD",
             "first_payment_date": "2021-01-04",
             "income_type": "possible income - please verify",
             "latest_payment_date": "2022-08-01",
             "duration": "1 year 6 months 28 day",
+            "latest_payment_description": "Account transfer money",
             "is_active": False,
             "next_expected_payment_date": None,
             "next_expected_payment_amount": None,
             "pay_frequency": "monthly",
-            "source": "N/A",
+            "source": None,
             "transaction_ids": [
                 "40356870-aa3a-4866-bead-db7a163f3cf0",
                 "2d820606-e12a-425a-a565-1c777189d14e",
@@ -61,15 +67,17 @@ def income_api_response():
         },
         {
             "total_amount": 45600.00,
+            "iso_currency_code": "USD",
             "first_payment_date": "2021-08-01",
             "income_type": "long term rent",
             "latest_payment_date": "2022-08-01",
             "duration": "1 year",
+            "latest_payment_description": "Rent transfer to REMAX",
             "is_active": False,
             "next_expected_payment_date": None,
             "next_expected_payment_amount": None,
-            "pay_frequency": "monthly",
-            "source": "N/A",
+            "pay_frequency": "yearly",
+            "source": None,
             "transaction_ids": [
                 "40352870-aa3a-4866-bead-db7a163f3cf0",
                 "2d820609-e12a-425a-a565-1c777189d14e",
@@ -92,14 +100,16 @@ def test_income_check_enum():
 
 def test_income_group():
     data = dict(
-        is_active=False,
         total_amount=35.2,
+        iso_currency_code="USD",
         first_payment_date="2022-08-01",
         latest_payment_date="2022-08-05",
-        duration="4 days",
+        duration="4 months",
+        is_active=False,
+        latest_payment_description="KFC",
         pay_frequency="weekly",
-        next_expected_payment_date="none",
-        next_expected_payment_amount="none",
+        next_expected_payment_date=None,
+        next_expected_payment_amount=None,
         income_type=IncomeLabelEnum.freelance.value.label,
         source="Kentucky Fried Chicken",
         transaction_ids=["id1", "id2"],
@@ -109,7 +119,12 @@ def test_income_group():
 
 
 def test_income_report(income_api_response):
-    report = IncomeReport.from_dicts(income_api_response)
+    income_groups = sorted(
+        [IncomeGroup.from_dict(d) for d in income_api_response],
+        key=lambda x: float(x.total_amount),
+        reverse=True,
+    )
+    report = IncomeReport(income_groups)
     df = report.to_df()
     assert isinstance(df, pd.DataFrame)
     assert len(df) == len(income_api_response)
@@ -124,5 +139,7 @@ def test_income_report(income_api_response):
     assert summary.passive_income > 0
     assert summary.possible_income > 0
     assert len(summary.earned_income_sources) > 0
-    assert len(summary.passive_income_sources) > 0
-    assert len(summary.possible_income_sources) > 0
+    assert len(summary.passive_income_sources) == 0
+    assert len(summary.possible_income_sources) == 0
+    assert summary.passive_income > 0
+    assert summary.possible_income > 0
