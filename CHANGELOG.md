@@ -2,10 +2,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [4.10.1]  2020-09-26
-- Fixed support for Python 3.6
+## [4.11.0]  2020-10-13
+- Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
+- Improve repr of objects across the board, using pandas if available
 
 ## [4.10.1] - 2020-09-16
+- Fixed support for Python 3.6
 - Added RecurrenceGroup and recurrence_group for correct parsing of this information
 - Rename `IncomeReport.report()` to `IncomeReport.report_dataframe()`
 
