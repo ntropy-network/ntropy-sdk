@@ -1799,9 +1799,6 @@ class SDK:
         per_page = min(1000, limit or 1000)
 
         while page < total_pages:
-            print(page)
-            print(total_pages)
-            print(per_page)
             response = self._get_account_holder_transactions_page(
                 account_holder_id, page, per_page
             )
