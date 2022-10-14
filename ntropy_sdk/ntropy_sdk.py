@@ -1796,7 +1796,7 @@ class SDK:
         txs = []
         page = 0
         total_pages = 1
-        per_page = min(1000, limit or 1000)
+        per_page = max(min(1000, limit or 1000), 1)
 
         while page < total_pages:
             response = self._get_account_holder_transactions_page(
