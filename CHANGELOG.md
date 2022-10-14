@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [4.11.0]  2020-10-13
 - Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
 - Improve repr of objects across the board, using pandas if available
+- Added `ntropy_sdk.get_account_holder_transactions` to fetch all transactions for an account holder
 
 ## [4.10.1] - 2020-09-16
 - Fixed support for Python 3.6

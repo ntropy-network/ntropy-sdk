@@ -1777,7 +1777,7 @@ class SDK:
         return response
 
     def get_account_holder_transactions(
-        self, account_holder_id: str
+        self, account_holder_id: str, limit=0
     ) -> EnrichedTransactionList:
         """Returns EnrichTransaction list for the account holder with the provided id
 
@@ -1785,6 +1785,8 @@ class SDK:
         ----------
         account_holder_id : str
             A unique identifier for the account holder.
+        limit : int
+            Maximum number of transactions to fetch
 
         Returns
         -------
@@ -1794,20 +1796,40 @@ class SDK:
         txs = []
         page = 0
         total_pages = 1
+        per_page = max(min(1000, limit or 1000), 1)
+
         while page < total_pages:
             response = self._get_account_holder_transactions_page(
-                account_holder_id, page
+                account_holder_id, page, per_page
             )
 
             if "pages" in response and total_pages < response["pages"]:
                 total_pages = response["pages"]
 
             txs += response["transactions"]
+
+            if len(txs) >= limit:
+                break
+
             page += 1
 
-        return EnrichedTransactionList.from_list(
-            self, txs, [Transaction(**tx) for tx in txs]
-        )
+        parents = []
+        enriched = []
+        for tx in txs:
+            parent = Transaction(
+                **{
+                    k: v
+                    for k, v in tx.items()
+                    if (
+                        k in Transaction._fields and k != "mcc"
+                    )  # mcc overlaps for both, but the returned value is the predicted mcc if available
+                }
+            )
+            etx = {k: v for k, v in tx.items() if k in EnrichedTransaction._fields}
+            parents.append(parent)
+            enriched.append(etx)
+
+        return EnrichedTransactionList.from_list(self, enriched, parents)
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
