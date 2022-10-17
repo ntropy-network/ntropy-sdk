@@ -2,6 +2,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+- Add warning related to non-unique transaction ids.
+
 ## [4.11.0]  2020-10-13
 - Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
 - Improve repr of objects across the board, using pandas if available
@@ -26,7 +29,7 @@ All notable changes to this project will be documented in this file.
 - Added support for income checking API (IncomeReport, IncomeGroup)
 
 ## [4.8.3] - 2022-08-05
-- Add repeating label to reccurence
+- Add repeating label to recurrence
 
 ## [4.8.2] - 2022-08-01
 - Renamed `predicted_mcc` to `mcc` for simplicity.

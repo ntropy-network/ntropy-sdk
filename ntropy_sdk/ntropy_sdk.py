@@ -1016,6 +1016,16 @@ class SDK:
         self._retry_on_unhandled_exception = retry_on_unhandled_exception
         self._with_progress = with_progress
 
+    @staticmethod
+    def _validate_unique_ids(tx_ids: List[str]):
+        if len(tx_ids) != len(set(tx_ids)):
+            warnings.warn(
+                "Duplicate transaction ids found in the input. "
+                "It is recommended to remove duplicates "
+                "or use unique id for each transaction if they're not actually duplicates.",
+                UserWarning,
+            )
+
     def retry_ratelimited_request(
         self, method: str, url: str, payload: object, log_level=logging.DEBUG
     ):
@@ -1272,6 +1282,8 @@ class SDK:
             transactions = transactions.copy()
 
         txs = self.df_to_transaction_list(transactions, mapping, inplace)
+        self._validate_unique_ids([tx.transaction_id for tx in txs])
+
         transactions["_output_tx"] = self.add_transactions(
             txs,
             labeling=labeling,
