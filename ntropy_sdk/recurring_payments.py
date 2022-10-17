@@ -31,7 +31,7 @@ class RecurringPaymentsGroup(BaseModel):
             ),
             merchant=data.get("merchant"),
             website=data.get("website"),
-            logo=data.get("website"),
+            logo=data.get("logo"),
             labels=data.get("labels", []),
             type=data.get("type"),
             is_essential=data.get("is_essential"),
