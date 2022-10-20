@@ -794,6 +794,8 @@ class Model(BaseModel):
     sdk: "SDK" = Field(description="A SDK associated with the model.")
     model_name: str = Field(description="The name of the model.")
     created_at: Optional[str] = Field(description="The date the model was created.")
+    id: Optional[str] = Field(description="id of the model if available")
+
     account_holder_type: Optional[AccountHolderType] = Field(
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
@@ -941,6 +943,7 @@ class Model(BaseModel):
             "account_holder_type": response.get("account_holder_type"),
             "status": response.get("status"),
             "progress": response.get("progress"),
+            "id": response.get("id"),
         }
 
         if poll_interval is not None:
