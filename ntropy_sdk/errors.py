@@ -3,9 +3,6 @@ class NtropyError(Exception):
 
     DESCRIPTION = "General error"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def __str__(self):
         if len(self.args) == 1:
             details = self.args[0]
