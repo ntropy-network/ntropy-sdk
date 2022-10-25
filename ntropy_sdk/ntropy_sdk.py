@@ -19,6 +19,7 @@ from typing import (
 )
 from urllib.parse import urlencode
 from itertools import islice
+from json import JSONDecodeError
 
 import requests  # type: ignore
 from pydantic import BaseModel, Field, validator, NonNegativeFloat
@@ -1094,7 +1095,13 @@ class SDK:
                 resp.raise_for_status()
             except requests.HTTPError as e:
                 status_code = e.response.status_code
-                err = error_from_http_status_code(status_code, e.response.json())
+
+                try:
+                    content = e.response.json()
+                except JSONDecodeError:
+                    content = {}
+
+                err = error_from_http_status_code(status_code, content)
                 raise err
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self._retries} attempts")
