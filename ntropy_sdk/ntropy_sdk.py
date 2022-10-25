@@ -408,6 +408,7 @@ class EnrichedTransaction(BaseModel):
         "confidence",
         "transaction_type",
         "mcc",
+        "parent_tx",
     ]
 
     sdk: "SDK" = Field(
@@ -958,14 +959,7 @@ class SDK:
     MAX_BATCH_SIZE = 100000
     MAX_SYNC_BATCH = 4000
     DEFAULT_MAPPING = {
-        "merchant": "merchant",
-        "merchant_id": "merchant_id",
-        "website": "website",
-        "labels": "labels",
-        "logo": "logo",
-        "location": "location",
-        "person": "person",
-        # the entire enriched transaction object is at _output_tx
+        k: k for k in EnrichedTransaction._fields if k not in ["sdk", "parent_tx"]
     }
 
     def __init__(

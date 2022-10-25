@@ -14,6 +14,7 @@ from ntropy_sdk import (
     SDK,
     Transaction,
 )
+from ntropy_sdk.utils import TransactionType
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 from tests import API_KEY
 
@@ -509,3 +510,51 @@ def test_single_transaction_enrich_error(sdk):
         assert False
     except TypeError as e:
         assert str(e) == "transactions must be either a pandas.Dataframe or an iterable"
+
+
+def test_enriched_fields(sdk):
+    tx = Transaction(
+        transaction_id="test-enriched-fields",
+        amount=12046.15,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2019-12-01",
+        account_holder_type="business",
+        iso_currency_code="USD",
+        country="US",
+        mcc=5432,
+    )
+    df = pd.DataFrame(
+        data={
+            "amount": [12046.15],
+            "description": [
+                "AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15"
+            ],
+            "entry_type": ["debit"],
+            "date": ["2019-12-01"],
+            "account_holder_type": ["business"],
+            "iso_currency_code": ["USD"],
+            "transaction_id": ["test-enriched-fields"],
+            "mcc": [5432],
+        }
+    )
+
+    enriched_df = sdk.add_transactions(df).iloc[0]
+    enriched_list = sdk.add_transactions([tx])[0]
+
+    for enriched in [enriched_df, enriched_list]:
+        print(enriched)
+        assert "infrastructure" in enriched.labels
+        assert len(enriched.location) > 0
+        assert enriched.logo == "https://logos.ntropy.com/aws.amazon.com"
+        assert enriched.merchant == "Amazon Web Services"
+        assert enriched.merchant_id == str(
+            uuid.uuid3(uuid.NAMESPACE_DNS, enriched.website)
+        )
+        assert enriched.transaction_id == "test-enriched-fields"
+        assert enriched.website == "aws.amazon.com"
+        assert "Operating expenses" in enriched.chart_of_accounts
+        # assert enriched.recurrence == "one off"
+        assert 0 <= enriched.confidence <= 1
+        assert any(enriched.transaction_type == t.value for t in TransactionType)
+        assert 5432 in enriched.mcc
