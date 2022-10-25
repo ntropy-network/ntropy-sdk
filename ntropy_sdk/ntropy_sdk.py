@@ -388,6 +388,17 @@ class RecurrenceGroup(BaseModel):
         extra = "allow"
 
 
+class IntermediaryInfo(BaseModel):
+    """Information regarding intermediary merchant"""
+
+    logo: Optional[str] = Field(description="A link to the logo of the merchant.")
+    merchant: Optional[str] = Field(description="The name of the transaction merchant.")
+    merchant_id: Optional[str] = Field(
+        description="A unique identifier for the merchant."
+    )
+    website: Optional[str] = Field(description="Website of the merchant.")
+
+
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
@@ -409,6 +420,7 @@ class EnrichedTransaction(BaseModel):
         "transaction_type",
         "mcc",
         "parent_tx",
+        "intermediary_info",
     ]
 
     sdk: "SDK" = Field(
@@ -441,6 +453,9 @@ class EnrichedTransaction(BaseModel):
     )
     mcc: Optional[List[int]] = Field(
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
+    )
+    intermediary_info: Optional[IntermediaryInfo] = Field(
+        description="An object containing the information of the intermediary processor for this transaction, if available"
     )
     parent_tx: Optional[Transaction] = Field(
         description="The original Transaction of the EnrichedTransaction."
