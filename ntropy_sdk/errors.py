@@ -89,5 +89,5 @@ ERROR_MAP = {
 
 
 def error_from_http_status_code(status_code: int, content: dict):
-    ErrorClass = ERROR_MAP.get(status_code, NtropyError)
+    ErrorClass = ERROR_MAP.get(status_code, NtropyHTTPError)
     return ErrorClass(content)
