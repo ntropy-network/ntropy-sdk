@@ -40,7 +40,7 @@ class NtropyHTTPError(NtropyError):
 
 
 class NtropyValidationError(NtropyHTTPError):
-    DESCRIPTION = "Failed to authorize the client using the provided API key"
+    DESCRIPTION = "One or more of the provided inputs is not a valid input"
 
 
 class NtropyNotAuthorizedError(NtropyHTTPError):
