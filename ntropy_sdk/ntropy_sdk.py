@@ -41,6 +41,13 @@ from ntropy_sdk.utils import (
     singledispatchmethod,
     validate_date,
 )
+from ntropy_sdk.errors import (
+    error_from_http_status_code,
+    NtropyTimeoutError,
+    NtropyModelTrainingError,
+    NtropyBatchError,
+    NtropyError,
+)
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
@@ -60,20 +67,6 @@ def chunks(it: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
         if len(chunk) == 0:
             return
         yield chunk
-
-
-class NtropyError(Exception):
-    """An expected error returned from the server-side"""
-
-    pass
-
-
-class NtropyBatchError(Exception):
-    """One or more errors in one or more transactions of a submitted transaction batch"""
-
-    def __init__(self, message, errors=None):
-        super().__init__(message)
-        self.errors = errors
 
 
 class Transaction(BaseModel):
@@ -762,7 +755,7 @@ class Batch(BaseModel):
                 time.sleep(poll_interval)
                 continue
             return resp
-        raise NtropyError("Batch wait timeout")
+        raise NtropyTimeoutError("Transaction batch wait timeout")
 
     def _wait_with_progress(self, poll_interval=None):
         """Retrieve the current batch enrichment with progress updates."""
@@ -781,7 +774,7 @@ class Batch(BaseModel):
                 diff_n = self.num_transactions - progress.n
                 progress.update(diff_n)
                 return resp
-            raise NtropyError("Batch wait timeout")
+            raise NtropyTimeoutError("Transaction batch wait timeout")
 
     class Config:
         arbitrary_types_allowed = True
@@ -887,12 +880,12 @@ class Model(BaseModel):
         while self.timeout - time.time() > 0:
             resp, status, _ = self.poll()
             if status == "error":
-                raise NtropyError("Unexpected model training error")
+                raise NtropyModelTrainingError("Unexpected model training error")
             if status != "ready":
                 time.sleep(poll_interval)
                 continue
             return resp
-        raise NtropyError("Model training wait timeout")
+        raise NtropyTimeoutError("Model training wait timeout")
 
     def _wait_with_progress(self, poll_interval=None):
         if not poll_interval:
@@ -901,7 +894,7 @@ class Model(BaseModel):
             while self.timeout - time.time() > 0:
                 resp, status, pr = self.poll()
                 if status == "error":
-                    raise NtropyError("Unexpected model training error")
+                    raise NtropyModelTrainingError("Unexpected model training error")
                 if status != "ready":
                     diff_n = pr - progress.n
                     progress.update(diff_n)
@@ -910,7 +903,7 @@ class Model(BaseModel):
                 progress.desc = status
                 progress.update(100)
                 return resp
-            raise NtropyError("Model training wait timeout")
+            raise NtropyTimeoutError("Model training wait timeout")
 
     @staticmethod
     def from_response(
@@ -999,7 +992,7 @@ class SDK:
 
         if not token:
             if ENV_NTROPY_API_TOKEN not in os.environ:
-                raise NtropyError(
+                raise ValueError(
                     f"API Token must be passed as an argument or set in the env. variable {ENV_NTROPY_API_TOKEN}"
                 )
             token = os.environ[ENV_NTROPY_API_TOKEN]
@@ -1096,12 +1089,13 @@ class SDK:
                 )
 
                 continue
+
             try:
                 resp.raise_for_status()
             except requests.HTTPError as e:
-                if e.response.headers.get("content-type") == "application/json":
-                    raise NtropyError(e.response.json()) from e
-                raise
+                status_code = e.response.status_code
+                err = error_from_http_status_code(status_code, e.response.json())
+                raise err
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self._retries} attempts")
 
