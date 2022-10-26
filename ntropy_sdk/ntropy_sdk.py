@@ -1192,7 +1192,6 @@ class SDK:
         labeling: bool = True,
         create_account_holders: bool = True,
         model_name: str = None,
-        model: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1216,8 +1215,6 @@ class SDK:
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
-        model: str, optional
-            Deprecated. Use model_name instead.
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
             expected column names. Note: this only applies to DataFrame enrichment.
@@ -1238,7 +1235,6 @@ class SDK:
                 labeling,
                 create_account_holders,
                 model_name,
-                model,
                 mapping,
                 inplace,
             )
@@ -1252,7 +1248,6 @@ class SDK:
                 labeling,
                 create_account_holders,
                 model_name,
-                model,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1266,7 +1261,6 @@ class SDK:
         labeling: bool = True,
         create_account_holders: bool = True,
         model_name: str = None,
-        model: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1313,18 +1307,9 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model_name=None,
-        model=None,
     ):
         if None in transactions:
             raise ValueError("transactions contains a None value")
-
-        if model is not None:
-            if model_name is not None:
-                msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
-            else:
-                msg = f"Argument model is deprecated and should be replaced with model_name"
-                model_name = model
-            warnings.warn(msg, category=DeprecationWarning)
 
         if len(transactions) > self.MAX_BATCH_SIZE:
             chunks = [
@@ -1358,7 +1343,6 @@ class SDK:
         labeling=True,
         create_account_holders=True,
         model_name=None,
-        model=None,
     ):
         result = []
         for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
@@ -1370,7 +1354,6 @@ class SDK:
                 labeling,
                 create_account_holders,
                 model_name,
-                model,
             )
         return result
 
