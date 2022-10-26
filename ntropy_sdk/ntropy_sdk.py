@@ -391,11 +391,9 @@ class RecurrenceGroup(BaseModel):
 class Entity(BaseModel):
     """Information regarding intermediary merchant"""
 
-    logo: Optional[str] = Field(description="A link to the logo of the merchant.")
-    merchant: Optional[str] = Field(description="The name of the transaction merchant.")
-    merchant_id: Optional[str] = Field(
-        description="A unique identifier for the merchant."
-    )
+    id: Optional[str] = Field(description="A unique identifier for the entity.")
+    logo: Optional[str] = Field(description="A link to the logo of the entity.")
+    name: Optional[str] = Field(description="The name of the transaction entity.")
     website: Optional[str] = Field(description="Website of the merchant.")
 
 
