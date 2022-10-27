@@ -418,7 +418,7 @@ class EnrichedTransaction(BaseModel):
         "transaction_type",
         "mcc",
         "parent_tx",
-        "intermediary",
+        "intermediaries",
     ]
 
     sdk: "SDK" = Field(
@@ -452,8 +452,8 @@ class EnrichedTransaction(BaseModel):
     mcc: Optional[List[int]] = Field(
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
     )
-    intermediary: Optional[Entity] = Field(
-        description="An object containing the information of the intermediary processor for this transaction, if available"
+    intermediaries: Optional[List[Entity]] = Field(
+        description="An object containing a list of the intermediary entities, if available"
     )
     parent_tx: Optional[Transaction] = Field(
         description="The original Transaction of the EnrichedTransaction."
