@@ -907,6 +907,19 @@ class Model(BaseModel):
                 return resp
             raise NtropyTimeoutError("Model training wait timeout")
 
+    def eval(self, test_txs: Any):
+        try:
+            import pandas as pd
+
+            if isinstance(test_txs, pd.DataFrame):
+                test_txs = list(test_txs.apply(LabeledTransaction.from_row))
+        except:
+            pass
+
+        pred_txs = [Transaction.from_dict(tx.to_dict()) for tx in test_txs]
+        result = self.sdk.add_transactions(pred_txs, model_name=self.model_name)
+        return ModelEvaluation(self, test_txs, result)
+
     @staticmethod
     def from_response(
         sdk: "SDK", response, poll_interval=None, timeout=None
@@ -949,6 +962,21 @@ class Model(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         use_enum_values = True
+
+
+class ModelEvaluation:
+    def __init__(self, model, labeled_txs, result_txs):
+        self.model = model
+        self.labeled_txs = labeled_txs
+        self.result_txs = result_txs
+
+    def accuracy(self):
+        tp = 0
+        for labeled, predicted in zip(self.labeled_txs, self.result_txs):
+            if labeled.label in predicted.labels:
+                tp += 1
+
+        return tp / len(self.labeled_txs)
 
 
 class SDK:
