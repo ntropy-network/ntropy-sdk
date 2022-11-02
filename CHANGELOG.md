@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 - Add warning related to non-unique transaction ids.
+- Remove labeling and create_account_holder params
 
 ## [4.11.0]  2020-10-13
 - Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
