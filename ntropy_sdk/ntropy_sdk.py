@@ -1189,8 +1189,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
         model: str = None,
         mapping: dict = None,
@@ -1211,8 +1209,6 @@ class SDK:
         with_progress : bool, optional
             True if progress bar should be displayed; False otherwise. By default,
             progress is displayed only in interactive mode.
-        labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
@@ -1235,8 +1231,6 @@ class SDK:
                 timeout,
                 poll_interval,
                 with_progress,
-                labeling,
-                create_account_holders,
                 model_name,
                 model,
                 mapping,
@@ -1249,8 +1243,6 @@ class SDK:
                 timeout,
                 poll_interval,
                 with_progress,
-                labeling,
-                create_account_holders,
                 model_name,
                 model,
             )
@@ -1263,8 +1255,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
         model: str = None,
         mapping: dict = None,
@@ -1281,8 +1271,6 @@ class SDK:
 
         transactions["_output_tx"] = self.add_transactions(
             txs,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
             timeout=timeout,
             poll_interval=poll_interval,
             with_progress=with_progress,
@@ -1310,8 +1298,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
         model=None,
     ):
@@ -1344,8 +1330,6 @@ class SDK:
             timeout,
             poll_interval,
             with_progress,
-            labeling,
-            create_account_holders,
             model_name,
         )
 
@@ -1355,8 +1339,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
         model=None,
     ):
@@ -1367,21 +1349,14 @@ class SDK:
                 timeout,
                 poll_interval,
                 with_progress,
-                labeling,
-                create_account_holders,
                 model_name,
                 model,
             )
         return result
 
     @staticmethod
-    def _build_params_str(
-        labeling: bool, create_account_holders: bool, model_name: str = None
-    ) -> str:
-        params = {
-            "labeling": labeling,
-            "create_account_holders": create_account_holders,
-        }
+    def _build_params_str(model_name: str = None) -> str:
+        params = {}
         if model_name is not None:
             params["model_name"] = model_name
 
@@ -1394,8 +1369,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
     ) -> EnrichedTransactionList:
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
@@ -1404,16 +1377,12 @@ class SDK:
                 transactions,
                 timeout,
                 poll_interval,
-                labeling,
-                create_account_holders,
                 model_name,
             )
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
-        params_str = self._build_params_str(
-            labeling, create_account_holders, model_name=model_name
-        )
+        params_str = self._build_params_str(model_name=model_name)
 
         try:
             data = [transaction.to_dict() for transaction in transactions]
@@ -1441,8 +1410,6 @@ class SDK:
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1459,8 +1426,6 @@ class SDK:
             Timeout for enriching the transactions.
         poll_interval : int, optional
             The interval between consecutive polling retries.
-        labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
@@ -1485,8 +1450,6 @@ class SDK:
                 transactions,
                 timeout,
                 poll_interval,
-                labeling,
-                create_account_holders,
                 model_name,
                 mapping,
                 inplace,
@@ -1497,8 +1460,6 @@ class SDK:
                 transactions,
                 timeout,
                 poll_interval,
-                labeling,
-                create_account_holders,
                 model_name,
             )
 
@@ -1509,8 +1470,6 @@ class SDK:
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1522,8 +1481,6 @@ class SDK:
         return self.add_transactions_async(
             txs,
             timeout=timeout,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             model_name=model_name,
         )
@@ -1534,8 +1491,6 @@ class SDK:
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ):
         if None in transactions:
@@ -1548,8 +1503,6 @@ class SDK:
             transactions,
             timeout,
             poll_interval,
-            labeling,
-            create_account_holders,
             model_name,
         )
 
@@ -1558,16 +1511,12 @@ class SDK:
         transactions: Iterable[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ):
         return self._add_transactions_async_list(
             list(transactions),
             timeout,
             poll_interval,
-            labeling,
-            create_account_holders,
             model_name,
         )
 
@@ -1576,13 +1525,9 @@ class SDK:
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ) -> Batch:
-        params_str = self._build_params_str(
-            labeling, create_account_holders, model_name=model_name
-        )
+        params_str = self._build_params_str(model_name=model_name)
 
         try:
 
