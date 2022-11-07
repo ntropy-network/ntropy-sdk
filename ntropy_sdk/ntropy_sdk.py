@@ -1236,6 +1236,8 @@ class SDK:
             )
 
         if model != _sentinel:
+            model_name = model
+
             raise DeprecationWarning(
                 "The model_name argument is deprecated and will be removed on the next major version. Please use the model"
             )
@@ -1243,27 +1245,21 @@ class SDK:
         if self._is_dataframe(transactions):
             return self._add_transactions_df(
                 transactions,
-                timeout,
-                poll_interval,
-                with_progress,
-                labeling,
-                create_account_holders,
-                model_name,
-                model,
-                mapping,
-                inplace,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                with_progress=with_progress,
+                model_name=model_name,
+                mapping=mapping,
+                inplace=inplace,
             )
 
         elif isinstance(transactions, Iterable):
             return self._add_transactions_iterable(
                 transactions,
-                timeout,
-                poll_interval,
-                with_progress,
-                labeling,
-                create_account_holders,
-                model_name,
-                model,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                with_progress=with_progress,
+                model_name=model_name,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1316,7 +1312,6 @@ class SDK:
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
         model_name=None,
-        model=None,
     ):
         result = []
         for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
@@ -1326,7 +1321,6 @@ class SDK:
                 poll_interval,
                 with_progress,
                 model_name,
-                model,
             )
         return result
 
@@ -1337,18 +1331,9 @@ class SDK:
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
         model_name=None,
-        model=None,
     ):
         if None in transactions:
             raise ValueError("transactions contains a None value")
-
-        if model is not None:
-            if model_name is not None:
-                msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
-            else:
-                msg = f"Argument model is deprecated and should be replaced with model_name"
-                model_name = model
-            warnings.warn(msg, category=DeprecationWarning)
 
         if len(transactions) > self.MAX_BATCH_SIZE:
             raise RuntimeError(
@@ -1364,13 +1349,8 @@ class SDK:
         )
 
     @staticmethod
-    def _build_params_str(
-        labeling: bool, create_account_holders: bool, model_name: str = None
-    ) -> str:
-        params = {
-            "labeling": labeling,
-            "create_account_holders": create_account_holders,
-        }
+    def _build_params_str(model_name: str = None) -> str:
+        params = {}
         if model_name is not None:
             params["model_name"] = model_name
 
@@ -1383,8 +1363,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
     ) -> EnrichedTransactionList:
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
@@ -1393,16 +1371,12 @@ class SDK:
                 transactions,
                 timeout,
                 poll_interval,
-                labeling,
-                create_account_holders,
                 model_name,
             )
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
-        params_str = self._build_params_str(
-            labeling, create_account_holders, model_name=model_name
-        )
+        params_str = self._build_params_str(model_name=model_name)
 
         try:
             data = [transaction.to_dict() for transaction in transactions]
@@ -1431,6 +1405,7 @@ class SDK:
         poll_interval: int = 10,
         labeling: bool = True,
         create_account_holders: bool = True,
+        model: str = None,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1466,12 +1441,19 @@ class SDK:
 
         if labeling != _sentinel:
             raise DeprecationWarning(
-                "The labeling argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+                "The labeling argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
             )
 
         if create_account_holders != _sentinel:
             raise DeprecationWarning(
-                "The create_account_holders argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+                "The create_account_holders argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
+            )
+
+        if model != _sentinel:
+            model_name = model
+
+            raise DeprecationWarning(
+                "The model argument is deprecated and will be removed in the next major version. Please use the model_name attribute instead."
             )
 
         if self._is_dataframe(transactions):
@@ -1480,23 +1462,19 @@ class SDK:
 
             return self._add_transactions_async_df(
                 transactions,
-                timeout,
-                poll_interval,
-                labeling,
-                create_account_holders,
-                model_name,
-                mapping,
-                inplace,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                model_nanme=model_name,
+                mapping=mapping,
+                inplace=inplace,
             )
 
         if isinstance(transactions, Iterable):
             return self._add_transactions_async_iterable(
                 transactions,
-                timeout,
-                poll_interval,
-                labeling,
-                create_account_holders,
-                model_name,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                model_name=model_name,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1506,8 +1484,6 @@ class SDK:
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1519,8 +1495,6 @@ class SDK:
         return self.add_transactions_async(
             txs,
             timeout=timeout,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             model_name=model_name,
         )
@@ -1530,8 +1504,6 @@ class SDK:
         transactions: Iterable[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ):
         if None in transactions:
@@ -1542,11 +1514,9 @@ class SDK:
 
         return self._add_transactions_async(
             transactions,
-            timeout,
-            poll_interval,
-            labeling,
-            create_account_holders,
-            model_name,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            model_name=model_name,
         )
 
     def _add_transactions_async(
@@ -1554,13 +1524,9 @@ class SDK:
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ) -> Batch:
-        params_str = self._build_params_str(
-            labeling, create_account_holders, model_name=model_name
-        )
+        params_str = self._build_params_str(model_name=model_name)
 
         try:
 
@@ -1661,6 +1627,9 @@ class SDK:
         ----------
         account_holder_id : str
             The unique identifier for the account holder.
+        fetch_transactions : bool
+            If true, fetches all transactions from account_holde to match with returned transaction_ids,
+            and ensures the transactions field of the IncomeReport is populated
 
         Returns
         -------
