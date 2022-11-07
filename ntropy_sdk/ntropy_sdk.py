@@ -373,8 +373,8 @@ class AccountHolder(BaseModel):
 class RecurrenceGroup(BaseModel):
     """Information regarding the recurrence group of one transaction"""
 
-    first_payment_date: Optional[date]
-    latest_payment_date: Optional[date]
+    first_payment_date: Optional[str]
+    latest_payment_date: Optional[str]
     periodicity: Optional[str]
     periodicity_in_days: Optional[int]
     average_amount: Optional[float]
