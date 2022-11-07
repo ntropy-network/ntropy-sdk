@@ -58,6 +58,7 @@ COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
+_sentinel = object()
 T = TypeVar("T")
 
 
@@ -402,7 +403,6 @@ class EnrichedTransaction(BaseModel):
         "person",
         "transaction_id",
         "website",
-        "chart_of_accounts",
         "recurrence",
         "recurrence_group",
         "confidence",
@@ -424,9 +424,6 @@ class EnrichedTransaction(BaseModel):
     person: Optional[str] = Field(description="Name of the person in the transaction.")
     transaction_id: Optional[str] = Field(description="Unique transaction identifier.")
     website: Optional[str] = Field(description="Website of the merchant.")
-    chart_of_accounts: Optional[List[str]] = Field(
-        description="Label from the standard chart-of-accounts hierarchy."
-    )
     recurrence: Optional[RecurrenceType] = Field(
         description="Indicates if the Transaction is recurring and the type of recurrence"
     )
@@ -1182,17 +1179,16 @@ class SDK:
         txs = df.apply(tx_class.from_row, axis=1).to_list()
         return txs
 
-    @singledispatchmethod
     def add_transactions(
         self,
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
+        labeling: bool = _sentinel,
+        create_account_holders: bool = _sentinel,
         model_name: str = None,
-        model: str = None,
+        model: str = _sentinel,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1229,6 +1225,21 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
+        if labeling != _sentinel:
+            raise DeprecationWarning(
+                "The labeling argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+            )
+
+        if create_account_holders != _sentinel:
+            raise DeprecationWarning(
+                "The create_account_holders argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+            )
+
+        if model != _sentinel:
+            raise DeprecationWarning(
+                "The model_name argument is deprecated and will be removed on the next major version. Please use the model"
+            )
+
         if self._is_dataframe(transactions):
             return self._add_transactions_df(
                 transactions,
@@ -1243,7 +1254,7 @@ class SDK:
                 inplace,
             )
 
-        if isinstance(transactions, Iterable):
+        elif isinstance(transactions, Iterable):
             return self._add_transactions_iterable(
                 transactions,
                 timeout,
@@ -1263,10 +1274,7 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
-        model: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1281,8 +1289,6 @@ class SDK:
 
         transactions["_output_tx"] = self.add_transactions(
             txs,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
             timeout=timeout,
             poll_interval=poll_interval,
             with_progress=with_progress,
@@ -1303,15 +1309,33 @@ class SDK:
         transactions = transactions.drop(["_output_tx"], axis=1)
         return transactions
 
-    @add_transactions.register(list)
-    def _add_transactions_list(
+    def _add_transactions_iterable(
+        self,
+        transactions: Iterable[Transaction],
+        timeout: int = 4 * 60 * 60,
+        poll_interval=10,
+        with_progress=DEFAULT_WITH_PROGRESS,
+        model_name=None,
+        model=None,
+    ):
+        result = []
+        for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
+            result += self._add_transactions_chunk(
+                chunk,
+                timeout,
+                poll_interval,
+                with_progress,
+                model_name,
+                model,
+            )
+        return result
+
+    def _add_transactions_chunk(
         self,
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
         model=None,
     ):
@@ -1327,52 +1351,17 @@ class SDK:
             warnings.warn(msg, category=DeprecationWarning)
 
         if len(transactions) > self.MAX_BATCH_SIZE:
-            chunks = [
-                transactions[i : (i + self.MAX_BATCH_SIZE)]
-                for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
-            ]
-
-            arr = []
-            for chunk in chunks:
-                arr += self._add_transactions(chunk)
-                time.sleep(self.MAX_BATCH_SIZE / 1000)
-
-            return arr
+            raise RuntimeError(
+                f"_add_transactions_chunk must be called with a list of transactions of length <= {self.MAX_BATCH_SIZE}"
+            )
 
         return self._add_transactions(
             transactions,
             timeout,
             poll_interval,
             with_progress,
-            labeling,
-            create_account_holders,
             model_name,
         )
-
-    def _add_transactions_iterable(
-        self,
-        transactions: Iterable[Transaction],
-        timeout: int = 4 * 60 * 60,
-        poll_interval=10,
-        with_progress=DEFAULT_WITH_PROGRESS,
-        labeling=True,
-        create_account_holders=True,
-        model_name=None,
-        model=None,
-    ):
-        result = []
-        for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
-            result += self._add_transactions_list(
-                chunk,
-                timeout,
-                poll_interval,
-                with_progress,
-                labeling,
-                create_account_holders,
-                model_name,
-                model,
-            )
-        return result
 
     @staticmethod
     def _build_params_str(
@@ -1435,7 +1424,6 @@ class SDK:
                 "transactions must be either a pandas.Dataframe or an iterable"
             )
 
-    @singledispatchmethod
     def add_transactions_async(
         self,
         transactions,
@@ -1476,8 +1464,17 @@ class SDK:
             A Batch object that can be polled and awaited.
         """
 
-        if self._is_dataframe(transactions):
+        if labeling != _sentinel:
+            raise DeprecationWarning(
+                "The labeling argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+            )
 
+        if create_account_holders != _sentinel:
+            raise DeprecationWarning(
+                "The create_account_holders argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+            )
+
+        if self._is_dataframe(transactions):
             if len(transactions) > self.MAX_BATCH_SIZE:
                 raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
 
@@ -1528,10 +1525,9 @@ class SDK:
             model_name=model_name,
         )
 
-    @add_transactions_async.register(list)
-    def _add_transactions_async_list(
+    def _add_transactions_async_iterable(
         self,
-        transactions: List[Transaction],
+        transactions: Iterable[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         labeling=True,
@@ -1546,24 +1542,6 @@ class SDK:
 
         return self._add_transactions_async(
             transactions,
-            timeout,
-            poll_interval,
-            labeling,
-            create_account_holders,
-            model_name,
-        )
-
-    def _add_transactions_async_iterable(
-        self,
-        transactions: Iterable[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
-        model_name=None,
-    ):
-        return self._add_transactions_async_list(
-            list(transactions),
             timeout,
             poll_interval,
             labeling,
@@ -1854,19 +1832,6 @@ class SDK:
 
         assert account_holder_type in ACCOUNT_HOLDER_TYPES
         url = f"/v2/labels/hierarchy/{account_holder_type}"
-        resp = self.retry_ratelimited_request("GET", url, None)
-        return resp.json()
-
-    def get_chart_of_accounts(self) -> dict:
-        """Returns all available chart of accounts.
-
-        Returns
-        -------
-        dict
-            A hierarchy of possible chart of accounts.
-        """
-
-        url = "/v2/chart-of-accounts"
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
