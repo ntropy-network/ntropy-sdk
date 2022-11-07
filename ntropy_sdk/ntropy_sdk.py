@@ -1226,19 +1226,19 @@ class SDK:
         """
         if labeling != _sentinel:
             raise DeprecationWarning(
-                "The labeling argument does not impact the result of enrichment. This argument is deprecated and will be removed on the next major version."
+                "The labeling argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
             )
 
         if create_account_holders != _sentinel:
             raise DeprecationWarning(
-                "The create_account_holders argument does not impact the result of enrichment. This argument is deprecated and will be removed on the next major version."
+                "The create_account_holders argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
             )
 
         if model != _sentinel:
             model_name = model
 
             raise DeprecationWarning(
-                "The model_name argument is deprecated and will be removed on the next major version. Please use the model_name argument."
+                "The model argument is deprecated and will be removed in the next major version. Please use the model_name argument."
             )
 
         if self._is_dataframe(transactions):
@@ -1402,9 +1402,9 @@ class SDK:
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        labeling: bool = True,
-        create_account_holders: bool = True,
-        model: str = None,
+        labeling: bool = _sentinel,
+        create_account_holders: bool = _sentinel,
+        model: str = _sentinel,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1455,7 +1455,7 @@ class SDK:
             model_name = model
 
             raise DeprecationWarning(
-                "The model argument is deprecated and will be removed in the next major version. Please use the model_name attribute instead."
+                "The model argument is deprecated and will be removed in the next major version. Please use the model_name argument."
             )
 
         if self._is_dataframe(transactions):
