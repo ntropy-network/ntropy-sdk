@@ -39,7 +39,6 @@ from ntropy_sdk.utils import (
     RecurrenceType,
     TransactionType,
     dict_to_str,
-    singledispatchmethod,
     validate_date,
 )
 from ntropy_sdk.errors import (
@@ -1892,9 +1891,6 @@ class SDK:
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
-
-    class Config:
-        keep_untouched = (singledispatchmethod,)
 
 
 Batch.update_forward_refs()
