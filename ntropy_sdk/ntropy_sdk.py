@@ -1227,19 +1227,19 @@ class SDK:
         """
         if labeling != _sentinel:
             raise DeprecationWarning(
-                "The labeling argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+                "The labeling argument does not impact the result of enrichment. This argument is deprecated and will be removed on the next major version."
             )
 
         if create_account_holders != _sentinel:
             raise DeprecationWarning(
-                "The create_account_holders argument does not impact the result of enrichment anymore. The argument is deprecated and will be removed on the next major version."
+                "The create_account_holders argument does not impact the result of enrichment. This argument is deprecated and will be removed on the next major version."
             )
 
         if model != _sentinel:
             model_name = model
 
             raise DeprecationWarning(
-                "The model_name argument is deprecated and will be removed on the next major version. Please use the model"
+                "The model_name argument is deprecated and will be removed on the next major version. Please use the model_name argument."
             )
 
         if self._is_dataframe(transactions):
@@ -1423,7 +1423,10 @@ class SDK:
         poll_interval : int, optional
             The interval between consecutive polling retries.
         labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
+            True if the enriched transactions should be labeled; False otherwise. Deprecated.
+        model: str, optional
+            Name of the custom model to use for labeling the transaction. If
+            provided, replaces the default labeler. Depreacted  in favour of model_name
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
@@ -1804,7 +1807,6 @@ class SDK:
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
-    @singledispatchmethod
     def train_custom_model(
         self,
         transactions,
@@ -1829,33 +1831,18 @@ class SDK:
         Model
             Model instance referencing the in-training model
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            # If here, the input data is not a dataframe, or import would succeed
-            raise ValueError(
-                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for its `df` parameter, you supplied a '{type(transactions)}'"
+        if self._is_dataframe(transactions):
+            transactions = self.df_to_transaction_list(
+                transactions,
+                mapping=None,
+                inplace=True,
+                tx_class=LabeledTransaction,
+            )
+        elif not isinstance(transactions, Iterable):
+            raise TypeError(
+                "transactions must be either a pandas.Dataframe or an iterable"
             )
 
-        transactions = self.df_to_transaction_list(
-            transactions,
-            mapping=None,
-            inplace=True,
-            tx_class=LabeledTransaction,
-        )
-
-        return self._train_custom_model(
-            transactions, model_name, poll_interval=poll_interval, timeout=timeout
-        )
-
-    @train_custom_model.register(list)
-    def train_custom_model_list(
-        self,
-        transactions,
-        model_name: str,
-        poll_interval: Optional[int] = None,
-        timeout: Optional[int] = None,
-    ) -> Model:
         return self._train_custom_model(
             transactions, model_name, poll_interval=poll_interval, timeout=timeout
         )
