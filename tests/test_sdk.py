@@ -321,11 +321,6 @@ def test_hierarchy(sdk):
         assert isinstance(h, dict)
 
 
-def test_chart_of_accounts(sdk):
-    coa = sdk.get_chart_of_accounts()
-    assert isinstance(coa, dict)
-
-
 def test_transaction_zero_amount():
     vals = {
         "description": "foo",
@@ -553,7 +548,6 @@ def test_enriched_fields(sdk):
         )
         assert enriched.transaction_id == "test-enriched-fields"
         assert enriched.website == "aws.amazon.com"
-        assert "Operating expenses" in enriched.chart_of_accounts
         # assert enriched.recurrence == "one off"
         assert 0 <= enriched.confidence <= 1
         assert any(enriched.transaction_type == t.value for t in TransactionType)
