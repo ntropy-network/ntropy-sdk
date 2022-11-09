@@ -284,7 +284,7 @@ def test_enrich_huge_batch(sdk):
     txs = [tx] * 10
     sdk.MAX_BATCH_SIZE = 4
 
-    enriched_txs = sdk.add_transactions(txs, labeling=False)
+    enriched_txs = sdk.add_transactions(txs)
 
     assert len(enriched_txs) == len(txs)
 
