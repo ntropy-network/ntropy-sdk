@@ -34,8 +34,11 @@ class NtropyHTTPError(NtropyError):
         self.content = content
 
     def __str__(self):
-        if self.content is not None and "details" in self.content:
-            return f"{self.DESCRIPTION}: {self.content['details']}"
+        if self.content is not None:
+            if "details" in self.content:
+                return f"{self.DESCRIPTION}: {self.content['details']}"
+            elif "detail" in self.content:
+                return f"{self.DESCRIPTION}: {self.content['detail']}"
         return self.DESCRIPTION
 
 
