@@ -52,6 +52,9 @@ from ntropy_sdk.errors import (
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
 DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
+DEFAULT_REGION = "us"
+ALL_REGIONS = {"eu": "https://api.eu.ntropy.com", "us": "https://api.ntropy.com"}
+
 ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
 COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
@@ -982,6 +985,7 @@ class SDK:
         retries: int = DEFAULT_RETRIES,
         retry_on_unhandled_exception: bool = False,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
+        region: str = DEFAULT_REGION,
     ):
         """Parameters
         ----------
@@ -996,6 +1000,8 @@ class SDK:
             Whether to retry or not, when a request returns an unhandled exception (50x status codes)
         with_progress : bool, optional
             True if enrichment should include a progress bar; False otherwise.
+        region : str, optional
+            The region to which the SDK should connect to. Available options are "us" and "eu".
         """
 
         if not token:
@@ -1005,7 +1011,11 @@ class SDK:
                 )
             token = os.environ[ENV_NTROPY_API_TOKEN]
 
-        self.base_url = "https://api.ntropy.com"
+        if region not in ALL_REGIONS:
+            raise ValueError(f"Requested region {region} is not available")
+
+        self.base_url = ALL_REGIONS[region]
+
         self.token = token
         self.session = requests.Session()
         self.keep_alive = TCPKeepAliveAdapter()
