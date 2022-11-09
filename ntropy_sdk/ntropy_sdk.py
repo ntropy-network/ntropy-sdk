@@ -1520,6 +1520,8 @@ class SDK:
         poll_interval=10,
         model_name=None,
     ):
+        transactions = list(transactions)
+
         if None in transactions:
             raise ValueError("transactions contains a None value")
 
