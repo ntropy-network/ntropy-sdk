@@ -417,6 +417,7 @@ class EnrichedTransaction(BaseModel):
         "confidence",
         "transaction_type",
         "mcc",
+        "created_at",
         "parent_tx",
         "intermediaries",
     ]
@@ -460,6 +461,9 @@ class EnrichedTransaction(BaseModel):
     )
     returned_fields: List[str] = Field(
         description="The list of returned properties by the API"
+    )
+    created_at: Optional[str] = Field(
+        description="Timestamp of the moment that the transaction was enriched"
     )
 
     @validator("confidence")
