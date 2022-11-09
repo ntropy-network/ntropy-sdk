@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 - Add warning related to non-unique transaction ids.
+- Remove `chart_of_accounts` property from transactions
+- Added deprecation warnings to soon-to-be deprecated arguments (`labeling`, `create_account_holders` and `model`)
+- Removed use of `singledispatchmethod` in favour of simpler input type handling
 
 ## [4.11.0]  2020-10-13
 - Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
