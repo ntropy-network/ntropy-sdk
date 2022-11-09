@@ -389,7 +389,7 @@ class RecurrenceGroup(BaseModel):
 
 
 class Entity(BaseModel):
-    """Information regarding intermediary merchant"""
+    """Information regarding an entity such as a merchant or intermediary"""
 
     id: Optional[str] = Field(description="A unique identifier for the entity.")
     logo: Optional[str] = Field(description="A link to the logo of the entity.")
