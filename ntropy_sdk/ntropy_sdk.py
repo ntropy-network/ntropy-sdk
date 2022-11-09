@@ -1466,7 +1466,7 @@ class SDK:
                 transactions,
                 timeout=timeout,
                 poll_interval=poll_interval,
-                model_nanme=model_name,
+                model_name=model_name,
                 mapping=mapping,
                 inplace=inplace,
             )
