@@ -1225,20 +1225,26 @@ class SDK:
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
         if labeling != _sentinel:
-            raise DeprecationWarning(
-                "The labeling argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
+            warnings.warn(
+                "The labeling argument does not impact the result of enrichment. "
+                " This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
             )
 
         if create_account_holders != _sentinel:
-            raise DeprecationWarning(
-                "The create_account_holders argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
+            warnings.warn(
+                "The create_account_holders argument does not impact the result of enrichment. "
+                "This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
             )
 
         if model != _sentinel:
             model_name = model
 
-            raise DeprecationWarning(
-                "The model argument is deprecated and will be removed in the next major version. Please use the model_name argument."
+            warnings.warn(
+                "The model argument is deprecated and will be removed in the next major version. "
+                "Please use the model_name argument.",
+                DeprecationWarning,
             )
 
         if self._is_dataframe(transactions):
@@ -1442,20 +1448,26 @@ class SDK:
         """
 
         if labeling != _sentinel:
-            raise DeprecationWarning(
-                "The labeling argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
+            warnings.warn(
+                "The labeling argument does not impact the result of enrichment. "
+                " This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
             )
 
         if create_account_holders != _sentinel:
-            raise DeprecationWarning(
-                "The create_account_holders argument does not impact the result of enrichment. This argument is deprecated and will be removed in the next major version."
+            warnings.warn(
+                "The create_account_holders argument does not impact the result of enrichment. "
+                "This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
             )
 
         if model != _sentinel:
             model_name = model
 
-            raise DeprecationWarning(
-                "The model argument is deprecated and will be removed in the next major version. Please use the model_name argument."
+            warnings.warn(
+                "The model argument is deprecated and will be removed in the next major version. "
+                "Please use the model_name argument.",
+                DeprecationWarning,
             )
 
         if self._is_dataframe(transactions):
