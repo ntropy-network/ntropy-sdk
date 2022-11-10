@@ -562,6 +562,7 @@ def test_sdk_region():
         entry_type="debit",
         date="2012-12-10",
         account_holder_id=ah_id,
+        account_holder_type="consumer",
         iso_currency_code="USD",
     )
 
