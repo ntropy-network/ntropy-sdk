@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [4.12.0] 2022-11-10
 - Add warning related to non-unique transaction ids.
 - Remove `chart_of_accounts` property from transactions
 - Added deprecation warnings to soon-to-be deprecated arguments (`labeling`, `create_account_holders` and `model`)
@@ -12,12 +14,12 @@ All notable changes to this project will be documented in this file.
 - Added `created_at` property to `EnrichedTransaction`
 - Added `region` parameter to SDK to allow connecting the SDK to EU datacenter seamlessly
 
-## [4.11.0]  2020-10-13
+## [4.11.0]  2022-10-13
 - Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
 - Improve repr of objects across the board, using pandas if available
 - Added `ntropy_sdk.get_account_holder_transactions` to fetch all transactions for an account holder
 
-## [4.10.1] - 2020-09-16
+## [4.10.1] - 2022-09-16
 - Fixed support for Python 3.6
 - Added RecurrenceGroup and recurrence_group for correct parsing of this information
 - Rename `IncomeReport.report()` to `IncomeReport.report_dataframe()`
