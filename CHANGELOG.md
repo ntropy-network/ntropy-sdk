@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Improved error handling and parseability with several new error types (see ntropy_sdk.errors), for both client side and server side errors
 - Added `intermediaries` to the EnrichedTransaction class containing the information for transaction intermediaries (i.e., payment processor)
 - Added `created_at` property to `EnrichedTransaction`
+- Added `region` parameter to SDK to allow connecting the SDK to EU datacenter seamlessly
 
 ## [4.11.0]  2020-10-13
 - Added `ntropy_sdk.recurring_payments` package with support for recurring payments feature
