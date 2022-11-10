@@ -552,3 +552,33 @@ def test_enriched_fields(sdk):
         assert 0 <= enriched.confidence <= 1
         assert any(enriched.transaction_type == t.value for t in TransactionType)
         assert 5432 in enriched.mcc
+
+
+def test_sdk_region():
+    ah_id = str(uuid.uuid4())
+    tx = Transaction(
+        amount=24.56,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2012-12-10",
+        account_holder_id=ah_id,
+        iso_currency_code="USD",
+    )
+
+    _sdk = SDK(API_KEY)
+    assert _sdk.base_url == "https://api.ntropy.com"
+    res = _sdk.add_transactions([tx])[0]
+    assert res.website is not None
+
+    _sdk = SDK(API_KEY, region="us")
+    assert _sdk.base_url == "https://api.ntropy.com"
+    res = _sdk.add_transactions([tx])[0]
+    assert res.website is not None
+
+    _sdk = SDK(API_KEY, region="eu")
+    assert _sdk.base_url == "https://api.eu.ntropy.com"
+    res = _sdk.add_transactions([tx])[0]
+    assert res.website is not None
+
+    with pytest.raises(ValueError):
+        _sdk = SDK(API_KEY, region="atlantida")
