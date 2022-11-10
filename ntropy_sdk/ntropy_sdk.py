@@ -1466,15 +1466,6 @@ class SDK:
                 DeprecationWarning,
             )
 
-        if model != _sentinel:
-            model_name = model
-
-            warnings.warn(
-                "The model argument is deprecated and will be removed in the next major version. "
-                "Please use the model_name argument.",
-                DeprecationWarning,
-            )
-
         if self._is_dataframe(transactions):
             if len(transactions) > self.MAX_BATCH_SIZE:
                 raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
