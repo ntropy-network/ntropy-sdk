@@ -631,18 +631,20 @@ class EnrichedTransactionList(list):
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
-        txs = []
-        for tx in self:
-            parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
-            returned_fields = tx.returned_fields
-            enriched = {
-                k: v
-                for k, v in tx.to_dict().items()
-                if k in returned_fields
-                and k not in ["kwargs", "returned_fields", "sdk"]
-            }
-            txs.append({**parent, **enriched})
-        return pd.DataFrame(txs)
+
+        def _tx_generator():
+            for tx in self:
+                parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
+                returned_fields = tx.returned_fields
+                enriched = {
+                    k: v
+                    for k, v in tx.to_dict().items()
+                    if k in returned_fields
+                    and k not in ["kwargs", "returned_fields", "sdk"]
+                }
+                yield {**parent, **enriched}
+
+        return pd.DataFrame.from_records(_tx_generator())
 
     def dict(self) -> List[Dict[str, Any]]:
         return [t.dict() for t in self]
