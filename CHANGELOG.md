@@ -2,6 +2,8 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
 ## [4.12.0] 2022-11-10
 - Add warning related to non-unique transaction ids.
 - Remove `chart_of_accounts` property from transactions
