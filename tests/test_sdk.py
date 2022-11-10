@@ -284,7 +284,7 @@ def test_enrich_huge_batch(sdk):
     txs = [tx] * 10
     sdk.MAX_BATCH_SIZE = 4
 
-    enriched_txs = sdk.add_transactions(txs, labeling=False)
+    enriched_txs = sdk.add_transactions(txs)
 
     assert len(enriched_txs) == len(txs)
 
@@ -319,11 +319,6 @@ def test_hierarchy(sdk):
     for account_holder_type in ["business", "consumer", "freelance", "unknown"]:
         h = sdk.get_labels(account_holder_type)
         assert isinstance(h, dict)
-
-
-def test_chart_of_accounts(sdk):
-    coa = sdk.get_chart_of_accounts()
-    assert isinstance(coa, dict)
 
 
 def test_transaction_zero_amount():
@@ -553,7 +548,6 @@ def test_enriched_fields(sdk):
         )
         assert enriched.transaction_id == "test-enriched-fields"
         assert enriched.website == "aws.amazon.com"
-        assert "Operating expenses" in enriched.chart_of_accounts
         # assert enriched.recurrence == "one off"
         assert 0 <= enriched.confidence <= 1
         assert any(enriched.transaction_type == t.value for t in TransactionType)

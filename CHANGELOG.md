@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 - Add warning related to non-unique transaction ids.
+- Remove `chart_of_accounts` property from transactions
+- Added deprecation warnings to soon-to-be deprecated arguments (`labeling`, `create_account_holders` and `model`)
+- Removed use of `singledispatchmethod` in favour of simpler input type handling
 - Improved error handling and parseability with several new error types (see ntropy_sdk.errors), for both client side and server side errors
 - Added `intermediaries` to the EnrichedTransaction class containing the information for transaction intermediaries (i.e., payment processor)
 - Added `created_at` property to `EnrichedTransaction`

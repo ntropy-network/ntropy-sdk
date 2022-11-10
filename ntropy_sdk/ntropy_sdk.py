@@ -39,7 +39,6 @@ from ntropy_sdk.utils import (
     RecurrenceType,
     TransactionType,
     dict_to_str,
-    singledispatchmethod,
     validate_date,
 )
 from ntropy_sdk.errors import (
@@ -58,6 +57,7 @@ COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
 
+_sentinel = object()
 T = TypeVar("T")
 
 
@@ -411,7 +411,6 @@ class EnrichedTransaction(BaseModel):
         "person",
         "transaction_id",
         "website",
-        "chart_of_accounts",
         "recurrence",
         "recurrence_group",
         "confidence",
@@ -435,9 +434,6 @@ class EnrichedTransaction(BaseModel):
     person: Optional[str] = Field(description="Name of the person in the transaction.")
     transaction_id: Optional[str] = Field(description="Unique transaction identifier.")
     website: Optional[str] = Field(description="Website of the merchant.")
-    chart_of_accounts: Optional[List[str]] = Field(
-        description="Label from the standard chart-of-accounts hierarchy."
-    )
     recurrence: Optional[RecurrenceType] = Field(
         description="Indicates if the Transaction is recurring and the type of recurrence"
     )
@@ -1199,17 +1195,15 @@ class SDK:
         txs = df.apply(tx_class.from_row, axis=1).to_list()
         return txs
 
-    @singledispatchmethod
     def add_transactions(
         self,
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
+        labeling: bool = _sentinel,
+        create_account_holders: bool = _sentinel,
         model_name: str = None,
-        model: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1229,12 +1223,12 @@ class SDK:
             True if progress bar should be displayed; False otherwise. By default,
             progress is displayed only in interactive mode.
         labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
+            Deprecated.
+        create_account_holders : bool, optional
+            Deprecated.
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
-        model: str, optional
-            Deprecated. Use model_name instead.
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
             expected column names. Note: this only applies to DataFrame enrichment.
@@ -1246,30 +1240,38 @@ class SDK:
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
+        if labeling != _sentinel:
+            warnings.warn(
+                "The labeling argument does not impact the result of enrichment. "
+                " This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
+            )
+
+        if create_account_holders != _sentinel:
+            warnings.warn(
+                "The create_account_holders argument does not impact the result of enrichment. "
+                "This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
+            )
+
         if self._is_dataframe(transactions):
             return self._add_transactions_df(
                 transactions,
-                timeout,
-                poll_interval,
-                with_progress,
-                labeling,
-                create_account_holders,
-                model_name,
-                model,
-                mapping,
-                inplace,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                with_progress=with_progress,
+                model_name=model_name,
+                mapping=mapping,
+                inplace=inplace,
             )
 
-        if isinstance(transactions, Iterable):
+        elif isinstance(transactions, Iterable):
             return self._add_transactions_iterable(
                 transactions,
-                timeout,
-                poll_interval,
-                with_progress,
-                labeling,
-                create_account_holders,
-                model_name,
-                model,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                with_progress=with_progress,
+                model_name=model_name,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1280,10 +1282,7 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
-        model: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1298,8 +1297,6 @@ class SDK:
 
         transactions["_output_tx"] = self.add_transactions(
             txs,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
             timeout=timeout,
             poll_interval=poll_interval,
             with_progress=with_progress,
@@ -1320,85 +1317,52 @@ class SDK:
         transactions = transactions.drop(["_output_tx"], axis=1)
         return transactions
 
-    @add_transactions.register(list)
-    def _add_transactions_list(
-        self,
-        transactions,
-        timeout: int = 4 * 60 * 60,
-        poll_interval=10,
-        with_progress=DEFAULT_WITH_PROGRESS,
-        labeling=True,
-        create_account_holders=True,
-        model_name=None,
-        model=None,
-    ):
-        if None in transactions:
-            raise ValueError("transactions contains a None value")
-
-        if model is not None:
-            if model_name is not None:
-                msg = f"Both model_name and model arguments provided. Using model_name f{model_name}, model is deprecated"
-            else:
-                msg = f"Argument model is deprecated and should be replaced with model_name"
-                model_name = model
-            warnings.warn(msg, category=DeprecationWarning)
-
-        if len(transactions) > self.MAX_BATCH_SIZE:
-            chunks = [
-                transactions[i : (i + self.MAX_BATCH_SIZE)]
-                for i in range(0, len(transactions), self.MAX_BATCH_SIZE)
-            ]
-
-            arr = []
-            for chunk in chunks:
-                arr += self._add_transactions(chunk)
-                time.sleep(self.MAX_BATCH_SIZE / 1000)
-
-            return arr
-
-        return self._add_transactions(
-            transactions,
-            timeout,
-            poll_interval,
-            with_progress,
-            labeling,
-            create_account_holders,
-            model_name,
-        )
-
     def _add_transactions_iterable(
         self,
         transactions: Iterable[Transaction],
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
-        model=None,
     ):
         result = []
         for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
-            result += self._add_transactions_list(
+            result += self._add_transactions_chunk(
                 chunk,
                 timeout,
                 poll_interval,
                 with_progress,
-                labeling,
-                create_account_holders,
                 model_name,
-                model,
             )
         return result
 
+    def _add_transactions_chunk(
+        self,
+        transactions,
+        timeout: int = 4 * 60 * 60,
+        poll_interval=10,
+        with_progress=DEFAULT_WITH_PROGRESS,
+        model_name=None,
+    ):
+        if None in transactions:
+            raise ValueError("transactions contains a None value")
+
+        if len(transactions) > self.MAX_BATCH_SIZE:
+            raise RuntimeError(
+                f"_add_transactions_chunk must be called with a list of transactions of length <= {self.MAX_BATCH_SIZE}"
+            )
+
+        return self._add_transactions(
+            transactions,
+            timeout,
+            poll_interval,
+            with_progress,
+            model_name,
+        )
+
     @staticmethod
-    def _build_params_str(
-        labeling: bool, create_account_holders: bool, model_name: str = None
-    ) -> str:
-        params = {
-            "labeling": labeling,
-            "create_account_holders": create_account_holders,
-        }
+    def _build_params_str(model_name: str = None) -> str:
+        params = {}
         if model_name is not None:
             params["model_name"] = model_name
 
@@ -1411,8 +1375,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
     ) -> EnrichedTransactionList:
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
@@ -1421,16 +1383,12 @@ class SDK:
                 transactions,
                 timeout,
                 poll_interval,
-                labeling,
-                create_account_holders,
                 model_name,
             )
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
-        params_str = self._build_params_str(
-            labeling, create_account_holders, model_name=model_name
-        )
+        params_str = self._build_params_str(model_name=model_name)
 
         try:
             data = [transaction.to_dict() for transaction in transactions]
@@ -1452,14 +1410,13 @@ class SDK:
                 "transactions must be either a pandas.Dataframe or an iterable"
             )
 
-    @singledispatchmethod
     def add_transactions_async(
         self,
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        labeling: bool = True,
-        create_account_holders: bool = True,
+        labeling: bool = _sentinel,
+        create_account_holders: bool = _sentinel,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1477,7 +1434,9 @@ class SDK:
         poll_interval : int, optional
             The interval between consecutive polling retries.
         labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
+            Deprecated.
+        create_account_holders : bool, optional
+            Deprecated.
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
@@ -1493,30 +1452,39 @@ class SDK:
             A Batch object that can be polled and awaited.
         """
 
-        if self._is_dataframe(transactions):
+        if labeling != _sentinel:
+            warnings.warn(
+                "The labeling argument does not impact the result of enrichment. "
+                " This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
+            )
 
+        if create_account_holders != _sentinel:
+            warnings.warn(
+                "The create_account_holders argument does not impact the result of enrichment. "
+                "This argument is deprecated and will be removed in the next major version.",
+                DeprecationWarning,
+            )
+
+        if self._is_dataframe(transactions):
             if len(transactions) > self.MAX_BATCH_SIZE:
                 raise ValueError("transactions length exceeds MAX_BATCH_SIZE")
 
             return self._add_transactions_async_df(
                 transactions,
-                timeout,
-                poll_interval,
-                labeling,
-                create_account_holders,
-                model_name,
-                mapping,
-                inplace,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                model_name=model_name,
+                mapping=mapping,
+                inplace=inplace,
             )
 
         if isinstance(transactions, Iterable):
             return self._add_transactions_async_iterable(
                 transactions,
-                timeout,
-                poll_interval,
-                labeling,
-                create_account_holders,
-                model_name,
+                timeout=timeout,
+                poll_interval=poll_interval,
+                model_name=model_name,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1526,8 +1494,6 @@ class SDK:
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        labeling: bool = True,
-        create_account_holders: bool = True,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1539,22 +1505,19 @@ class SDK:
         return self.add_transactions_async(
             txs,
             timeout=timeout,
-            labeling=labeling,
-            create_account_holders=create_account_holders,
             poll_interval=poll_interval,
             model_name=model_name,
         )
 
-    @add_transactions_async.register(list)
-    def _add_transactions_async_list(
+    def _add_transactions_async_iterable(
         self,
-        transactions: List[Transaction],
+        transactions: Iterable[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ):
+        transactions = list(transactions)
+
         if None in transactions:
             raise ValueError("transactions contains a None value")
 
@@ -1563,29 +1526,9 @@ class SDK:
 
         return self._add_transactions_async(
             transactions,
-            timeout,
-            poll_interval,
-            labeling,
-            create_account_holders,
-            model_name,
-        )
-
-    def _add_transactions_async_iterable(
-        self,
-        transactions: Iterable[Transaction],
-        timeout=4 * 60 * 60,
-        poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
-        model_name=None,
-    ):
-        return self._add_transactions_async_list(
-            list(transactions),
-            timeout,
-            poll_interval,
-            labeling,
-            create_account_holders,
-            model_name,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            model_name=model_name,
         )
 
     def _add_transactions_async(
@@ -1593,13 +1536,9 @@ class SDK:
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        labeling=True,
-        create_account_holders=True,
         model_name=None,
     ) -> Batch:
-        params_str = self._build_params_str(
-            labeling, create_account_holders, model_name=model_name
-        )
+        params_str = self._build_params_str(model_name=model_name)
 
         try:
 
@@ -1700,6 +1639,9 @@ class SDK:
         ----------
         account_holder_id : str
             The unique identifier for the account holder.
+        fetch_transactions : bool
+            If true, fetches all transactions from account_holde to match with returned transaction_ids,
+            and ensures the transactions field of the IncomeReport is populated
 
         Returns
         -------
@@ -1874,20 +1816,6 @@ class SDK:
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
-    def get_chart_of_accounts(self) -> dict:
-        """Returns all available chart of accounts.
-
-        Returns
-        -------
-        dict
-            A hierarchy of possible chart of accounts.
-        """
-
-        url = "/v2/chart-of-accounts"
-        resp = self.retry_ratelimited_request("GET", url, None)
-        return resp.json()
-
-    @singledispatchmethod
     def train_custom_model(
         self,
         transactions,
@@ -1912,33 +1840,18 @@ class SDK:
         Model
             Model instance referencing the in-training model
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            # If here, the input data is not a dataframe, or import would succeed
-            raise ValueError(
-                f"train_custom_model takes either a pandas.DataFrame or a list of Transactions for its `df` parameter, you supplied a '{type(transactions)}'"
+        if self._is_dataframe(transactions):
+            transactions = self.df_to_transaction_list(
+                transactions,
+                mapping=None,
+                inplace=True,
+                tx_class=LabeledTransaction,
+            )
+        elif not isinstance(transactions, Iterable):
+            raise TypeError(
+                "transactions must be either a pandas.Dataframe or an iterable"
             )
 
-        transactions = self.df_to_transaction_list(
-            transactions,
-            mapping=None,
-            inplace=True,
-            tx_class=LabeledTransaction,
-        )
-
-        return self._train_custom_model(
-            transactions, model_name, poll_interval=poll_interval, timeout=timeout
-        )
-
-    @train_custom_model.register(list)
-    def train_custom_model_list(
-        self,
-        transactions,
-        model_name: str,
-        poll_interval: Optional[int] = None,
-        timeout: Optional[int] = None,
-    ) -> Model:
         return self._train_custom_model(
             transactions, model_name, poll_interval=poll_interval, timeout=timeout
         )
@@ -1988,9 +1901,6 @@ class SDK:
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
-
-    class Config:
-        keep_untouched = (singledispatchmethod,)
 
 
 Batch.update_forward_refs()
