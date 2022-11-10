@@ -1204,7 +1204,6 @@ class SDK:
         labeling: bool = _sentinel,
         create_account_holders: bool = _sentinel,
         model_name: str = None,
-        model: str = _sentinel,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1224,12 +1223,12 @@ class SDK:
             True if progress bar should be displayed; False otherwise. By default,
             progress is displayed only in interactive mode.
         labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise.
+            Deprecated.
+        create_account_holders : bool, optional
+            Deprecated.
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
-        model: str, optional
-            Deprecated. Use model_name instead.
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
             expected column names. Note: this only applies to DataFrame enrichment.
@@ -1252,15 +1251,6 @@ class SDK:
             warnings.warn(
                 "The create_account_holders argument does not impact the result of enrichment. "
                 "This argument is deprecated and will be removed in the next major version.",
-                DeprecationWarning,
-            )
-
-        if model != _sentinel:
-            model_name = model
-
-            warnings.warn(
-                "The model argument is deprecated and will be removed in the next major version. "
-                "Please use the model_name argument.",
                 DeprecationWarning,
             )
 
@@ -1427,7 +1417,6 @@ class SDK:
         poll_interval: int = 10,
         labeling: bool = _sentinel,
         create_account_holders: bool = _sentinel,
-        model: str = _sentinel,
         model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
@@ -1445,10 +1434,9 @@ class SDK:
         poll_interval : int, optional
             The interval between consecutive polling retries.
         labeling : bool, optional
-            True if the enriched transactions should be labeled; False otherwise. Deprecated.
-        model: str, optional
-            Name of the custom model to use for labeling the transaction. If
-            provided, replaces the default labeler. Depreacted  in favour of model_name
+            Deprecated.
+        create_account_holders : bool, optional
+            Deprecated.
         model_name: str, optional
             Name of the custom model to use for labeling the transaction. If
             provided, replaces the default labeler
