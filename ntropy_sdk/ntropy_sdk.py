@@ -526,6 +526,7 @@ class EnrichedTransaction(BaseModel):
 
     def report(
         self,
+        webhook_url=None,
         **kwargs,
     ):
         """Reports an incorrectly enriched transaction.
@@ -537,7 +538,13 @@ class EnrichedTransaction(BaseModel):
         """
 
         return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", {"transaction_id": self.transaction_id, **kwargs}
+            "POST",
+            "/v2/report",
+            {
+                "transaction_id": self.transaction_id,
+                "webhook_url": webhook_url,
+                **kwargs,
+            },
         )
 
     @classmethod
@@ -967,6 +974,87 @@ class Model(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         use_enum_values = True
+
+
+class Report(BaseModel):
+    """A transaction report."""
+
+    id: str = Field(description="Unique identifier for the report.")
+    transaction_id: str = Field(description="Identifier of the reported transaction.")
+    status: str = Field(description="Current status of the report.")
+    created_at: str = Field(description="Timestamp at which the report was created.")
+    webhook_url: Optional[str] = Field(
+        description="Optional webhook_url that will be notified about status changes."
+    )
+    _sdk = None
+
+    def __repr__(self):
+        return f"Report({dict_to_str(self.to_dict())})"
+
+    def __str__(self):
+        return repr(self)
+
+    def set_sdk(self, sdk):
+        """Sets the internal SDK reference used by this account holder object
+
+        Parameters
+        ----------
+        sdk : SDK
+            A SDK to use with the account holder.
+        """
+
+        self._sdk = sdk
+
+    def to_dict(self):
+        """Returns a dictionary of non-empty fields for an AccountHolder.
+
+        Returns
+        -------
+        dict
+            A dictionary of the account holder's fields.
+        """
+
+        return self.dict(exclude_none=False)
+
+    @staticmethod
+    def from_response(sdk: "SDK", response) -> "Report":
+        id = response.get("id")
+        transaction_id = response.get("transaction_id")
+        webhook_url = response.get("webhook_url")
+        created_at = response.get("created_at")
+        status = response.get("status")
+
+        return Report(
+            id=id,
+            transaction_id=transaction_id,
+            webhook_url=webhook_url,
+            created_at=created_at,
+            status=status,
+        )
+
+    def poll(self):
+        """Polls the current report status and updates internal attributes
+
+        Returns
+        -------
+        json_resp : str
+            The JSON response of the report poll
+        """
+        url = f"/v2/report/{self.id}"
+
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+
+        transaction_id = json_resp.get("transaction_id")
+        webhook_url = json_resp.get("webhook_url")
+        created_at = json_resp.get("created_at")
+        status = json_resp.get("status")
+
+        self.transaction_id = transaction_id
+        self.webhook_url = webhook_url
+        self.status = status
+        self.created_at = created_at
+
+        return json_resp, status
 
 
 class SDK:
@@ -1913,6 +2001,83 @@ class SDK:
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
+
+    def report_transaction(
+        self,
+        transaction_id,
+        webhook_url=None,
+        **kwargs,
+    ):
+        """Reports an incorrectly enriched transaction.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments for the correct transaction.
+        """
+
+        if isinstance(transaction_id, EnrichedTransaction):
+            transaction_id = transaction_id.transaction_id
+
+        return self.retry_ratelimited_request(
+            "POST",
+            "/v2/report",
+            {"transaction_id": transaction_id, "webhook_url": webhook_url, **kwargs},
+        )
+
+    def list_reports(
+        self,
+        status=None,
+        transaction_id=None,
+        page=0,
+        per_page=50,
+    ):
+        """Paginated method to retrieve all existing reports.
+        Reports can also be filtered by transaction_id or status.
+
+        Parameters
+        ----------
+        status : str
+            If provided, lists reports only with the requested status.
+        transaction_id : str
+            If provided, lists reports only for requested transaction_id.
+        page : int
+            Selected page for the reports to retrieve.
+        per_page : int
+            How many reports to be fetched per page.
+        """
+        try:
+            url = f"/v2/report?page={page}&per_page={per_page}"
+            if status is not None:
+                url += f"&status={status}"
+            if transaction_id is not None:
+                url += f"&transaction_id={transaction_id}"
+
+            result = self.retry_ratelimited_request("GET", url, None)
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        data = result.json()
+        reports = data["reports"]
+
+        return [Report.from_response(self, r) for r in reports]
+
+    def get_report(self, report_id: str):
+        """Retrieves a specific report given it's id"""
+        try:
+            result = self.retry_ratelimited_request(
+                "GET", f"/v2/report/{report_id}", None
+            )
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+        data = result.json()
+        return Report.from_response(self, data)
 
 
 Batch.update_forward_refs()
