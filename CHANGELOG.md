@@ -3,9 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Adde support for webhooks in report transaction endpoint and added new `sdk.report_transaction` method to report from base SDK object.
+- Added support for new list report and get report endpoints.
 
 ## [4.12.0] 2022-11-10
-- Add warning related to non-unique transaction ids.
+- Added warning related to non-unique transaction ids.
 - Remove `chart_of_accounts` property from transactions
 - Added deprecation warnings to soon-to-be deprecated arguments (`labeling`, `create_account_holders` and `model`)
 - Removed use of `singledispatchmethod` in favour of simpler input type handling
