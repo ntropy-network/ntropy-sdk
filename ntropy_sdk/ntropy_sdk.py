@@ -526,7 +526,7 @@ class EnrichedTransaction(BaseModel):
     def __repr__(self):
         return f"EnrichedTransaction({dict_to_str(self.to_dict())})"
 
-    def report(
+    def create_report(
         self,
         webhook_url=None,
         **kwargs,
@@ -2012,7 +2012,7 @@ class SDK:
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
 
-    def report_transaction(
+    def create_report(
         self,
         transaction_id,
         webhook_url=None,
