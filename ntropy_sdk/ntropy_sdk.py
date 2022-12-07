@@ -407,6 +407,7 @@ class EnrichedTransaction(BaseModel):
         "sdk",
         "returned_fields",
         "labels",
+        "label_group",
         "location",
         "logo",
         "merchant",
@@ -428,6 +429,9 @@ class EnrichedTransaction(BaseModel):
         description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
     labels: Optional[List[str]] = Field(description="Label for the transaction.")
+    label_group: Optional[str] = Field(
+        description="Higher level category that groups together related labels"
+    )
     location: Optional[str] = Field(description="Location of the merchant.")
     logo: Optional[str] = Field(description="A link to the logo of the merchant.")
     merchant: Optional[str] = Field(description="The name of the transaction merchant.")
