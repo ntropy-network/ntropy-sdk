@@ -978,7 +978,7 @@ class SDK:
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
     """
 
-    MAX_BATCH_SIZE = 100000
+    MAX_BATCH_SIZE = 24960
     MAX_SYNC_BATCH = 4000
     DEFAULT_MAPPING = {
         k: k for k in EnrichedTransaction._fields if k not in ["sdk", "parent_tx"]
