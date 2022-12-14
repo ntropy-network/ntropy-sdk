@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Update batch size limit to 24960
+- Add `label_group` attrbiute for EnrichedTransaction
 
 ## [4.12.0] 2022-11-10
 - Add warning related to non-unique transaction ids.

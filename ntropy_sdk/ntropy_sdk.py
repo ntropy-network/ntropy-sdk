@@ -1028,6 +1028,7 @@ class SDK:
         self.session.mount("https://", self.keep_alive)
         self.logger = logging.getLogger("Ntropy-SDK")
 
+        self._extra_headers = {}
         self._timeout = timeout
         self._retries = retries
         self._retry_on_unhandled_exception = retry_on_unhandled_exception
@@ -1077,6 +1078,7 @@ class SDK:
                     headers={
                         "X-API-Key": self.token,
                         "User-Agent": f"ntropy-sdk/{__version__}",
+                        **self._extra_headers,
                     },
                     timeout=self._timeout,
                 )
