@@ -409,6 +409,7 @@ class EnrichedTransaction(BaseModel):
         "sdk",
         "returned_fields",
         "labels",
+        "label_group",
         "location",
         "logo",
         "merchant",
@@ -430,6 +431,9 @@ class EnrichedTransaction(BaseModel):
         description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
     labels: Optional[List[str]] = Field(description="Label for the transaction.")
+    label_group: Optional[str] = Field(
+        description="Higher level category that groups together related labels"
+    )
     location: Optional[str] = Field(description="Location of the merchant.")
     logo: Optional[str] = Field(description="A link to the logo of the merchant.")
     merchant: Optional[str] = Field(description="The name of the transaction merchant.")
@@ -1072,7 +1076,7 @@ class SDK:
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
     """
 
-    MAX_BATCH_SIZE = 100000
+    MAX_BATCH_SIZE = 24960
     MAX_SYNC_BATCH = 4000
     DEFAULT_MAPPING = {
         k: k for k in EnrichedTransaction._fields if k not in ["sdk", "parent_tx"]
@@ -1122,6 +1126,7 @@ class SDK:
         self.session.mount("https://", self.keep_alive)
         self.logger = logging.getLogger("Ntropy-SDK")
 
+        self._extra_headers = {}
         self._timeout = timeout
         self._retries = retries
         self._retry_on_unhandled_exception = retry_on_unhandled_exception
@@ -1171,6 +1176,7 @@ class SDK:
                     headers={
                         "X-API-Key": self.token,
                         "User-Agent": f"ntropy-sdk/{__version__}",
+                        **self._extra_headers,
                     },
                     timeout=self._timeout,
                 )

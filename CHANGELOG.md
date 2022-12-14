@@ -3,8 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-- Adde support for webhooks in report transaction endpoint and added new `sdk.report_transaction` method to report from base SDK object.
+- Added support for webhooks in report transaction endpoint and added new `sdk.report_transaction` method to report from base SDK object.
 - Added support for new list report and get report endpoints.
+- Update batch size limit to 24960
+- Add `label_group` attrbiute for EnrichedTransaction
 
 ## [4.12.0] 2022-11-10
 - Added warning related to non-unique transaction ids.
