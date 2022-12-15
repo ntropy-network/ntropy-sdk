@@ -196,10 +196,10 @@ class IncomeReport(list):
         except ImportError:
             raise RuntimeError("pandas is not installed")
         df = self.to_df()
-        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
-        df = df.rename({"transaction_ids": "# transactions"})
         if df.empty:
             return df
+        df.transaction_ids = df.transaction_ids.apply(lambda x: len(x))
+        df = df.rename({"transaction_ids": "# transactions"})
         df = df.fillna("N/A")
         return df
 
