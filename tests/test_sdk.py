@@ -311,6 +311,9 @@ def test_report(sdk):
     )
     enriched_tx = sdk.add_transactions([tx])[0]
 
+    import time
+    time.sleep(1)
+
     enriched_tx.create_report(website="ww2.target.com")
     enriched_tx.create_report(unplanned_kwarg="bar")
 
