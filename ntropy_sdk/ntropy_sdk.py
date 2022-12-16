@@ -301,7 +301,9 @@ class AccountHolder(BaseModel):
     name: Optional[str] = Field(description="Name of the account holder.")
     industry: Optional[str] = Field(description="Industry of the account holder.")
     website: Optional[str] = Field(description="Website of the account holder.")
-    _sdk = None
+    sdk: Optional["SDK"] = Field(
+        description="An SDK to use with the EnrichedTransaction.", exclude=True
+    )
 
     def __repr__(self):
         return f"AccountHolder({dict_to_str(self.to_dict())})"
@@ -318,7 +320,7 @@ class AccountHolder(BaseModel):
             A SDK to use with the account holder.
         """
 
-        self._sdk = sdk
+        self.sdk = sdk
 
     def to_dict(self):
         """Returns a dictionary of non-empty fields for an AccountHolder.
@@ -348,11 +350,11 @@ class AccountHolder(BaseModel):
         dict:
             A JSON object of the query result
         """
-        if not self._sdk:
+        if not self.sdk:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self._sdk.get_account_holder_metrics(self.id, metrics, start, end)
+        return self.sdk.get_account_holder_metrics(self.id, metrics, start, end)
 
     def get_income_report(self):
         """Returns the income report for the account holder.
@@ -362,11 +364,11 @@ class AccountHolder(BaseModel):
         IncomeReport:
             An IncomeReport object for this account holder's history
         """
-        if not self._sdk:
+        if not self.sdk:
             raise ValueError(
                 "sdk is not set: either call SDK.create_account_holder or set self._sdk first"
             )
-        return self._sdk.get_income_report(self.id)
+        return self.sdk.get_income_report(self.id)
 
     class Config:
         use_enum_values = True
@@ -528,8 +530,9 @@ class EnrichedTransaction(BaseModel):
     def __repr__(self):
         return f"EnrichedTransaction({dict_to_str(self.to_dict())})"
 
-    def report(
+    def create_report(
         self,
+        webhook_url=None,
         **kwargs,
     ):
         """Reports an incorrectly enriched transaction.
@@ -540,9 +543,17 @@ class EnrichedTransaction(BaseModel):
             Keyword arguments for the correct transaction.
         """
 
-        return self.sdk.retry_ratelimited_request(
-            "POST", "/v2/report", {"transaction_id": self.transaction_id, **kwargs}
-        )
+        response = self.sdk.retry_ratelimited_request(
+            "POST",
+            "/v2/report",
+            {
+                "transaction_id": self.transaction_id,
+                "webhook_url": webhook_url,
+                **kwargs,
+            },
+        ).json()
+
+        return Report.from_response(self.sdk, response)
 
     @classmethod
     def from_dict(cls, sdk, val: dict):
@@ -971,6 +982,93 @@ class Model(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         use_enum_values = True
+
+
+class Report(BaseModel):
+    """A transaction report."""
+
+    sdk: Optional["SDK"] = Field(description="A SDK associated with the model.")
+    id: str = Field(description="Unique identifier for the report.")
+    transaction_id: str = Field(description="Identifier of the reported transaction.")
+    status: str = Field(description="Current status of the report.")
+    created_at: str = Field(description="Timestamp at which the report was created.")
+    webhook_url: Optional[str] = Field(
+        description="Optional webhook_url that will be notified about status changes."
+    )
+
+    def __repr__(self):
+        return f"Report({dict_to_str(self.to_dict())})"
+
+    def __str__(self):
+        return repr(self)
+
+    def set_sdk(self, sdk):
+        """Sets the internal SDK reference used by this account holder object
+
+        Parameters
+        ----------
+        sdk : SDK
+            A SDK to use with the account holder.
+        """
+
+        self.sdk = sdk
+
+    def to_dict(self):
+        """Returns a dictionary of non-empty fields for an AccountHolder.
+
+        Returns
+        -------
+        dict
+            A dictionary of the account holder's fields.
+        """
+
+        return self.dict(exclude_none=False)
+
+    @staticmethod
+    def from_response(sdk: "SDK", response) -> "Report":
+        id = response.get("id")
+        transaction_id = response.get("transaction_id")
+        webhook_url = response.get("webhook_url")
+        created_at = response.get("created_at")
+        status = response.get("status")
+
+        r = Report(
+            id=id,
+            transaction_id=transaction_id,
+            webhook_url=webhook_url,
+            created_at=created_at,
+            status=status,
+        )
+        r.set_sdk(sdk)
+
+        return r
+
+    def poll(self):
+        """Polls the current report status and updates internal attributes
+
+        Returns
+        -------
+        json_resp : str
+            The JSON response of the report poll
+        """
+
+        if not self.sdk:
+            raise ValueError("sdk is not set")
+
+        url = f"/v2/report/{self.id}"
+
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        transaction_id = json_resp.get("transaction_id")
+        webhook_url = json_resp.get("webhook_url")
+        created_at = json_resp.get("created_at")
+        status = json_resp.get("status")
+
+        self.transaction_id = transaction_id
+        self.webhook_url = webhook_url
+        self.status = status
+        self.created_at = created_at
+
+        return json_resp, status
 
 
 class SDK:
@@ -1919,6 +2017,86 @@ class SDK:
         url = f"/v2/models/{model_name}"
         response = self.retry_ratelimited_request("GET", url, None).json()
         return Model.from_response(self, response)
+
+    def create_report(
+        self,
+        transaction_id,
+        webhook_url=None,
+        **kwargs,
+    ):
+        """Reports an incorrectly enriched transaction.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments for the correct transaction.
+        """
+
+        if isinstance(transaction_id, EnrichedTransaction):
+            transaction_id = transaction_id.transaction_id
+
+        response = self.retry_ratelimited_request(
+            "POST",
+            "/v2/report",
+            {"transaction_id": transaction_id, "webhook_url": webhook_url, **kwargs},
+        ).json()
+
+        return Report.from_response(self, response)
+
+    def list_reports(
+        self,
+        status=None,
+        transaction_id=None,
+        page=0,
+        per_page=50,
+    ):
+        """Paginated method to retrieve all existing reports.
+        Reports can also be filtered by transaction_id or status.
+
+        Parameters
+        ----------
+        status : str
+            If provided, lists reports only with the requested status.
+        transaction_id : str
+            If provided, lists reports only for requested transaction_id.
+        page : int
+            Selected page for the reports to retrieve.
+        per_page : int
+            How many reports to be fetched per page.
+        """
+        try:
+            url = f"/v2/report?page={page}&per_page={per_page}"
+            if status is not None:
+                url += f"&status={status}"
+            if transaction_id is not None:
+                url += f"&transaction_id={transaction_id}"
+
+            result = self.retry_ratelimited_request("GET", url, None)
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        data = result.json()
+        reports = data["reports"]
+
+        return [Report.from_response(self, r) for r in reports]
+
+    def get_report(self, report_id: str):
+        """Retrieves a specific report given it's id"""
+        try:
+            result = self.retry_ratelimited_request(
+                "GET", f"/v2/report/{report_id}", None
+            )
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        data = result.json()
+        return Report.from_response(self, data)
 
 
 Batch.update_forward_refs()
