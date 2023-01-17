@@ -1858,8 +1858,22 @@ class SDK:
 
         return response
 
+    def _get_account_holder_transactions_txids(
+        self, account_holder_id: str, txids: List[str]
+    ):
+        url = f"/v2/account-holder/{account_holder_id}/transactions"
+        try:
+            response = self.retry_ratelimited_request("POST", url, txids).json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+            raise
+
+        return response
+
     def get_account_holder_transactions(
-        self, account_holder_id: str, limit=0
+        self, account_holder_id: str, limit=0, transaction_ids=[]
     ) -> EnrichedTransactionList:
         """Returns EnrichTransaction list for the account holder with the provided id
 
@@ -1869,6 +1883,8 @@ class SDK:
             A unique identifier for the account holder.
         limit : int
             Maximum number of transactions to fetch
+        transaction_ids : List[str]
+            Optional list of transaction ids to fetch.
 
         Returns
         -------
@@ -1880,20 +1896,26 @@ class SDK:
         total_pages = 1
         per_page = max(min(1000, limit or 1000), 1)
 
-        while page < total_pages:
-            response = self._get_account_holder_transactions_page(
-                account_holder_id, page, per_page
-            )
+        if transaction_ids == []:
+            while page < total_pages:
+                response = self._get_account_holder_transactions_page(
+                    account_holder_id, page, per_page
+                )
 
-            if "pages" in response and total_pages < response["pages"]:
-                total_pages = response["pages"]
+                if "pages" in response and total_pages < response["pages"]:
+                    total_pages = response["pages"]
 
-            txs += response["transactions"]
+                txs += response["transactions"]
 
-            if len(txs) >= limit:
-                break
+                if len(txs) >= limit:
+                    break
 
-            page += 1
+                page += 1
+        else:
+            for i in range(0, len(transaction_ids), per_page):
+                txs += self._get_account_holder_transactions_txids(
+                    account_holder_id, transaction_ids[i : i + per_page]
+                )["transactions"]
 
         parents = []
         enriched = []
