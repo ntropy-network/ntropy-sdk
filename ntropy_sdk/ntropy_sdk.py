@@ -1756,7 +1756,7 @@ class SDK:
         account_holder_id : str
             The unique identifier for the account holder.
         fetch_transactions : bool
-            If true, fetches all transactions from account_holde to match with returned transaction_ids,
+            If true, fetches all transactions from account_holder to match with returned transaction_ids,
             and ensures the transactions field of the IncomeReport is populated
 
         Returns
@@ -1873,7 +1873,7 @@ class SDK:
         return response
 
     def get_account_holder_transactions(
-        self, account_holder_id: str, limit=0, transaction_ids=[]
+        self, account_holder_id: str, limit=0, transaction_ids=None
     ) -> EnrichedTransactionList:
         """Returns EnrichTransaction list for the account holder with the provided id
 
@@ -1883,7 +1883,7 @@ class SDK:
             A unique identifier for the account holder.
         limit : int
             Maximum number of transactions to fetch
-        transaction_ids : List[str]
+        transaction_ids : Iterable[str]
             Optional list of transaction ids to fetch.
 
         Returns
@@ -1896,7 +1896,12 @@ class SDK:
         total_pages = 1
         per_page = max(min(1000, limit or 1000), 1)
 
-        if transaction_ids == []:
+        if isinstance(transaction_ids, Iterable):
+            for chunk in chunks(transaction_ids, per_page):
+                txs += self._get_account_holder_transactions_txids(
+                    account_holder_id, chunk
+                )["transactions"]
+        else:
             while page < total_pages:
                 response = self._get_account_holder_transactions_page(
                     account_holder_id, page, per_page
@@ -1911,11 +1916,6 @@ class SDK:
                     break
 
                 page += 1
-        else:
-            for i in range(0, len(transaction_ids), per_page):
-                txs += self._get_account_holder_transactions_txids(
-                    account_holder_id, transaction_ids[i : i + per_page]
-                )["transactions"]
 
         parents = []
         enriched = []
