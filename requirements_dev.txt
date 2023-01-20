@@ -8,3 +8,4 @@ coverage==4.5.4
 Sphinx==1.8.5
 twine==1.14.0
 requests_toolbelt==0.9.1
+pytest==7.2.1

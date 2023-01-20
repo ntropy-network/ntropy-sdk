@@ -5,7 +5,8 @@ import sys
 import time
 import uuid
 import warnings
-from datetime import date
+from datetime import date, datetime
+from io import IOBase
 from typing import (
     Any,
     ClassVar,
@@ -1071,6 +1072,13 @@ class Report(BaseModel):
         return json_resp, status
 
 
+class DatasourceResponse(BaseModel):
+    id: str
+    created_at: datetime
+    filename: str
+    doc_type: str
+
+
 class SDK:
     """The main Ntropy SDK object that holds the connection to the API server and implements
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
@@ -1143,7 +1151,12 @@ class SDK:
             )
 
     def retry_ratelimited_request(
-        self, method: str, url: str, payload: object, log_level=logging.DEBUG
+        self,
+        method: str,
+        url: str,
+        payload: object,
+        log_level=logging.DEBUG,
+        **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
         Catches expected errors and wraps them in NtropyError.
@@ -1179,6 +1192,7 @@ class SDK:
                         **self._extra_headers,
                     },
                     timeout=self._timeout,
+                    **request_kwargs,
                 )
             except requests.ConnectionError:
                 # Rebuild session on connection error and retry
@@ -2097,6 +2111,19 @@ class SDK:
 
         data = result.json()
         return Report.from_response(self, data)
+
+    def add_payslip(self, file: IOBase, filename: str):
+        result = self.retry_ratelimited_request(
+            "POST",
+            "/payslips",
+            payload=None,
+            files={
+                "doc_type": (None, "payslip"),
+                "filename": (None, filename),
+                "file": (None, file),
+            },
+        )
+        return DatasourceResponse.parse_obj(result.json())
 
 
 Batch.update_forward_refs()
