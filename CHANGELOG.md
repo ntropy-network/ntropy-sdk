@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [4.14.1] - 2022-09-16
+- Add an optional `transaction_ids` filter to `ntropy_sdk.get_account_holder_transactions` to only fetch transactions that match the given IDs.
+
+## [4.14.0] 2022-12-15
 - Added support for webhooks in report transaction endpoint and added new `sdk.report_transaction` method to report from base SDK object.
 - Added support for new list report and get report endpoints.
 - Update batch size limit to 24960
