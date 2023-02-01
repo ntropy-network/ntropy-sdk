@@ -2115,7 +2115,7 @@ class SDK:
     def add_payslip(self, file: IOBase, filename: str):
         result = self.retry_ratelimited_request(
             "POST",
-            "/payslips",
+            "/datasources/payslips",
             payload=None,
             files={
                 "doc_type": (None, "payslip"),
