@@ -1076,7 +1076,6 @@ class DatasourceResponse(BaseModel):
     id: str
     created_at: datetime
     filename: str
-    doc_type: str
 
 
 class SDK:
@@ -2118,7 +2117,6 @@ class SDK:
             "/datasources/payslips",
             payload=None,
             files={
-                "doc_type": (None, "payslip"),
                 "filename": (None, filename),
                 "file": (None, file),
             },

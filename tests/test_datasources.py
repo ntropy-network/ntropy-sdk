@@ -13,6 +13,5 @@ def payslip_sample():
 def test_add_payslip(sdk):
     with open("payslip_sample.png", "rb") as f:
         r = sdk.add_payslip(f, "payslip_sample.png")
-        assert r.doc_type == "payslip"
         assert r.id is not None
         assert r.filename == "payslip_sample.png"
