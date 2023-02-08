@@ -24,8 +24,10 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
     bsr = BankStatementRequest(
         sdk=sdk,
         filename="file",
-        bs_id="123",  # TODO inject here once bootstrapped
+        bs_id="d192b263-8332-430c-a5c1-433862eac7ea",
     )
 
     bs = bsr.wait()
     enriched = sdk.add_transactions(bs.transactions)
+    assert len(enriched) > 0
+    assert enriched[0].merchant == "Ministrum"
