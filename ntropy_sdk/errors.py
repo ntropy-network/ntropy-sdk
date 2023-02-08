@@ -19,6 +19,12 @@ class NtropyBatchError(Exception):
         self.errors = errors
 
 
+class NtropyDatasourceError(Exception):
+    """Errors in processing underlying document"""
+
+    DESCRIPTION = "Error processing submitted document"
+
+
 class NtropyTimeoutError(NtropyError):
     DESCRIPTION = "Operation timed out"
 
