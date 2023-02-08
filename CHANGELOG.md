@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.15.0] - 2023-02-08
+- Added a method to SDK `sdk.add_bank_statement` to allow enrichment to be
+performed on file data.
+- For more details, refer to the relevant [documentation](https://developers.ntropy.com/docs/enrichment/#enriching-file-data).
+
 ## [4.14.1] - 2022-09-16
 - Add an optional `transaction_ids` filter to `ntropy_sdk.get_account_holder_transactions` to only fetch transactions that match the given IDs.
 

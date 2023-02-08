@@ -6,6 +6,7 @@ import time
 import uuid
 import warnings
 from datetime import date
+from io import IOBase
 from typing import (
     Any,
     ClassVar,
@@ -22,7 +23,7 @@ from itertools import islice
 from json import JSONDecodeError
 
 import requests  # type: ignore
-from pydantic import BaseModel, Field, validator, NonNegativeFloat
+from pydantic import BaseModel, Field, validator, NonNegativeFloat, root_validator
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tabulate import tabulate
 from tqdm.auto import tqdm
@@ -47,6 +48,7 @@ from ntropy_sdk.errors import (
     NtropyModelTrainingError,
     NtropyBatchError,
     NtropyError,
+    NtropyDatasourceError,
 )
 
 DEFAULT_TIMEOUT = 10 * 60
@@ -1071,6 +1073,106 @@ class Report(BaseModel):
         return json_resp, status
 
 
+class BankStatement(BaseModel):
+    id: str
+    status: str
+    transactions: List
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "allow"
+
+    @root_validator
+    def transform_txs(cls, values):
+        if values["transactions"]:
+            txs = [Transaction.from_dict(tx) for tx in values["transactions"]]
+            values["transactions"] = txs
+        return values
+
+
+class BankStatementRequest(BaseModel):
+    """An enriched batch with a unique identifier."""
+
+    sdk: "SDK" = Field(description="A SDK associated with the statement.")
+    filename: str = Field(description="Filename associated with the statement.")
+    bs_id: str = Field(description="A unique identifier for the statement.")
+    timeout: int = Field(
+        4 * 60 * 60, description="A timeout for retrieving the statement result."
+    )
+    poll_interval: int = Field(10, description="The interval between polling retries.")
+    transactions: list = Field(
+        [], description="The transactions submitted in this statement"
+    )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.timeout = time.time() + self.timeout
+
+    def __repr__(self):
+        return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
+
+    def poll(self):
+        """Polls the current bank statement status and returns the server response and status attribute.
+
+        Returns
+        -------
+        status : str
+            The status of the bank statement enrichment.
+        dict
+            The JSON response of the statement poll.
+        """
+
+        url = f"/datasources/bank_statements/{self.bs_id}"
+
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        status = json_resp.get("status")
+
+        if status == "processed":
+            return BankStatement(**json_resp), status
+
+        if status == "failed":
+            raise NtropyDatasourceError()
+
+        return json_resp, status
+
+    def wait(self, poll_interval=None):
+        """Continuously polls the status of this bank statement, blocking until the statement status is
+        "ready" or "error"
+
+        Parameters
+        ----------
+        poll_interval : bool
+            The interval between polling retries. If not specified, defaults to
+            the statement's poll_interval.
+
+        Returns
+        -------
+        status : str
+            The status of the bank statement enrichment.
+        dict
+            The JSON response of the statement poll.
+        """
+
+        return self._wait(poll_interval=poll_interval)
+
+    def _wait(self, poll_interval=None):
+        """Retrieve the current bank statement enrichment without progress updates."""
+
+        if not poll_interval:
+            poll_interval = self.poll_interval
+        while self.timeout - time.time() > 0:
+            resp, status = self.poll()
+            if status == "processing":
+                time.sleep(poll_interval)
+                continue
+            return resp
+        raise NtropyTimeoutError("Bank statement wait timeout")
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "allow"
+
+
 class SDK:
     """The main Ntropy SDK object that holds the connection to the API server and implements
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
@@ -1143,7 +1245,12 @@ class SDK:
             )
 
     def retry_ratelimited_request(
-        self, method: str, url: str, payload: object, log_level=logging.DEBUG
+        self,
+        method: str,
+        url: str,
+        payload: object,
+        log_level=logging.DEBUG,
+        **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
         Catches expected errors and wraps them in NtropyError.
@@ -1179,6 +1286,7 @@ class SDK:
                         **self._extra_headers,
                     },
                     timeout=self._timeout,
+                    **request_kwargs,
                 )
             except requests.ConnectionError:
                 # Rebuild session on connection error and retry
@@ -1657,7 +1765,6 @@ class SDK:
         params_str = self._build_params_str(model_name=model_name)
 
         try:
-
             url = "/v2/transactions/async?" + params_str
 
             data = [transaction.to_dict() for transaction in transactions]
@@ -1676,6 +1783,45 @@ class SDK:
                 poll_interval=poll_interval,
                 num_transactions=len(transactions),
                 transactions=transactions,
+            )
+
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                error = e.response.json()
+                raise ValueError(f"{error['detail']}")
+
+            raise
+
+    def add_bank_statement(
+        self,
+        file: IOBase,
+        filename: Optional[str] = "file",
+        timeout=4 * 60 * 60,
+        poll_interval=30,
+    ) -> BankStatementRequest:
+        try:
+            resp = self.retry_ratelimited_request(
+                "POST",
+                "/datasources/bank_statements",
+                payload=None,
+                files={
+                    "filename": (None, filename),
+                    "file": ("file", file),
+                },
+            )
+
+            r = resp.json()
+            bs_id = r.get("id", "")
+
+            if not bs_id:
+                raise ValueError("id missing from response")
+
+            return BankStatementRequest(
+                sdk=self,
+                bs_id=bs_id,
+                filename=filename,
+                timeout=timeout,
+                poll_interval=poll_interval,
             )
 
         except requests.HTTPError as e:
@@ -2122,5 +2268,6 @@ class SDK:
 
 
 Batch.update_forward_refs()
+BankStatementRequest.update_forward_refs()
 EnrichedTransaction.update_forward_refs()
 Model.update_forward_refs()
