@@ -24,7 +24,7 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
     bsr = BankStatementRequest(
         sdk=sdk,
         filename="file",
-        bs_id="123",  # TODO find processed sample and inject here
+        bs_id="123",  # TODO inject here once bootstrapped
     )
 
     bs = bsr.wait()
