@@ -23,7 +23,7 @@ from itertools import islice
 from json import JSONDecodeError
 
 import requests  # type: ignore
-from pydantic import BaseModel, Field, validator, NonNegativeFloat
+from pydantic import BaseModel, Field, validator, NonNegativeFloat, root_validator
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tabulate import tabulate
 from tqdm.auto import tqdm
@@ -1074,6 +1074,23 @@ class Report(BaseModel):
 
 
 class BankStatement(BaseModel):
+    id: str
+    status: str
+    transactions: List
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "allow"
+
+    @root_validator
+    def transform_txs(cls, values):
+        if values["transactions"]:
+            txs = [Transaction.from_dict(tx) for tx in values["transactions"]]
+            values["transactions"] = txs
+        return values
+
+
+class BankStatementRequest(BaseModel):
     """An enriched batch with a unique identifier."""
 
     sdk: "SDK" = Field(description="A SDK associated with the statement.")
@@ -1111,10 +1128,7 @@ class BankStatement(BaseModel):
         status = json_resp.get("status")
 
         if status == "processed":
-            return (
-                json_resp.get("transactions", []),
-                status,
-            )
+            return BankStatement(**json_resp), status
 
         if status == "failed":
             raise NtropyDatasourceError()
@@ -1784,7 +1798,7 @@ class SDK:
         filename: Optional[str] = "file",
         timeout=4 * 60 * 60,
         poll_interval=30,
-    ) -> BankStatement:
+    ) -> BankStatementRequest:
         try:
             resp = self.retry_ratelimited_request(
                 "POST",
@@ -1800,9 +1814,9 @@ class SDK:
             bs_id = r.get("id", "")
 
             if not bs_id:
-                raise ValueError("bs_id missing from response")
+                raise ValueError("id missing from response")
 
-            return BankStatement(
+            return BankStatementRequest(
                 sdk=self,
                 bs_id=bs_id,
                 filename=filename,
@@ -2254,6 +2268,6 @@ class SDK:
 
 
 Batch.update_forward_refs()
-BankStatement.update_forward_refs()
+BankStatementRequest.update_forward_refs()
 EnrichedTransaction.update_forward_refs()
 Model.update_forward_refs()
