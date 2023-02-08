@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from ntropy_sdk.ntropy_sdk import Transaction
+from ntropy_sdk.ntropy_sdk import BankStatementRequest
 
 
 @pytest.fixture()
@@ -18,3 +18,14 @@ def test_submit_bank_statement(sdk, bank_statement_sample):
         r, status = bs.poll()
         assert status == "processing"
         assert bs.bs_id == r["id"]
+
+
+def test_processed_bank_statement(sdk, bank_statement_sample):
+    bsr = BankStatementRequest(
+        sdk=sdk,
+        filename="file",
+        bs_id="123",  # TODO find processed sample and inject here
+    )
+
+    bs = bsr.wait()
+    enriched = sdk.add_transactions(bs.transactions)
