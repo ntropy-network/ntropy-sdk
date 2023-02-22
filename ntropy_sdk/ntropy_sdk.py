@@ -49,6 +49,11 @@ from ntropy_sdk.errors import (
     NtropyBatchError,
     NtropyError,
     NtropyDatasourceError,
+    NtropyValueError,
+    NtropyResourceOccupiedError,
+    NtropyRuntimeError,
+    NtropyQuotaExceededError,
+    NtropyValidationError,
 )
 
 DEFAULT_TIMEOUT = 10 * 60
@@ -427,6 +432,8 @@ class EnrichedTransaction(BaseModel):
         "created_at",
         "parent_tx",
         "intermediaries",
+        "error",
+        "error_details",
     ]
 
     sdk: "SDK" = Field(
@@ -472,6 +479,10 @@ class EnrichedTransaction(BaseModel):
     created_at: Optional[str] = Field(
         description="Timestamp of the moment that the transaction was enriched"
     )
+    error: Optional[Any] = Field(
+        description="Error object or string",
+    )
+    error_details: Optional[str] = Field(description="Details of the error")
 
     @validator("confidence")
     def _confidence_validator(cls, v):
@@ -643,6 +654,61 @@ class EnrichedTransactionList(list):
             etx.parent_tx = tx
         return etx_list
 
+    @classmethod
+    def from_err_list(
+        cls, sdk, original_txs: List[Transaction], exc: Exception, parent_txs: list = []
+    ):
+        etx_list = [cls._from_err(sdk, tx.transaction_id, exc) for tx in original_txs]
+        for tx, etx in zip(parent_txs, etx_list):
+            etx.parent_tx = tx
+        return cls(etx_list)
+
+    @classmethod
+    def _from_err(cls, sdk, tx_id: str, exc: Exception) -> EnrichedTransaction:
+        return EnrichedTransaction.from_dict(
+            sdk,
+            dict(
+                transaction_id=tx_id,
+                error=exc,
+                error_details=str(exc),
+            ),
+        )
+
+    @classmethod
+    def from_list_or_err(
+        cls, sdk, transactions: List[dict], parent_txs: List = [], exc: Exception = None
+    ):
+        """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
+        Additionally, for every transaction that contains errors, add `exc`
+
+        Parameters
+        ----------
+        transactions : List[dict]
+            A list of input transactions as dictionaries representing EnrichedTransaction fields.
+        parent_txs: List[EnrichedTransaction]
+            Parent transaction to be assigned to the input `transactions`
+        exc: Exception
+            The exception to assign to each transaction with errors
+
+        Returns
+        -------
+        EnrichedTransactionList
+            A corresponding EnrichedTransactionList object.
+        """
+        enr_txs = []
+        for tx in transactions:
+            enr_tx = EnrichedTransaction.from_dict(sdk, tx)
+            if enr_tx.error or enr_tx.error_details:
+                if exc is None:
+                    exc = NtropyError(
+                        f"Error on transaction_id={enr_tx.transaction_id}"
+                    )
+                enr_tx = cls._from_err(sdk, enr_tx.transaction_id, exc)
+            enr_txs.append(enr_tx)
+        for tx, etx in zip(parent_txs, enr_txs):
+            etx.parent_tx = tx
+        return cls(enr_txs)
+
     def to_df(self) -> Any:
         try:
             import pandas as pd
@@ -745,12 +811,26 @@ class Batch(BaseModel):
 
         if status == "finished":
             return (
-                EnrichedTransactionList.from_list(self.sdk, results, self.transactions),
+                EnrichedTransactionList.from_list_or_err(
+                    self.sdk,
+                    results,
+                    self.transactions,
+                    NtropyBatchError(f"Batch[{json_resp.get('id')}] contains errors"),
+                ),
                 status,
             )
 
         if status == "error":
-            raise NtropyBatchError(f"Batch failed: {results}", errors=results)
+            # At least one of the transactions has an error
+            return (
+                EnrichedTransactionList.from_list_or_err(
+                    self.sdk,
+                    results,
+                    self.transactions,
+                    NtropyBatchError(f"Batch[{json_resp.get('id')}] contains errors"),
+                ),
+                status,
+            )
 
         return json_resp, status
 
@@ -1576,13 +1656,22 @@ class SDK:
                 f"_add_transactions_chunk must be called with a list of transactions of length <= {self.MAX_BATCH_SIZE}"
             )
 
-        return self._add_transactions(
-            transactions,
-            timeout,
-            poll_interval,
-            with_progress,
-            model_name,
-        )
+        try:
+            return self._add_transactions(
+                transactions,
+                timeout,
+                poll_interval,
+                with_progress,
+                model_name,
+            )
+        except (
+            NtropyValueError,
+            NtropyResourceOccupiedError,
+            NtropyValidationError,
+            NtropyQuotaExceededError,
+            NtropyRuntimeError,
+        ) as e:
+            return EnrichedTransactionList.from_err_list(self, transactions, e)
 
     @staticmethod
     def _build_params_str(model_name: str = None) -> str:
@@ -1619,10 +1708,13 @@ class SDK:
             url = f"/v2/transactions/sync?" + params_str
             resp = self.retry_ratelimited_request("POST", url, data)
 
+            exc = None
             if resp.status_code != 200:
-                raise NtropyBatchError("Batch failed", errors=resp.json())
+                exc = NtropyBatchError("Batch failed")
 
-            return EnrichedTransactionList.from_list(self, resp.json(), transactions)
+            return EnrichedTransactionList.from_list_or_err(
+                self, resp.json(), transactions, exc
+            )
 
         except requests.HTTPError as e:
             if e.response.status_code == 404:
@@ -2079,7 +2171,7 @@ class SDK:
             parents.append(parent)
             enriched.append(etx)
 
-        return EnrichedTransactionList.from_list(self, enriched, parents)
+        return EnrichedTransactionList.from_list_or_err(self, enriched, parents)
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
