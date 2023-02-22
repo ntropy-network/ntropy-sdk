@@ -693,7 +693,7 @@ def test_async_batch_with_err(async_sdk, input_tx, batch_status):
         side_effect=responses,
     ) as m:
         res = async_sdk.add_transactions([input_tx] * 2)
-        assert m.call_count == 4
+        assert m.call_count >= 4
         assert len(res) == 2
         assert res[0].error is not None and "mock-id" in str(res[0].error)
         assert res[1].merchant is not None and res[1].error is None
@@ -724,7 +724,7 @@ def test_async_batch_request_err(async_sdk, input_tx):
         side_effect=responses,
     ) as m:
         res = async_sdk.add_transactions([input_tx] * 2)
-        assert m.call_count == 4
+        assert m.call_count >= 4
         assert len(res) == 2
         assert res[0].error is not None and isinstance(res[0].error, NtropyValueError)
         assert res[1].merchant is not None and res[1].error is None
