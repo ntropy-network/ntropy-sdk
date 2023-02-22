@@ -427,7 +427,10 @@ def test_batch(sdk):
 
     batch = sdk.add_transactions_async([tx] * 10)
     resp, status = batch.poll()
-    assert status == "started" and resp["total"] == 10
+
+    if status != "finished":
+        # Might've finished already
+        assert status == "started" and resp["total"] == 10
 
     batch.wait()
 
