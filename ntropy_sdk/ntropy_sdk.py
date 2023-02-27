@@ -665,6 +665,8 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def _from_err(cls, sdk, tx_id: str, exc: Exception) -> EnrichedTransaction:
+        if sdk._raise_on_enrichment_error:
+            raise exc
         return EnrichedTransaction.from_dict(
             sdk,
             dict(
@@ -1272,6 +1274,7 @@ class SDK:
         retry_on_unhandled_exception: bool = False,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
         region: str = DEFAULT_REGION,
+        raise_on_enrichment_error: bool = True,
     ):
         """Parameters
         ----------
@@ -1288,6 +1291,9 @@ class SDK:
             True if enrichment should include a progress bar; False otherwise.
         region : str, optional
             The region to which the SDK should connect to. Available options are "us" and "eu".
+        raise_on_enrichment_error : bool, optional
+            Whether to raise an error if there is an exception in the enrichment process. If set to `False`
+            it will store the errors in `error` and `error_details` fields of the affected transactions.
         """
 
         if not token:
@@ -1313,6 +1319,7 @@ class SDK:
         self._retries = retries
         self._retry_on_unhandled_exception = retry_on_unhandled_exception
         self._with_progress = with_progress
+        self._raise_on_enrichment_error = raise_on_enrichment_error
 
     @staticmethod
     def _validate_unique_ids(tx_ids: List[str]):

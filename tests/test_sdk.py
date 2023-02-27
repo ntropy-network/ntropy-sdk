@@ -17,7 +17,7 @@ from ntropy_sdk import (
     Transaction,
     NtropyError,
 )
-from ntropy_sdk.errors import NtropyValueError
+from ntropy_sdk.errors import NtropyValueError, NtropyBatchError
 from ntropy_sdk.utils import TransactionType
 from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 from tests import API_KEY
@@ -642,6 +642,9 @@ class MockResponse:
 
 
 def wrap_response(sdk, wrap_meth, responses):
+    """
+    Mocks a response for `wrap_meth` iterating through `responses` to obtain return values
+    """
     orig = sdk.session.request
     responses = iter(responses)
 
@@ -668,7 +671,8 @@ def wrap_response(sdk, wrap_meth, responses):
 
 
 @pytest.mark.parametrize("batch_status", ["finished", "error"])
-def test_async_batch_with_err(async_sdk, input_tx, batch_status):
+def test_async_batch_with_err_ignore_raise(async_sdk, input_tx, batch_status):
+    async_sdk._raise_on_enrichment_error = False
     responses = wrap_response(
         async_sdk,
         "GET",
@@ -699,7 +703,8 @@ def test_async_batch_with_err(async_sdk, input_tx, batch_status):
         assert res[1].merchant is not None and res[1].error is None
 
 
-def test_async_batch_request_err(async_sdk, input_tx):
+def test_async_batch_request_err_ignore_raise(async_sdk, input_tx):
+    async_sdk._raise_on_enrichment_error = False
     responses = wrap_response(
         async_sdk,
         "GET",
@@ -730,7 +735,8 @@ def test_async_batch_request_err(async_sdk, input_tx):
         assert res[1].merchant is not None and res[1].error is None
 
 
-def test_sync_batch_request_err(sync_sdk, input_tx):
+def test_sync_batch_request_err_ignore_raise(sync_sdk, input_tx):
+    sync_sdk._raise_on_enrichment_error = False
     responses = wrap_response(
         sync_sdk,
         "POST",
@@ -759,3 +765,95 @@ def test_sync_batch_request_err(sync_sdk, input_tx):
         assert len(res) == 2
         assert res[0].error is not None and isinstance(res[0].error, NtropyValueError)
         assert res[1].merchant is not None and res[1].error is None
+
+
+@pytest.mark.parametrize("batch_status", ["finished", "error"])
+def test_async_batch_with_err(async_sdk, input_tx, batch_status):
+    async_sdk._raise_on_enrichment_error = True
+    responses = wrap_response(
+        async_sdk,
+        "GET",
+        [
+            (
+                200,
+                batch_status,
+                [
+                    {
+                        "transaction_id": "err",
+                        "error": "internal_error",
+                        "error_details": "internal_error",
+                    }
+                ],
+            ),
+        ],
+    )
+
+    with patch.object(
+        async_sdk.session,
+        "request",
+        side_effect=responses,
+    ) as m:
+        with pytest.raises(NtropyBatchError) as be:
+            async_sdk.add_transactions([input_tx] * 2)
+        assert "mock-id" in str(be.value)
+        assert m.call_count == 2
+
+
+def test_async_batch_request_err(async_sdk, input_tx):
+    async_sdk._raise_on_enrichment_error = True
+    responses = wrap_response(
+        async_sdk,
+        "GET",
+        [
+            (
+                400,
+                "error",
+                [
+                    {
+                        "transaction_id": "err",
+                        "error": "internal_error",
+                        "error_details": "internal_error",
+                    }
+                ],
+            ),
+        ],
+    )
+
+    with patch.object(
+        async_sdk.session,
+        "request",
+        side_effect=responses,
+    ) as m:
+        with pytest.raises(NtropyValueError):
+            async_sdk.add_transactions([input_tx] * 2)
+        assert m.call_count == 2
+
+
+def test_sync_batch_request_err(sync_sdk, input_tx):
+    sync_sdk._raise_on_enrichment_error = True
+    responses = wrap_response(
+        sync_sdk,
+        "POST",
+        [
+            (
+                400,
+                "error",
+                [
+                    {
+                        "transaction_id": "err",
+                        "error": "internal_error",
+                        "error_details": "internal_error",
+                    }
+                ],
+            ),
+        ],
+    )
+
+    with patch.object(
+        sync_sdk.session,
+        "request",
+        side_effect=responses,
+    ) as m:
+        with pytest.raises(NtropyValueError):
+            sync_sdk.add_transactions([input_tx] * 2)
+        assert m.call_count == 1
