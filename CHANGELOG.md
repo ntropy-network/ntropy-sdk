@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.16.0] - 2023-02-27
+- Added a flag to SDK `raise_on_enrichment_error` that allows for enrichment to continue even if there are errors in
+enrichment process by populating `error` and `error_details` of the affected transactions instead.
+
 ## [4.15.0] - 2023-02-08
 - Added a method to SDK `sdk.add_bank_statement` to allow enrichment to be
 performed on file data.
@@ -16,7 +20,7 @@ performed on file data.
 - Added support for webhooks in report transaction endpoint and added new `sdk.report_transaction` method to report from base SDK object.
 - Added support for new list report and get report endpoints.
 - Update batch size limit to 24960
-- Add `label_group` attrbiute for EnrichedTransaction
+- Add `label_group` attribute for EnrichedTransaction
 
 ## [4.12.0] 2022-11-10
 - Added warning related to non-unique transaction ids.

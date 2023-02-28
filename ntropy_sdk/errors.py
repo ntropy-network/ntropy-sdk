@@ -14,8 +14,9 @@ class NtropyError(Exception):
 class NtropyBatchError(Exception):
     """One or more errors in one or more transactions of a submitted transaction batch"""
 
-    def __init__(self, message, errors=None):
+    def __init__(self, message, batch_id=None, errors=None):
         super().__init__(message)
+        self.batch_id = batch_id
         self.errors = errors
 
 
