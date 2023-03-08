@@ -1583,7 +1583,7 @@ class SDK:
                 poll_interval=poll_interval,
                 with_progress=with_progress,
                 model_name=model_name,
-                mapping=mapping
+                mapping=mapping,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1692,7 +1692,6 @@ class SDK:
                         delattr(tx, key)
 
         return transactions_enriched
-        
 
     @staticmethod
     def _build_params_str(model_name: str = None) -> str:

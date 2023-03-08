@@ -534,7 +534,7 @@ def test_enriched_fields(sdk):
     enriched_list = sdk.add_transactions([tx])[0]
 
     for enriched in [enriched_df, enriched_list]:
-        # print(enriched)
+        print(enriched)
         assert "infrastructure" in enriched.labels
         assert len(enriched.location) > 0
         assert enriched.logo == "https://logos.ntropy.com/aws.amazon.com"
@@ -858,6 +858,7 @@ def test_sync_batch_request_err(sync_sdk, input_tx):
             sync_sdk.add_transactions([input_tx] * 2)
         assert m.call_count == 1
 
+
 def test_mapping(sdk):
     tx = Transaction(
         transaction_id="test-enriched-fields",
@@ -871,12 +872,8 @@ def test_mapping(sdk):
         mcc=5432,
     )
 
-    mapping = {
-        "merchant":"company"
-    }
-    mapping_invalid = {
-        "invalid":"test"
-    }
+    mapping = {"merchant": "company"}
+    mapping_invalid = {"invalid": "test"}
 
     enriched_mapping = sdk.add_transactions([tx], mapping=mapping)
     try:
@@ -888,5 +885,5 @@ def test_mapping(sdk):
         enriched_mapping[0].merchant
     except AttributeError as e:
         assert str(e) == "'EnrichedTransaction' object has no attribute 'merchant'"
-    
+
     assert enriched_mapping[0].company == "Amazon Web Services"
