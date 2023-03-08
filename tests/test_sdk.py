@@ -527,7 +527,7 @@ def test_enriched_fields(sdk):
     enriched_list = sdk.add_transactions([tx])[0]
 
     for enriched in [enriched_df, enriched_list]:
-        print(enriched)
+        # print(enriched)
         assert "infrastructure" in enriched.labels
         assert len(enriched.location) > 0
         assert enriched.logo == "https://logos.ntropy.com/aws.amazon.com"
@@ -572,3 +572,36 @@ def test_sdk_region():
 
     with pytest.raises(ValueError):
         _sdk = SDK(API_KEY, region="atlantida")
+
+def test_mapping(sdk):
+    tx = Transaction(
+        transaction_id="test-enriched-fields",
+        amount=12046.15,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2019-12-01",
+        account_holder_type="business",
+        iso_currency_code="USD",
+        country="US",
+        mcc=5432,
+    )
+
+    mapping = {
+        "merchant":"company"
+    }
+    mapping_invalid = {
+        "invalid":"test"
+    }
+
+    enriched_mapping = sdk.add_transactions([tx], mapping=mapping)
+    try:
+        enriched_mapping_invalid = sdk.add_transactions([tx], mapping=mapping_invalid)
+    except KeyError as e:
+        assert "invalid mapping" in str(e)
+
+    try:
+        enriched_mapping[0].merchant
+    except AttributeError as e:
+        assert str(e) == "'EnrichedTransaction' object has no attribute 'merchant'"
+    
+    assert enriched_mapping[0].company == "Amazon Web Services"
