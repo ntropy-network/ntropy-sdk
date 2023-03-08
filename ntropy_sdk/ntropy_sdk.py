@@ -1690,6 +1690,7 @@ class SDK:
                     else:
                         setattr(tx, mapping[key], getattr(tx, key))
                         delattr(tx, key)
+                        tx.returned_fields.append(mapping[key])
 
         return transactions_enriched
 
