@@ -5,9 +5,12 @@ name: Python application
 
 on:
   push:
-    branches: [ main ]
+    branches:
+    - main
+    - gh-readonly-queue/main/**
   pull_request:
-    branches: [ main ]
+    branches:
+    - main
 
 jobs:
   build:
