@@ -857,3 +857,33 @@ def test_sync_batch_request_err(sync_sdk, input_tx):
         with pytest.raises(NtropyValueError):
             sync_sdk.add_transactions([input_tx] * 2)
         assert m.call_count == 1
+
+
+def test_mapping(sdk):
+    tx = Transaction(
+        transaction_id="test-enriched-fields",
+        amount=12046.15,
+        description="AMAZON WEB SERVICES AWS.AMAZON.CO WA Ref5543286P25S Crd15",
+        entry_type="debit",
+        date="2019-12-01",
+        account_holder_type="business",
+        iso_currency_code="USD",
+        country="US",
+        mcc=5432,
+    )
+
+    mapping = {"merchant": "company"}
+    mapping_invalid = {"invalid": "test"}
+
+    enriched_mapping = sdk.add_transactions([tx], mapping=mapping)
+    try:
+        enriched_mapping_invalid = sdk.add_transactions([tx], mapping=mapping_invalid)
+    except KeyError as e:
+        assert "invalid mapping" in str(e)
+
+    try:
+        enriched_mapping[0].merchant
+    except AttributeError as e:
+        assert str(e) == "'EnrichedTransaction' object has no attribute 'merchant'"
+
+    assert enriched_mapping[0].company == "Amazon Web Services"

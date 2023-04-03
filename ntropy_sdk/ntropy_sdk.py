@@ -1542,7 +1542,7 @@ class SDK:
             provided, replaces the default labeler
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
-            expected column names. Note: this only applies to DataFrame enrichment.
+            expected column names.
         inplace : bool, optional
             Enrich the dataframe inplace. Note: this only applies to DataFrame enrichment.
 
@@ -1583,6 +1583,7 @@ class SDK:
                 poll_interval=poll_interval,
                 with_progress=with_progress,
                 model_name=model_name,
+                mapping=mapping,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -1635,15 +1636,12 @@ class SDK:
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
         model_name=None,
+        mapping: dict = None,
     ):
         result = []
         for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
             result += self._add_transactions_chunk(
-                chunk,
-                timeout,
-                poll_interval,
-                with_progress,
-                model_name,
+                chunk, timeout, poll_interval, with_progress, model_name, mapping
             )
         return result
 
@@ -1654,9 +1652,13 @@ class SDK:
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
         model_name=None,
+        mapping: dict = None,
     ):
         if None in transactions:
             raise ValueError("transactions contains a None value")
+
+        if mapping is None:
+            mapping = self.DEFAULT_MAPPING
 
         if len(transactions) > self.MAX_BATCH_SIZE:
             raise RuntimeError(
@@ -1664,7 +1666,7 @@ class SDK:
             )
 
         try:
-            return self._add_transactions(
+            transactions_enriched = self._add_transactions(
                 transactions,
                 timeout,
                 poll_interval,
@@ -1679,6 +1681,18 @@ class SDK:
             NtropyRuntimeError,
         ) as e:
             return EnrichedTransactionList.from_err_list(self, transactions, e)
+
+        if mapping != self.DEFAULT_MAPPING:
+            for tx in transactions_enriched:
+                for key in mapping.keys():
+                    if not hasattr(tx, key):
+                        raise KeyError(f"invalid mapping: {key} not in {tx}")
+                    else:
+                        setattr(tx, mapping[key], getattr(tx, key))
+                        delattr(tx, key)
+                        tx.returned_fields.append(mapping[key])
+
+        return transactions_enriched
 
     @staticmethod
     def _build_params_str(model_name: str = None) -> str:
@@ -1765,7 +1779,7 @@ class SDK:
             provided, replaces the default labeler
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
-            expected column names. Note: this only applies to DataFrame enrichment.
+            expected column names.
         inplace : bool, optional
             Enrich the dataframe inplace. Note: this only applies to DataFrame enrichment.
 
