@@ -1337,7 +1337,6 @@ class SDK:
         url: str,
         payload: object,
         log_level=logging.DEBUG,
-        extra_headers: dict = None,
         **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
@@ -1354,17 +1353,12 @@ class SDK:
             The request payload.
         log_level : int, optional
             The logging level for the request.
-        extra_headers: dict, optional
-            Extra headers for the request
 
         Raises
         ------
         NtropyError
             If the request failed after the maximum number of retries.
         """
-
-        if not extra_headers:
-            extra_headers = {}
 
         backoff = 1
         for _ in range(self._retries):
@@ -1376,7 +1370,6 @@ class SDK:
                     headers={
                         "X-API-Key": self.token,
                         "User-Agent": f"ntropy-sdk/{__version__}",
-                        **extra_headers,
                         **self._extra_headers,
                     },
                     timeout=self._timeout,
@@ -1733,13 +1726,8 @@ class SDK:
 
         try:
             data = [transaction.to_dict() for transaction in transactions]
-
-            headers = {}
-            if len(transactions) == 1:
-                headers["X-Realtime"] = "1"
-
             url = f"/v2/transactions/sync?" + params_str
-            resp = self.retry_ratelimited_request("POST", url, data, extra_headers=headers)
+            resp = self.retry_ratelimited_request("POST", url, data)
 
             exc = None
             if resp.status_code != 200:
