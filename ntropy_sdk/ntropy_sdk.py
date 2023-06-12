@@ -409,6 +409,25 @@ class Entity(BaseModel):
     website: Optional[str] = Field(description="Website of the merchant.")
 
 
+class LocationStructured(BaseModel):
+    """Information regarding the location of the merchant"""
+
+    address: Optional[str] = Field(
+        description="The street address (including house number, apartment, suite, unit, or building number, if applicable)."
+    )
+    city: Optional[str] = Field(description="City, district, suburb, town, or village.")
+    state: Optional[str] = Field(description="State, county, province, or region.")
+    country: Optional[str] = Field(
+        description="Two-letter country code (ISO 3166-1 alpha-2)."
+    )
+    postcode: Optional[str] = Field(description="ZIP or postal code.")
+    latitude: Optional[float] = Field(description="Latitude of the location.")
+    longitude: Optional[float] = Field(description="Longitude of the location.")
+    store_number: Optional[str] = Field(
+        description="Store number of the location if found in the transaction description."
+    )
+
+
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
@@ -418,6 +437,7 @@ class EnrichedTransaction(BaseModel):
         "labels",
         "label_group",
         "location",
+        "location_structured",
         "logo",
         "merchant",
         "merchant_id",
@@ -443,7 +463,12 @@ class EnrichedTransaction(BaseModel):
     label_group: Optional[str] = Field(
         description="Higher level category that groups together related labels"
     )
-    location: Optional[str] = Field(description="Location of the merchant.")
+    location: Optional[str] = Field(
+        description="Location of the merchant as a formatted string."
+    )
+    location_structured: Optional[LocationStructured] = Field(
+        description="Location of the merchant as a structured object."
+    )
     logo: Optional[str] = Field(description="A link to the logo of the merchant.")
     merchant: Optional[str] = Field(description="The name of the transaction merchant.")
     merchant_id: Optional[str] = Field(
