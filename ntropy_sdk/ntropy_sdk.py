@@ -417,12 +417,16 @@ class LocationStructured(BaseModel):
     )
     city: Optional[str] = Field(description="City, district, suburb, town, or village.")
     state: Optional[str] = Field(description="State, county, province, or region.")
+    postcode: Optional[str] = Field(description="ZIP or postal code.")
     country: Optional[str] = Field(
         description="Two-letter country code (ISO 3166-1 alpha-2)."
     )
-    postcode: Optional[str] = Field(description="ZIP or postal code.")
     latitude: Optional[float] = Field(description="Latitude of the location.")
     longitude: Optional[float] = Field(description="Longitude of the location.")
+    google_maps_url: Optional[str] = Field(
+        description="Google Maps URL of the location."
+    )
+    apple_maps_url: Optional[str] = Field(description="Apple Maps URL of the location.")
     store_number: Optional[str] = Field(
         description="Store number of the location if found in the transaction description."
     )
