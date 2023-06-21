@@ -7,6 +7,7 @@ import uuid
 import warnings
 from datetime import date
 from io import IOBase
+from pathlib import Path
 from typing import (
     Any,
     ClassVar,
@@ -1273,7 +1274,10 @@ class BankStatementRequest(BaseModel):
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
             resp, status = self.poll()
-            if status == "processing":
+            if status in (
+                "queued",
+                "processing",
+            ):
                 time.sleep(poll_interval)
                 continue
             return resp
@@ -1947,8 +1951,7 @@ class SDK:
                 "/datasources/bank_statements",
                 payload=None,
                 files={
-                    "filename": (None, filename),
-                    "file": ("file", file),
+                    "file": (Path(getattr(file, "name", file)).name, file),
                 },
             )
 
