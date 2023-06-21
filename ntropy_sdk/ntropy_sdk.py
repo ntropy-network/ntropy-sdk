@@ -1273,7 +1273,10 @@ class BankStatementRequest(BaseModel):
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
             resp, status = self.poll()
-            if status == "processing":
+            if status in (
+                "queued",
+                "processing",
+            ):
                 time.sleep(poll_interval)
                 continue
             return resp
