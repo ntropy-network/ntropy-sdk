@@ -7,6 +7,7 @@ import uuid
 import warnings
 from datetime import date
 from io import IOBase
+from pathlib import Path
 from typing import (
     Any,
     ClassVar,
@@ -1950,8 +1951,7 @@ class SDK:
                 "/datasources/bank_statements",
                 payload=None,
                 files={
-                    "filename": (None, filename),
-                    "file": ("file", file),
+                    "file": (Path(getattr(file, "name", file)).name, file),
                 },
             )
 
