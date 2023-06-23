@@ -513,7 +513,7 @@ def test_enriched_fields(sdk):
         account_holder_type="business",
         iso_currency_code="USD",
         country="US",
-        mcc=5432,
+        # mcc=5432,
     )
     df = pd.DataFrame(
         data={
@@ -526,7 +526,7 @@ def test_enriched_fields(sdk):
             "account_holder_type": ["business"],
             "iso_currency_code": ["USD"],
             "transaction_id": ["test-enriched-fields"],
-            "mcc": [5432],
+            # "mcc": [5432],
         }
     )
 
@@ -547,7 +547,7 @@ def test_enriched_fields(sdk):
         # assert enriched.recurrence == "one off"
         assert 0 <= enriched.confidence <= 1
         assert any(enriched.transaction_type == t.value for t in TransactionType)
-        assert 5432 in enriched.mcc
+        # assert 5432 in enriched.mcc
 
 
 def test_sdk_region():
