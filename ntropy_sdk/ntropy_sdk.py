@@ -1951,7 +1951,7 @@ class SDK:
                 "/datasources/bank_statements",
                 payload=None,
                 files={
-                    "file": (Path(getattr(file, "name", file)).name, file),
+                    "file": (Path(getattr(file, "name", filename)).name, file),
                 },
             )
 
