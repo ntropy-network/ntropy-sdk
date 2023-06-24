@@ -25,6 +25,13 @@ class NtropyDatasourceError(Exception):
 
     DESCRIPTION = "Error processing submitted document"
 
+    def __init__(self, error_code=None, error=None):
+        self.error_code = error_code or 500
+        self.error = error or "Unknown Error"
+
+    def __str__(self):
+        return f"{self.DESCRIPTION}: {self.error_code}: {self.error}"
+
 
 class NtropyTimeoutError(NtropyError):
     DESCRIPTION = "Operation timed out"

@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from ntropy_sdk.errors import NtropyDatasourceError
 from ntropy_sdk.ntropy_sdk import BankStatementRequest
 
 
@@ -31,3 +32,17 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
     enriched = sdk.add_transactions(bs.transactions)
     assert len(enriched) > 0
     assert enriched[0].merchant == "Ministrum"
+
+
+def test_processed_bank_statement_error(sdk, bank_statement_sample):
+    bsr = BankStatementRequest(
+        sdk=sdk,
+        filename="file",
+        bs_id="adcdc5f8-9ce9-46a2-978c-2148a3271d50",
+    )
+
+    with pytest.raises(NtropyDatasourceError) as e:
+        bsr.wait()
+    assert e.value.error_code == 415
+    assert "file type not supported" in e.value.error.lower()
+

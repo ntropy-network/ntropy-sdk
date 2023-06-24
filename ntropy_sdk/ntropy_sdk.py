@@ -1223,15 +1223,12 @@ class BankStatementRequest(BaseModel):
     def __repr__(self):
         return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
 
-    def poll(self):
-        """Polls the current bank statement status and returns the server response and status attribute.
+    def poll(self) -> BankStatement:
+        """Polls the current bank statement status and returns the server response
 
         Returns
         -------
-        status : str
-            The status of the bank statement enrichment.
-        dict
-            The JSON response of the statement poll.
+        bank_statement: A bank statement
         """
 
         url = f"/datasources/bank_statements/{self.bs_id}"
@@ -1239,11 +1236,9 @@ class BankStatementRequest(BaseModel):
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status = json_resp.get("status")
 
-        if status == "processed":
-            return BankStatement(**json_resp), status
-
         if status == "failed":
-            raise NtropyDatasourceError()
+            raise NtropyDatasourceError(error_code=json_resp.get("error_code", None),
+                                        error=json_resp.get("error", None))
 
         return json_resp, status
 
@@ -1273,14 +1268,14 @@ class BankStatementRequest(BaseModel):
         if not poll_interval:
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
-            resp, status = self.poll()
-            if status in (
+            bs = self.poll()
+            if bs.status in (
                 "queued",
                 "processing",
             ):
                 time.sleep(poll_interval)
                 continue
-            return resp
+            return bs
         raise NtropyTimeoutError("Bank statement wait timeout")
 
     class Config:
