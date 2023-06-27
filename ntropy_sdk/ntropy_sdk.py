@@ -1217,9 +1217,6 @@ class BankStatementRequest(BaseModel):
         4 * 60 * 60, description="A timeout for retrieving the statement result."
     )
     poll_interval: int = Field(10, description="The interval between polling retries.")
-    transactions: list = Field(
-        [], description="The transactions submitted in this statement"
-    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1247,7 +1244,7 @@ class BankStatementRequest(BaseModel):
 
         return BankStatement(**json_resp)
 
-    def wait(self, with_progress: bool = DEFAULT_WITH_PROGRESS, poll_interval=None):
+    def wait(self, with_progress: bool = DEFAULT_WITH_PROGRESS, poll_interval=None, merge_original=True):
         """Continuously polls the status of this bank statement, blocking until the statement status is
         "ready" or "error"
 
@@ -1258,6 +1255,8 @@ class BankStatementRequest(BaseModel):
         poll_interval : bool
             The interval between polling retries. If not specified, defaults to
             the statement's poll_interval.
+        merge_original : bool
+            Whether to merge input transactions (needs pandas installed).
 
         Returns
         -------
@@ -1268,7 +1267,18 @@ class BankStatementRequest(BaseModel):
         """
 
         bs = self._wait(poll_interval=poll_interval)
-        return bs.wait_for_batch(sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval)
+        batch_res = bs.wait_for_batch(sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval)
+        if not merge_original:
+            return batch_res
+
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+
+        assert len(batch_res) == len(bs.transactions)
+        input_txs = [tx.to_dict() for tx in bs.transactions]
+        return pd.concat([pd.DataFrame(input_txs), batch_res.to_df()], axis=1)
 
     def _wait(self, poll_interval=None):
         """Retrieve the current bank statement enrichment without progress updates."""
