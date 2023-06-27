@@ -11,5 +11,7 @@ from ntropy_sdk.ntropy_sdk import (
     EnrichedTransaction,
     EnrichedTransactionList,
     LabeledTransaction,
+    BankStatement,
+    BankStatementRequest,
     Report,
 )
