@@ -1187,8 +1187,9 @@ class Report(BaseModel):
 
 class BankStatement(BaseModel):
     id: str
+    batch_id: str | None
     status: str
-    transactions: List
+    transactions: List | None
 
     class Config:
         arbitrary_types_allowed = True
@@ -1196,10 +1197,14 @@ class BankStatement(BaseModel):
 
     @root_validator
     def transform_txs(cls, values):
-        if values["transactions"]:
-            txs = [Transaction.from_dict(tx) for tx in values["transactions"]]
-            values["transactions"] = txs
+        if txs_json := values.get("transactions", []):
+            values["transactions"] = [Transaction.from_dict(tx) for tx in txs_json]
         return values
+
+    def wait_for_batch(self, sdk, *args, **kwargs):
+        assert self.batch_id, "Need to specify batch_id"
+        batch = Batch(sdk=sdk, batch_id=self.batch_id)
+        return batch.wait(*args, **kwargs)
 
 
 class BankStatementRequest(BaseModel):
@@ -1240,14 +1245,16 @@ class BankStatementRequest(BaseModel):
             raise NtropyDatasourceError(error_code=json_resp.get("error_code", None),
                                         error=json_resp.get("error", None))
 
-        return json_resp, status
+        return BankStatement(**json_resp)
 
-    def wait(self, poll_interval=None):
+    def wait(self, with_progress: bool = DEFAULT_WITH_PROGRESS, poll_interval=None):
         """Continuously polls the status of this bank statement, blocking until the statement status is
         "ready" or "error"
 
         Parameters
         ----------
+        with_progress : bool, optional
+            True if enrichment should include a progress bar; False otherwise.
         poll_interval : bool
             The interval between polling retries. If not specified, defaults to
             the statement's poll_interval.
@@ -1260,7 +1267,8 @@ class BankStatementRequest(BaseModel):
             The JSON response of the statement poll.
         """
 
-        return self._wait(poll_interval=poll_interval)
+        bs = self._wait(poll_interval=poll_interval)
+        return bs.wait_for_batch(sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval)
 
     def _wait(self, poll_interval=None):
         """Retrieve the current bank statement enrichment without progress updates."""
@@ -1952,6 +1960,7 @@ class SDK:
 
             r = resp.json()
             bs_id = r.get("id", "")
+            batch_id = r.get("batch_id", None)
 
             if not bs_id:
                 raise ValueError("id missing from response")
@@ -1959,6 +1968,7 @@ class SDK:
             return BankStatementRequest(
                 sdk=self,
                 bs_id=bs_id,
+                batch_id=batch_id,
                 filename=filename,
                 timeout=timeout,
                 poll_interval=poll_interval,
