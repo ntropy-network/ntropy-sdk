@@ -1239,12 +1239,19 @@ class BankStatementRequest(BaseModel):
         status = json_resp.get("status")
 
         if status == "failed":
-            raise NtropyDatasourceError(error_code=json_resp.get("error_code", None),
-                                        error=json_resp.get("error", None))
+            raise NtropyDatasourceError(
+                error_code=json_resp.get("error_code", None),
+                error=json_resp.get("error", None),
+            )
 
         return BankStatement(**json_resp)
 
-    def wait(self, with_progress: bool = DEFAULT_WITH_PROGRESS, poll_interval=None, merge_original=True):
+    def wait(
+        self,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        poll_interval=None,
+        merge_original=True,
+    ):
         """Continuously polls the status of this bank statement, blocking until the statement status is
         "ready" or "error"
 
@@ -1267,7 +1274,9 @@ class BankStatementRequest(BaseModel):
         """
 
         bs = self._wait(poll_interval=poll_interval)
-        batch_res = bs.wait_for_batch(sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval)
+        batch_res = bs.wait_for_batch(
+            sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval
+        )
         if not merge_original:
             return batch_res
 
@@ -1955,7 +1964,6 @@ class SDK:
         self,
         file: IOBase,
         filename: Optional[str] = "file",
-        account_type: Optional[AccountHolderType] = AccountHolderType.business,
         timeout=4 * 60 * 60,
         poll_interval=30,
     ) -> BankStatementRequest:
@@ -1966,9 +1974,6 @@ class SDK:
                 payload=None,
                 files={
                     "file": (Path(getattr(file, "name", filename)).name, file),
-                },
-                json={
-                    "account_type": account_type,
                 },
             )
 
