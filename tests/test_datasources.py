@@ -28,9 +28,10 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
         bs_id="855ec219-6366-4b06-82f4-1ed6b9a6b0db",
     )
 
-    df = bsr.wait()
+    df = bsr.wait(merge_original=True)
     assert len(df) > 0
     assert df.iloc[3].merchant == "RBC"
+    assert df.iloc[3].description.strip() == "MISC PAYMENT RBC CREDIT CARD"
 
 
 def test_processed_bank_statement_error(sdk, bank_statement_sample):
