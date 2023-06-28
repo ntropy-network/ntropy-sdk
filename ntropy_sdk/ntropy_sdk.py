@@ -1197,7 +1197,8 @@ class BankStatement(BaseModel):
 
     @root_validator
     def transform_txs(cls, values):
-        if txs_json := values.get("transactions", []):
+        txs_json = values.get("transactions", [])
+        if txs_json:
             values["transactions"] = [Transaction.from_dict(tx) for tx in txs_json]
         return values
 
