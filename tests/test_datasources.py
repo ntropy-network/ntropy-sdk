@@ -15,23 +15,22 @@ def bank_statement_sample():
 
 def test_submit_bank_statement(sdk, bank_statement_sample):
     with open(bank_statement_sample, "rb") as f:
-        bs = sdk.add_bank_statement(file=f, filename="bank_statement_sample.jpg")
-        r, status = bs.poll()
-        assert status == "queued"
-        assert bs.bs_id == r["id"]
+        bsr = sdk.add_bank_statement(file=f, filename="bank_statement_sample.jpg")
+        bs = bsr.poll()
+        assert bs.status == "queued"
+        assert bs.id is not None
 
 
 def test_processed_bank_statement(sdk, bank_statement_sample):
     bsr = BankStatementRequest(
         sdk=sdk,
         filename="file",
-        bs_id="d192b263-8332-430c-a5c1-433862eac7ea",
+        bs_id="855ec219-6366-4b06-82f4-1ed6b9a6b0db",
     )
 
-    bs = bsr.wait()
-    enriched = sdk.add_transactions(bs.transactions)
-    assert len(enriched) > 0
-    assert enriched[0].merchant == "Ministrum"
+    df = bsr.wait()
+    assert len(df) > 0
+    assert df.iloc[3].merchant == "RBC"
 
 
 def test_processed_bank_statement_error(sdk, bank_statement_sample):
@@ -45,4 +44,3 @@ def test_processed_bank_statement_error(sdk, bank_statement_sample):
         bsr.wait()
     assert e.value.error_code == 415
     assert "file type not supported" in e.value.error.lower()
-
