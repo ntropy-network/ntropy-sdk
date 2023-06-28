@@ -1190,6 +1190,7 @@ class BankStatement(BaseModel):
     batch_id: str | None
     status: str
     transactions: List | None
+    account_type: AccountHolderType
 
     class Config:
         arbitrary_types_allowed = True
@@ -1966,13 +1967,14 @@ class SDK:
         file: IOBase,
         filename: Optional[str] = "file",
         timeout=4 * 60 * 60,
+        account_type: Optional[AccountHolderType] = AccountHolderType.business,
         poll_interval=30,
     ) -> BankStatementRequest:
         try:
             resp = self.retry_ratelimited_request(
                 "POST",
                 "/datasources/bank_statements",
-                payload=None,
+                payload=dict(account_type=account_type.value),
                 files={
                     "file": (Path(getattr(file, "name", filename)).name, file),
                 },

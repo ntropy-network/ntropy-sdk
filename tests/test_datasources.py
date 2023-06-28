@@ -4,20 +4,26 @@ import pytest
 
 from ntropy_sdk.errors import NtropyDatasourceError
 from ntropy_sdk.ntropy_sdk import BankStatementRequest
+from ntropy_sdk.utils import AccountHolderType
 
 
 @pytest.fixture()
 def bank_statement_sample():
     return os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "bank_statement_sample.jpg"
+        os.path.dirname(os.path.abspath(__file__)), "bank_statement_sample.pdf"
     )
 
 
 def test_submit_bank_statement(sdk, bank_statement_sample):
     with open(bank_statement_sample, "rb") as f:
-        bsr = sdk.add_bank_statement(file=f, filename="bank_statement_sample.jpg")
+        bsr = sdk.add_bank_statement(
+            file=f,
+            filename="bank_statement_sample.pdf",
+            account_type=AccountHolderType.business,
+        )
         bs = bsr.poll()
         assert bs.status == "queued"
+        assert bs.account_type == "business"
         assert bs.id is not None
 
 
