@@ -1955,6 +1955,7 @@ class SDK:
         self,
         file: IOBase,
         filename: Optional[str] = "file",
+        account_type: Optional[AccountHolderType] = AccountHolderType.business,
         timeout=4 * 60 * 60,
         poll_interval=30,
     ) -> BankStatementRequest:
@@ -1965,6 +1966,9 @@ class SDK:
                 payload=None,
                 files={
                     "file": (Path(getattr(file, "name", filename)).name, file),
+                },
+                json={
+                    "account_type": account_type,
                 },
             )
 
