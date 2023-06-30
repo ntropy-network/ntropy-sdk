@@ -1187,9 +1187,9 @@ class Report(BaseModel):
 
 class BankStatement(BaseModel):
     id: str
-    batch_id: str | None
+    batch_id: Optional[str]
     status: str
-    transactions: List | None
+    transactions: Optional[List]
     account_type: AccountHolderType
 
     class Config:
