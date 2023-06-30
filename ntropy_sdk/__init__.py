@@ -1,4 +1,4 @@
-__version__ = "4.19.0rc3"
+__version__ = "4.19.0rc7"
 
 from ntropy_sdk.ntropy_sdk import (
     AccountHolder,
@@ -11,5 +11,7 @@ from ntropy_sdk.ntropy_sdk import (
     EnrichedTransaction,
     EnrichedTransactionList,
     LabeledTransaction,
+    BankStatement,
+    BankStatementRequest,
     Report,
 )

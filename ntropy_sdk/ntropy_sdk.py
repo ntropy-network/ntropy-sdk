@@ -1187,8 +1187,10 @@ class Report(BaseModel):
 
 class BankStatement(BaseModel):
     id: str
+    batch_id: Optional[str]
     status: str
-    transactions: List
+    transactions: Optional[List]
+    account_type: AccountHolderType
 
     class Config:
         arbitrary_types_allowed = True
@@ -1196,10 +1198,15 @@ class BankStatement(BaseModel):
 
     @root_validator
     def transform_txs(cls, values):
-        if values["transactions"]:
-            txs = [Transaction.from_dict(tx) for tx in values["transactions"]]
-            values["transactions"] = txs
+        txs_json = values.get("transactions", [])
+        if txs_json:
+            values["transactions"] = [Transaction.from_dict(tx) for tx in txs_json]
         return values
+
+    def wait_for_batch(self, sdk, *args, **kwargs):
+        assert self.batch_id, "Need to specify batch_id"
+        batch = Batch(sdk=sdk, batch_id=self.batch_id)
+        return batch.wait(*args, **kwargs)
 
 
 class BankStatementRequest(BaseModel):
@@ -1212,9 +1219,6 @@ class BankStatementRequest(BaseModel):
         4 * 60 * 60, description="A timeout for retrieving the statement result."
     )
     poll_interval: int = Field(10, description="The interval between polling retries.")
-    transactions: list = Field(
-        [], description="The transactions submitted in this statement"
-    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1223,15 +1227,12 @@ class BankStatementRequest(BaseModel):
     def __repr__(self):
         return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
 
-    def poll(self):
-        """Polls the current bank statement status and returns the server response and status attribute.
+    def poll(self) -> BankStatement:
+        """Polls the current bank statement status and returns the server response
 
         Returns
         -------
-        status : str
-            The status of the bank statement enrichment.
-        dict
-            The JSON response of the statement poll.
+        bank_statement: A bank statement
         """
 
         url = f"/datasources/bank_statements/{self.bs_id}"
@@ -1239,23 +1240,32 @@ class BankStatementRequest(BaseModel):
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status = json_resp.get("status")
 
-        if status == "processed":
-            return BankStatement(**json_resp), status
-
         if status == "failed":
-            raise NtropyDatasourceError()
+            raise NtropyDatasourceError(
+                error_code=json_resp.get("error_code", None),
+                error=json_resp.get("error", None),
+            )
 
-        return json_resp, status
+        return BankStatement(**json_resp)
 
-    def wait(self, poll_interval=None):
+    def wait(
+        self,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        poll_interval=None,
+        merge_original=True,
+    ):
         """Continuously polls the status of this bank statement, blocking until the statement status is
         "ready" or "error"
 
         Parameters
         ----------
+        with_progress : bool, optional
+            True if enrichment should include a progress bar; False otherwise.
         poll_interval : bool
             The interval between polling retries. If not specified, defaults to
             the statement's poll_interval.
+        merge_original : bool
+            Whether to merge input transactions (needs pandas installed).
 
         Returns
         -------
@@ -1265,7 +1275,21 @@ class BankStatementRequest(BaseModel):
             The JSON response of the statement poll.
         """
 
-        return self._wait(poll_interval=poll_interval)
+        bs = self._wait(poll_interval=poll_interval)
+        batch_res = bs.wait_for_batch(
+            sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval
+        )
+        if not merge_original:
+            return batch_res
+
+        try:
+            import pandas as pd
+        except ImportError:
+            raise RuntimeError("pandas is not installed")
+
+        assert len(batch_res) == len(bs.transactions)
+        input_txs = [tx.to_dict() for tx in bs.transactions]
+        return pd.concat([pd.DataFrame(input_txs), batch_res.to_df()], axis=1)
 
     def _wait(self, poll_interval=None):
         """Retrieve the current bank statement enrichment without progress updates."""
@@ -1273,14 +1297,14 @@ class BankStatementRequest(BaseModel):
         if not poll_interval:
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
-            resp, status = self.poll()
-            if status in (
+            bs = self.poll()
+            if bs.status in (
                 "queued",
                 "processing",
             ):
                 time.sleep(poll_interval)
                 continue
-            return resp
+            return bs
         raise NtropyTimeoutError("Bank statement wait timeout")
 
     class Config:
@@ -1943,20 +1967,22 @@ class SDK:
         file: IOBase,
         filename: Optional[str] = "file",
         timeout=4 * 60 * 60,
+        account_type: Optional[AccountHolderType] = AccountHolderType.business,
         poll_interval=30,
     ) -> BankStatementRequest:
         try:
             resp = self.retry_ratelimited_request(
                 "POST",
                 "/datasources/bank_statements",
-                payload=None,
+                payload=dict(account_type=account_type.value),
                 files={
-                    "file": (Path(getattr(file, "name", file)).name, file),
+                    "file": (Path(getattr(file, "name", filename)).name, file),
                 },
             )
 
             r = resp.json()
             bs_id = r.get("id", "")
+            batch_id = r.get("batch_id", None)
 
             if not bs_id:
                 raise ValueError("id missing from response")
@@ -1964,6 +1990,7 @@ class SDK:
             return BankStatementRequest(
                 sdk=self,
                 bs_id=bs_id,
+                batch_id=batch_id,
                 filename=filename,
                 timeout=timeout,
                 poll_interval=poll_interval,
