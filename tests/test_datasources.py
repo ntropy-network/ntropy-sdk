@@ -23,7 +23,7 @@ def test_submit_bank_statement(sdk, bank_statement_sample):
         )
         bs = bsr.poll()
         assert bs.status == "queued"
-        assert bs.account_type == "business"
+        assert bs.account_type == AccountHolderType.business
         assert bs.id is not None
 
 
@@ -31,7 +31,7 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
     bsr = BankStatementRequest(
         sdk=sdk,
         filename="file",
-        bs_id="855ec219-6366-4b06-82f4-1ed6b9a6b0db",
+        bs_id="940ee882-cdf1-4770-838b-35e31859b56e",
     )
 
     df = bsr.wait(merge_original=True)
