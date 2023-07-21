@@ -708,7 +708,12 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_list_or_err(
-        cls, sdk, transactions: List[dict], parent_txs: List = [], exc: Exception = None
+        cls,
+        sdk,
+        transactions: List[dict],
+        parent_txs: List = [],
+        exc: Exception = None,
+        drop_errors: bool = False,
     ):
         """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
         Additionally, for every transaction that contains errors, add `exc`
@@ -721,6 +726,8 @@ class EnrichedTransactionList(list):
             Parent transaction to be assigned to the input `transactions`
         exc: Exception
             The exception to assign to each transaction with errors
+        drop_errors: boolean
+            if True, drops the errored transactions instead of raising errors
 
         Returns
         -------
@@ -731,6 +738,8 @@ class EnrichedTransactionList(list):
         for tx in transactions:
             enr_tx = EnrichedTransaction.from_dict(sdk, tx)
             if enr_tx.error or enr_tx.error_details:
+                if drop_errors:
+                    continue
                 if exc is None:
                     exc = NtropyError(
                         f"Error on transaction_id={enr_tx.transaction_id}"
@@ -744,8 +753,9 @@ class EnrichedTransactionList(list):
     def to_df(self) -> Any:
         try:
             import pandas as pd
+            import numpy as np
         except ImportError:
-            raise RuntimeError("pandas is not installed")
+            raise RuntimeError("pandas or numpy are not installed")
 
         def _tx_generator():
             for tx in self:
@@ -759,7 +769,10 @@ class EnrichedTransactionList(list):
                 }
                 yield {**parent, **enriched}
 
-        return pd.DataFrame.from_records(_tx_generator())
+        df = pd.DataFrame.from_records(_tx_generator())
+        # Avoids any issues with errored fields
+        df = df.replace(np.nan, None)
+        return df
 
     def dict(self) -> List[Dict[str, Any]]:
         return [t.dict() for t in self]
@@ -2251,7 +2264,9 @@ class SDK:
             parents.append(parent)
             enriched.append(etx)
 
-        return EnrichedTransactionList.from_list_or_err(self, enriched, parents)
+        return EnrichedTransactionList.from_list_or_err(
+            self, enriched, parents, drop_errors=True
+        )
 
     def get_labels(self, account_holder_type: str) -> dict:
         """Returns a hierarchy of possible labels for a specific type.
