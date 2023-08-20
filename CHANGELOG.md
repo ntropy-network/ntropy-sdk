@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+## [4.20.0] - 2023-08-21
+- Added ability to specify account holder information to bank statements via `sdk.add_bank_statement`.
 
 ## [4.16.0] - 2023-02-27
 - Added a flag to SDK `raise_on_enrichment_error` that allows for enrichment to continue even if there are errors in
