@@ -1966,7 +1966,7 @@ class SDK:
         self,
         file: IOBase,
         filename: Optional[str] = "file",
-        account_holder_id: str | None = None,
+        account_holder_id: Optional[str] = None,
         account_type: Optional[AccountHolderType] = AccountHolderType.business,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 30,
