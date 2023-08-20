@@ -1968,8 +1968,8 @@ class SDK:
         filename: Optional[str] = "file",
         account_holder_id: str | None = None,
         account_type: Optional[AccountHolderType] = AccountHolderType.business,
-        timeout=4 * 60 * 60,
-        poll_interval=30,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 30,
     ) -> BankStatementRequest:
         """Enriches the transactions found in a Bank Statement.
         Returns a `BankStatementRequest` object that can be used to get both raw and enriched transactions.
@@ -1986,9 +1986,9 @@ class SDK:
         account_type : AccountHolderType, optional
             Type of account holder to use when it is being created. Otherwise it'll override the type of the existing
             one for the transactions on this bank statement.
-        timeout : int, optional
+        timeout : int
             Timeout for retrieving bank statement result.
-        poll_interval : int, optional
+        poll_interval : int
             The interval between consecutive polling retries.
 
         Returns
