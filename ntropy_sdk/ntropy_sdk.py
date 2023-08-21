@@ -1966,15 +1966,50 @@ class SDK:
         self,
         file: IOBase,
         filename: Optional[str] = "file",
-        timeout=4 * 60 * 60,
+        account_holder_id: Optional[str] = None,
         account_type: Optional[AccountHolderType] = AccountHolderType.business,
-        poll_interval=30,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 30,
     ) -> BankStatementRequest:
+        """Enriches the transactions found in a Bank Statement.
+        Returns a `BankStatementRequest` object that can be used to get both raw and enriched transactions.
+
+        Parameters
+        ----------
+        file : IOBase
+            Bank statement file
+        filename : string, optional
+            Name to use for the bank statement,
+        account_holder_id : str, optional
+            Account holder to associate to underlying bank statement transactions.
+            If no account holder with the given id exists, one will be created with `account_type` or "business" if not
+            specified.
+        account_type : AccountHolderType, optional
+            Type of account holder to use when it is being created. Otherwise it'll override the type of the existing
+            one for the transactions on this bank statement.
+        timeout : int
+            Timeout for retrieving bank statement result.
+        poll_interval : int
+            The interval between consecutive polling retries.
+
+        Returns
+        -------
+        Batch
+            A Batch object that can be polled and awaited.
+        """
         try:
+            params = {
+                "account_type": account_type.value,
+            }
+
+            if account_holder_id:
+                params["account_holder_id"] = account_holder_id
+
             resp = self.retry_ratelimited_request(
                 "POST",
                 "/datasources/bank_statements",
-                payload=dict(account_type=account_type.value),
+                params=params,
+                payload=None,
                 files={
                     "file": (Path(getattr(file, "name", filename)).name, file),
                 },
