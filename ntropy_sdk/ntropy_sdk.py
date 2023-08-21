@@ -1981,8 +1981,9 @@ class SDK:
         filename : string, optional
             Name to use for the bank statement,
         account_holder_id : str, optional
-            Account holder to associate to underlying bank statement transactions. One will be created if it does not
-            exist with `account_type` or "business" if not specified.
+            Account holder to associate to underlying bank statement transactions.
+            If no account holder with the given id exists, one will be created with `account_type` or "business" if not
+            specified.
         account_type : AccountHolderType, optional
             Type of account holder to use when it is being created. Otherwise it'll override the type of the existing
             one for the transactions on this bank statement.
