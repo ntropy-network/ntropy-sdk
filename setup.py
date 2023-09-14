@@ -11,7 +11,7 @@ requirements = [
     "requests",
     "tqdm",
     "requests_toolbelt",
-    "pydantic<2",
+    "pydantic",
     "tabulate",
 ]
 
