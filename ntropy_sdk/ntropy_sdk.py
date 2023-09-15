@@ -1730,7 +1730,6 @@ class SDK:
         mapping: dict = None,
     ):
         result = []
-        force_async = len(transactions) > self.MAX_BATCH_SIZE
 
         for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
             result += self._add_transactions_chunk(
@@ -1740,7 +1739,6 @@ class SDK:
                 with_progress,
                 model_name,
                 mapping,
-                force_async,
             )
         return result
 
@@ -1752,7 +1750,6 @@ class SDK:
         with_progress=DEFAULT_WITH_PROGRESS,
         model_name=None,
         mapping: dict = None,
-        force_async: bool = False,
     ):
         if None in transactions:
             raise ValueError("transactions contains a None value")
@@ -1772,7 +1769,6 @@ class SDK:
                 poll_interval,
                 with_progress,
                 model_name,
-                force_async=force_async,
             )
         except (
             NtropyValueError,
@@ -1811,9 +1807,8 @@ class SDK:
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
         model_name: str = None,
-        force_async: bool = False,
     ) -> EnrichedTransactionList:
-        is_sync = (len(transactions) <= self.MAX_SYNC_BATCH) and not force_async
+        is_sync = len(transactions) <= self.MAX_SYNC_BATCH
         if not is_sync:
             batch = self._add_transactions_async(
                 transactions,
