@@ -315,7 +315,7 @@ class AccountHolder(BaseModel):
     industry: Optional[str] = Field(None, description="Industry of the account holder.")
     website: Optional[str] = Field(None, description="Website of the account holder.")
     sdk: Optional["SDK"] = Field(
-        description="An SDK to use with the EnrichedTransaction.", exclude=True
+        None, description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
 
     def __repr__(self):
@@ -1223,7 +1223,7 @@ class BankStatement(BaseModel):
     id: str
     batch_id: Optional[str] = None
     status: str
-    transactions: Optional[List]
+    transactions: Optional[List] = []
     account_type: AccountHolderType
 
     class Config:
