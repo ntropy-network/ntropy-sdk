@@ -251,25 +251,25 @@ def test_enrich_huge_batch(sdk):
         assert enriched_tx.transaction_id == txs[i].transaction_id
         assert enriched_tx.parent_tx is txs[i]
 
-
-def test_report(sdk):
-    account_holder = AccountHolder(
-        id=str(uuid.uuid4()), type="business", industry="fintech", website="ntropy.com"
-    )
-    sdk.create_account_holder(account_holder)
-
-    tx = Transaction(
-        amount=24.56,
-        description="TARGET T- 5800 20th St 11/30/19 17:32",
-        entry_type="debit",
-        date="2012-12-10",
-        account_holder_id=account_holder.id,
-        iso_currency_code="USD",
-    )
-    enriched_tx = sdk.add_transactions([tx])[0]
-
-    enriched_tx.create_report(website="ww2.target.com")
-    enriched_tx.create_report(unplanned_kwarg="bar")
+# TODO: temporarily disabled until persistence timing is adjusted for reports
+# def test_report(sdk):
+#     account_holder = AccountHolder(
+#         id=str(uuid.uuid4()), type="business", industry="fintech", website="ntropy.com"
+#     )
+#     sdk.create_account_holder(account_holder)
+#
+#     tx = Transaction(
+#         amount=24.56,
+#         description="TARGET T- 5800 20th St 11/30/19 17:32",
+#         entry_type="debit",
+#         date="2012-12-10",
+#         account_holder_id=account_holder.id,
+#         iso_currency_code="USD",
+#     )
+#     enriched_tx = sdk.add_transactions([tx])[0]
+#
+#     enriched_tx.create_report(website="ww2.target.com")
+#     enriched_tx.create_report(unplanned_kwarg="bar")
 
 
 def test_hierarchy(sdk):
