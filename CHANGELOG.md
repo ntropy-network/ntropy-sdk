@@ -3,8 +3,30 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Added support for pydantic >= 2.0
+- Fix sending batches async when chunkedd
+
+## [4.20.0] - 2023-08-21
+- Added `account_holder_id` property to bank statements structure
+
 ## [4.20.0] - 2023-08-21
 - Added ability to specify account holder information to bank statements via `sdk.add_bank_statement`.
+
+## [4.19.0]
+- Added `google_maps_url` and `apple_maps_url` to the structured location.
+- Improved bank statements waiting statuses and default file naming
+- Removed deprecated `mcc` property
+- Updated bank_statements to match new API definition
+- Fixed pydantic version to 1.x
+
+## [4.18.0]
+- Added structured location support (address, city, state, country, postcode, longitude, store_number)
+
+## [4.18.0]
+- Reverted some small changes that introduced latency issues in small batches
+
+## [4.17.0]
+- Improved support for single transaction batches
 
 ## [4.16.0] - 2023-02-27
 - Added a flag to SDK `raise_on_enrichment_error` that allows for enrichment to continue even if there are errors in

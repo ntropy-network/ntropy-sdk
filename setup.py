@@ -11,7 +11,7 @@ requirements = [
     "requests",
     "tqdm",
     "requests_toolbelt",
-    "pydantic<2",
+    "pydantic",
     "tabulate",
 ]
 
@@ -54,6 +54,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="4.21.0",
+    version="4.21.1",
     zip_safe=False,
 )
