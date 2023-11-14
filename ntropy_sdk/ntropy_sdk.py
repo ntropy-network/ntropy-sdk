@@ -399,7 +399,7 @@ class RecurrenceGroup(BaseModel):
     average_amount: Optional[float] = None
     other_party: Optional[str] = None
     periodicity: Optional[str] = None
-    periodicity_in_days: Optional[int] = None
+    periodicity_in_days: Optional[float] = None
 
     class Config:
         use_enum_values = True
