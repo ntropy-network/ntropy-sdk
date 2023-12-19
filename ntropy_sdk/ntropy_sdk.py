@@ -103,6 +103,7 @@ class Transaction(BaseModel):
         "iso_currency_code",
         "country",
         "mcc",
+        "location",
     ]
 
     _date_validator = validator("date", pre=True, allow_reuse=True)(validate_date)
@@ -142,6 +143,11 @@ class Transaction(BaseModel):
         le=9999,
         description="The Merchant Category Code of the merchant, according to ISO 18245.",
     )
+    location: Optional[str] = Field(
+        None,
+        description="The transaction location if available.",
+    )
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -197,6 +203,7 @@ class Transaction(BaseModel):
             mcc=row.get("mcc"),
             country=row.get("country"),
             transaction_id=row.get("transaction_id"),
+            location=row.get("location"),
         )
 
     def to_dict(self):
