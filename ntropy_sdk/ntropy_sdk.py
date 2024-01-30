@@ -18,6 +18,7 @@ from typing import (
     TypeVar,
     Iterable,
     Union,
+    Type,
 )
 from urllib.parse import urlencode
 from itertools import islice
@@ -769,25 +770,25 @@ class EnrichedTransactionList(list):
             etx.parent_tx = tx
         return cls(enr_txs)
 
+    def tx_generator(self):
+        for tx in self:
+            parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
+            returned_fields = tx.returned_fields
+            enriched = {
+                k: v
+                for k, v in tx.to_dict().items()
+                if k in returned_fields
+                and k not in ["kwargs", "returned_fields", "sdk"]
+            }
+            yield {**parent, **enriched}
+
     def to_df(self) -> Any:
         try:
             import pandas as pd
         except ImportError:
             raise RuntimeError("pandas is not installed")
 
-        def _tx_generator():
-            for tx in self:
-                parent = tx.parent_tx.to_dict() if tx.parent_tx else {}
-                returned_fields = tx.returned_fields
-                enriched = {
-                    k: v
-                    for k, v in tx.to_dict().items()
-                    if k in returned_fields
-                    and k not in ["kwargs", "returned_fields", "sdk"]
-                }
-                yield {**parent, **enriched}
-
-        return pd.DataFrame.from_records(_tx_generator())
+        return pd.DataFrame.from_records(self.tx_generator())
 
     def dict(self) -> List[Dict[str, Any]]:
         return [t.dict() for t in self]
@@ -1220,27 +1221,28 @@ class Report(BaseModel):
 
 
 class BankStatement(BaseModel):
-    id: str
-    batch_id: Optional[str] = None
-    status: str
-    transactions: Optional[List] = []
+    id: str = Field(description="A unique identifier for the statement.")
+    status: str = Field(
+        description="A status describing the state of which the process is in."
+    )
+    transactions: Optional[List] = Field(
+        [], description="The enriched transactions of the bank statement."
+    )
     account_type: AccountHolderType
+    complete: bool = Field(
+        False, description="Whether the bank statement has finished being processed."
+    )
 
     class Config:
         arbitrary_types_allowed = True
         extra = "allow"
 
-    @root_validator(skip_on_failure=True)
+    @root_validator()
     def transform_txs(cls, values):
         txs_json = values.get("transactions", [])
         if txs_json:
             values["transactions"] = [Transaction.from_dict(tx) for tx in txs_json]
         return values
-
-    def wait_for_batch(self, sdk, *args, **kwargs):
-        assert self.batch_id, "Need to specify batch_id"
-        batch = Batch(sdk=sdk, batch_id=self.batch_id)
-        return batch.wait(*args, **kwargs)
 
 
 class BankStatementRequest(BaseModel):
@@ -1284,22 +1286,16 @@ class BankStatementRequest(BaseModel):
 
     def wait(
         self,
-        with_progress: bool = DEFAULT_WITH_PROGRESS,
         poll_interval=None,
-        merge_original=True,
     ):
         """Continuously polls the status of this bank statement, blocking until the statement status is
         "ready" or "error"
 
         Parameters
         ----------
-        with_progress : bool, optional
-            True if enrichment should include a progress bar; False otherwise.
         poll_interval : bool
             The interval between polling retries. If not specified, defaults to
             the statement's poll_interval.
-        merge_original : bool
-            Whether to merge input transactions (needs pandas installed).
 
         Returns
         -------
@@ -1309,36 +1305,42 @@ class BankStatementRequest(BaseModel):
             The JSON response of the statement poll.
         """
 
-        bs = self._wait(poll_interval=poll_interval)
-        batch_res = bs.wait_for_batch(
-            sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval
-        )
-        if not merge_original:
-            return batch_res
+        txs_dict = self._wait_complete(poll_interval=poll_interval)
+
+        input_txs = [Transaction.from_dict(tx) for tx in txs_dict]
+        enr_txs = EnrichedTransactionList.from_list_or_err(self.sdk, txs_dict)
+        merged = [i.dict() | o for i, o in zip(input_txs, enr_txs.tx_generator())]
 
         try:
             import pandas as pd
+
+            breakpoint()
+            return pd.DataFrame(merged)
         except ImportError:
-            raise RuntimeError("pandas is not installed")
+            return merged
 
-        assert len(batch_res) == len(bs.transactions)
-        input_txs = [tx.to_dict() for tx in bs.transactions]
-        return pd.concat([pd.DataFrame(input_txs), batch_res.to_df()], axis=1)
+    def _fetch_transactions(self):
+        url = f"/datasources/bank_statements/{self.bs_id}/transactions"
+        r = self.sdk.retry_ratelimited_request("GET", url, None)
+        if r.status_code != 200:
+            raise NtropyDatasourceError(
+                error_code=r.status_code,
+                error=r.text,
+            )
+        return r.json()
 
-    def _wait(self, poll_interval=None):
+    def _wait_complete(self, poll_interval=None):
         """Retrieve the current bank statement enrichment without progress updates."""
 
         if not poll_interval:
             poll_interval = self.poll_interval
         while self.timeout - time.time() > 0:
             bs = self.poll()
-            if bs.status in (
-                "queued",
-                "processing",
-            ):
+            if not bs.complete:
                 time.sleep(poll_interval)
                 continue
-            return bs
+
+            return self._fetch_transactions()
         raise NtropyTimeoutError("Bank statement wait timeout")
 
     class Config:
