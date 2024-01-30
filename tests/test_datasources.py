@@ -23,6 +23,7 @@ def test_submit_bank_statement(sdk, bank_statement_sample):
         )
         bs = bsr.poll()
         assert bs.status == "queued"
+        assert bs.complete is False
         assert bs.account_type == AccountHolderType.business
         assert bs.id is not None
 
@@ -34,7 +35,7 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
         bs_id="940ee882-cdf1-4770-838b-35e31859b56e",
     )
 
-    df = bsr.wait(merge_original=True)
+    df = bsr.wait()
     assert len(df) > 0
     assert df.iloc[3].merchant == "RBC"
     assert df.iloc[3].description.strip() == "MISC PAYMENT RBC CREDIT CARD"
