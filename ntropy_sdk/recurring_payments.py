@@ -5,7 +5,7 @@ from tabulate import tabulate
 
 class RecurringPaymentsGroup(BaseModel):
     latest_payment_amount: float
-    periodicity: str
+    periodicity: Optional[str]
     merchant: Optional[str]
     merchant_id: Optional[str]
     website: Optional[str]
