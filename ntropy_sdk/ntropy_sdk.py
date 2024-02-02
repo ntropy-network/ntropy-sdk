@@ -400,6 +400,7 @@ class RecurrenceGroup(BaseModel):
     other_party: Optional[str] = None
     periodicity: Optional[str] = None
     periodicity_in_days: Optional[float] = None
+    confidence: Optional[float] = None
 
     class Config:
         use_enum_values = True
