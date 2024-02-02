@@ -79,7 +79,7 @@ class IncomeGroup(BaseModel):
             total_amount=income_group["total_amount"],
             iso_currency_code=income_group["iso_currency_code"],
             source=income_group["source"],
-            merchant_id=income_group["merchant_id"],
+            merchant_id=income_group.get("merchant_id", None),
             income_type=income_group["income_type"],
             first_payment_date=income_group["first_payment_date"],
             latest_payment_date=income_group["latest_payment_date"],

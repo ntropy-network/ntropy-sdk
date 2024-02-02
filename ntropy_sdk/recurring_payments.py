@@ -30,7 +30,7 @@ class RecurringPaymentsGroup(BaseModel):
             latest_payment_amount=data.get(
                 "latest_payment_amount", data.get("amount", 0)
             ),
-            merchant=data.get("merchant"),
+            merchant=data.get("merchant", None),
             merchant_id=data.get("merchant_id"),
             website=data.get("website"),
             logo=data.get("logo"),
