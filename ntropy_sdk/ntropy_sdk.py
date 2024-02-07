@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 import logging
 import os
@@ -312,7 +314,7 @@ class AccountHolder(BaseModel):
     name: str | None = Field(None, description="Name of the account holder.")
     industry: str | None = Field(None, description="Industry of the account holder.")
     website: str | None = Field(None, description="Website of the account holder.")
-    sdk: "SDK" | None = Field(
+    sdk: SDK | None = Field(
         None, description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
 
@@ -522,7 +524,7 @@ class EnrichedTransaction(BaseModel):
         None,
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245).",
     )
-    intermediaries: list[Entity] | None= Field(
+    intermediaries: list[Entity] | None = Field(
         None,
         description="An object containing a list of the intermediary entities, if available",
     )
@@ -1133,7 +1135,7 @@ class Model(BaseModel):
 class Report(BaseModel):
     """A transaction report."""
 
-    sdk: "SDK" | None = Field(None, description="A SDK associated with the model.")
+    sdk: SDK | None = Field(None, description="A SDK associated with the model.")
     id: str = Field(description="Unique identifier for the report.")
     transaction_id: str = Field(description="Identifier of the reported transaction.")
     status: str = Field(description="Current status of the report.")
@@ -1543,7 +1545,7 @@ class SDK:
     def df_to_transaction_list(
         self,
         df,
-        mapping: dict | None= None,
+        mapping: dict | None = None,
         inplace: bool = False,
         tx_class: Any = Transaction,
     ) -> list[Transaction]:
@@ -2391,7 +2393,7 @@ class SDK:
         transactions,
         model_name: str,
         poll_interval: int | None = None,
-        timeout: int | None= None,
+        timeout: int | None = None,
     ) -> Model:
         txs = [tx.to_dict() for tx in transactions]
 
