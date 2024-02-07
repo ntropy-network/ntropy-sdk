@@ -12,7 +12,6 @@ from typing import (
     Any,
     ClassVar,
     Generator,
-    List,
     Dict,
     TypeVar,
     Iterable,
@@ -71,7 +70,7 @@ _sentinel = object()
 T = TypeVar("T")
 
 
-def chunks(it: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
+def chunks(it: Iterable[T], chunk_size: int) -> Generator[list[T], None, None]:
     it = it.__iter__()
     while True:
         chunk = list(islice(it, chunk_size))
@@ -83,7 +82,7 @@ def chunks(it: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
 class Transaction(BaseModel):
     """A financial transaction that can be enriched with the Ntropy SDK."""
 
-    _required_fields: ClassVar[List[str]] = [
+    _required_fields: ClassVar[list[str]] = [
         "amount",
         "description",
         "entry_type",
@@ -91,7 +90,7 @@ class Transaction(BaseModel):
         "date",
     ]
 
-    _fields: ClassVar[List[str]] = [
+    _fields: ClassVar[list[str]] = [
         "account_holder_id",
         "account_holder_type",
         "transaction_id",
@@ -217,7 +216,7 @@ class LabeledTransaction(Transaction):
 
     label: str = Field(description="Ground truth label for a transaction.")
 
-    _required_fields: ClassVar[List[str]] = [
+    _required_fields: ClassVar[list[str]] = [
         "amount",
         "description",
         "entry_type",
@@ -225,7 +224,7 @@ class LabeledTransaction(Transaction):
         "date",
     ]
 
-    _fields: ClassVar[List[str]] = [
+    _fields: ClassVar[list[str]] = [
         "account_holder_id",
         "account_holder_type",
         "transaction_id",
@@ -345,12 +344,12 @@ class AccountHolder(BaseModel):
 
         return self.dict(exclude_none=True)
 
-    def get_metrics(self, metrics: List[str], start: date, end: date):
+    def get_metrics(self, metrics: list[str], start: date, end: date):
         """Returns the result of a metrics query.
 
         Parameters
         ----------
-        metrics : List[str]
+        metrics : list[str]
             A list of metrics to query for.
         start : date
             A start date range.
@@ -391,7 +390,7 @@ class RecurrenceGroup(BaseModel):
     """Information regarding the recurrence group of one transaction"""
 
     id: str
-    transaction_ids: List[str]
+    transaction_ids: list[str]
 
     first_payment_date: date | None = Field(None, description="The date of the first identified payment of the recurrence group")
     latest_payment_date: date | None = Field(None, description="The date of the last identified payment of the recurrence group")
@@ -450,7 +449,7 @@ class LocationStructured(BaseModel):
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
-    _fields: ClassVar[List[str]] = [
+    _fields: ClassVar[list[str]] = [
         "sdk",
         "returned_fields",
         "labels",
@@ -530,7 +529,7 @@ class EnrichedTransaction(BaseModel):
     parent_tx: Transaction | None = Field(
         None, description="The original Transaction of the EnrichedTransaction."
     )
-    returned_fields: List[str] = Field(
+    returned_fields: list[str] = Field(
         None, description="The list of returned properties by the API"
     )
     created_at: str | None = Field(
@@ -666,7 +665,7 @@ class EnrichedTransaction(BaseModel):
 class EnrichedTransactionList(list):
     """A list of EnrichedTransaction objects."""
 
-    def __init__(self, transactions: List[EnrichedTransaction]):
+    def __init__(self, transactions: list[EnrichedTransaction]):
         """Parameters
         ----------
         transactions : List[EnrichedTransaction]
@@ -699,7 +698,7 @@ class EnrichedTransactionList(list):
 
         Parameters
         ----------
-        vals : List[dict]
+        vals : list[dict]
             A list of dictionaries representing EnrichedTransaction fields.
 
         Returns
@@ -714,7 +713,7 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_err_list(
-        cls, sdk, original_txs: List[Transaction], exc: Exception, parent_txs: list = []
+        cls, sdk, original_txs: list[Transaction], exc: Exception, parent_txs: list = []
     ):
         etx_list = [cls._from_err(sdk, tx.transaction_id, exc) for tx in original_txs]
         for tx, etx in zip(parent_txs, etx_list):
@@ -736,16 +735,16 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_list_or_err(
-        cls, sdk, transactions: List[dict], parent_txs: List = [], exc: Exception = None
+        cls, sdk, transactions: list[dict], parent_txs: list = [], exc: Exception = None
     ):
         """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
         Additionally, for every transaction that contains errors, add `exc`
 
         Parameters
         ----------
-        transactions : List[dict]
+        transactions : list[dict]
             A list of input transactions as dictionaries representing EnrichedTransaction fields.
-        parent_txs: List[EnrichedTransaction]
+        parent_txs: list[EnrichedTransaction]
             Parent transaction to be assigned to the input `transactions`
         exc: Exception
             The exception to assign to each transaction with errors
@@ -789,7 +788,7 @@ class EnrichedTransactionList(list):
 
         return pd.DataFrame.from_records(_tx_generator())
 
-    def dict(self) -> List[Dict[str, Any]]:
+    def dict(self) -> list[Dict[str, Any]]:
         return [t.dict() for t in self]
 
     def _repr_df(self) -> Any:
@@ -1413,7 +1412,7 @@ class SDK:
         self._raise_on_enrichment_error = raise_on_enrichment_error
 
     @staticmethod
-    def _validate_unique_ids(tx_ids: List[str]):
+    def _validate_unique_ids(tx_ids: list[str]):
         if len(tx_ids) != len(set(tx_ids)):
             warnings.warn(
                 "Duplicate transaction ids found in the input. "
@@ -1547,7 +1546,7 @@ class SDK:
         mapping: dict | None= None,
         inplace: bool = False,
         tx_class: Any = Transaction,
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """Transforms a dataframe with the expected format to a list of `Transacton` objects
 
         Parameters
@@ -1639,7 +1638,7 @@ class SDK:
 
         Returns
         -------
-        List[EnrichedTransaction], pandas.DataFrame
+        list[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
         if labeling != _sentinel:
@@ -1802,7 +1801,7 @@ class SDK:
 
     def _add_transactions(
         self,
-        transactions: List[Transaction],
+        transactions: list[Transaction],
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
@@ -1967,7 +1966,7 @@ class SDK:
 
     def _add_transactions_async(
         self,
-        transactions: List[Transaction],
+        transactions: list[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         model_name=None,
@@ -2104,7 +2103,7 @@ class SDK:
         return AccountHolder(**response)
 
     def get_account_holder_metrics(
-        self, account_holder_id: str, metrics: List[str], start: date, end: date
+        self, account_holder_id: str, metrics: list[str], start: date, end: date
     ) -> dict:
         """Returns the result of a metrics query for a specific account holder.
 
@@ -2112,7 +2111,7 @@ class SDK:
         ----------
         account_holder_id : str
             The unique identifier for the account holder.
-        metrics : List[str]
+        metrics : list[str]
             A list of metrics to query for.
         start : date
             A start date range.
@@ -2252,7 +2251,7 @@ class SDK:
         return response
 
     def _get_account_holder_transactions_txids(
-        self, account_holder_id: str, txids: List[str]
+        self, account_holder_id: str, txids: list[str]
     ):
         url = f"/v2/account-holder/{account_holder_id}/transactions"
         try:
@@ -2404,12 +2403,12 @@ class SDK:
             self, response, poll_interval=poll_interval, timeout=timeout
         )
 
-    def get_all_custom_models(self) -> List[Model]:
+    def get_all_custom_models(self) -> list[Model]:
         """Returns a list of Model objects for all existing custom models previously trained
 
         Returns
         -------
-        List[Model]
+        list[Model]
             List of all trained models, independently of their status
         """
         url = "/v2/models"
