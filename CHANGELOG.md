@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Better support for pydantic >= 2
+- Adding missing descriptions to recurrence models
+
+## [4.22.0] - 2024-02-04
+- New recurrence group and recurring payments attributes (confidence)
+
+## [4.21.0] - 2023-12-01
 - Added support for pydantic >= 2.0
 - Fix sending batches async when chunkedd
 

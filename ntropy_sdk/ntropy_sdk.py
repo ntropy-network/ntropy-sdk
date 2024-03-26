@@ -12,9 +12,7 @@ from typing import (
     Any,
     ClassVar,
     Generator,
-    List,
     Dict,
-    Optional,
     TypeVar,
     Iterable,
     Union,
@@ -72,7 +70,7 @@ _sentinel = object()
 T = TypeVar("T")
 
 
-def chunks(it: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
+def chunks(it: Iterable[T], chunk_size: int) -> Generator[list[T], None, None]:
     it = it.__iter__()
     while True:
         chunk = list(islice(it, chunk_size))
@@ -84,7 +82,7 @@ def chunks(it: Iterable[T], chunk_size: int) -> Generator[List[T], None, None]:
 class Transaction(BaseModel):
     """A financial transaction that can be enriched with the Ntropy SDK."""
 
-    _required_fields: ClassVar[List[str]] = [
+    _required_fields: ClassVar[list[str]] = [
         "amount",
         "description",
         "entry_type",
@@ -92,7 +90,7 @@ class Transaction(BaseModel):
         "date",
     ]
 
-    _fields: ClassVar[List[str]] = [
+    _fields: ClassVar[list[str]] = [
         "account_holder_id",
         "account_holder_type",
         "transaction_id",
@@ -118,25 +116,25 @@ class Transaction(BaseModel):
     )
     description: str = Field(description="Description text of the transaction.")
 
-    account_holder_id: Optional[str] = Field(
+    account_holder_id: str | None = Field(
         None,
         min_length=1,
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
     )
-    account_holder_type: Optional[AccountHolderType] = Field(
-        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+    account_holder_type: AccountHolderType | None = Field(
+        None, description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
-    country: Optional[str] = Field(
+    country: str | None = Field(
         None,
         pattern=COUNTRY_REGEX,
         description="Country where the transaction was made, in ISO-3166-2 format (e.g. US).",
     )
-    transaction_id: Optional[str] = Field(
+    transaction_id: str | None = Field(
         None,
         description="Unique identifier of the transaction in your system. If not supplied, a random transaction_id is used.",
         min_length=1,
     )
-    mcc: Optional[int] = Field(
+    mcc: int | None = Field(
         None,
         ge=700,
         le=9999,
@@ -218,7 +216,7 @@ class LabeledTransaction(Transaction):
 
     label: str = Field(description="Ground truth label for a transaction.")
 
-    _required_fields: ClassVar[List[str]] = [
+    _required_fields: ClassVar[list[str]] = [
         "amount",
         "description",
         "entry_type",
@@ -226,7 +224,7 @@ class LabeledTransaction(Transaction):
         "date",
     ]
 
-    _fields: ClassVar[List[str]] = [
+    _fields: ClassVar[list[str]] = [
         "account_holder_id",
         "account_holder_type",
         "transaction_id",
@@ -311,10 +309,10 @@ class AccountHolder(BaseModel):
     type: AccountHolderType = Field(
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
-    name: Optional[str] = Field(None, description="Name of the account holder.")
-    industry: Optional[str] = Field(None, description="Industry of the account holder.")
-    website: Optional[str] = Field(None, description="Website of the account holder.")
-    sdk: Optional["SDK"] = Field(
+    name: str | None = Field(None, description="Name of the account holder.")
+    industry: str | None = Field(None, description="Industry of the account holder.")
+    website: str | None = Field(None, description="Website of the account holder.")
+    sdk: SDK | None = Field(
         None, description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
 
@@ -346,12 +344,12 @@ class AccountHolder(BaseModel):
 
         return self.dict(exclude_none=True)
 
-    def get_metrics(self, metrics: List[str], start: date, end: date):
+    def get_metrics(self, metrics: list[str], start: date, end: date):
         """Returns the result of a metrics query.
 
         Parameters
         ----------
-        metrics : List[str]
+        metrics : list[str]
             A list of metrics to query for.
         start : date
             A start date range.
@@ -392,15 +390,15 @@ class RecurrenceGroup(BaseModel):
     """Information regarding the recurrence group of one transaction"""
 
     id: str
-    transaction_ids: List[str]
+    transaction_ids: list[str]
 
-    first_payment_date: Optional[date] = None
-    latest_payment_date: Optional[date] = None
-    average_amount: Optional[float] = None
-    other_party: Optional[str] = None
-    periodicity: Optional[str] = None
-    periodicity_in_days: Optional[float] = None
-    confidence: Optional[float] = None
+    first_payment_date: date | None = Field(None, description="The date of the first identified payment of the recurrence group")
+    latest_payment_date: date | None = Field(None, description="The date of the last identified payment of the recurrence group")
+    average_amount: float | None = Field(None, description="The average amount of all transactions in the recurrence group")
+    other_party: str | None = Field(None, description="The identified counter-party in this recurrence group")
+    periodicity: str | None = Field(None, description="The periodicity of the recurrence group in a textual representation")
+    periodicity_in_days: float | None = Field(None, description="The identified periodicity of the recurrence group in days")
+    confidence: float | None = Field(None, description="A confidence score for the identified recurrence group")
 
     class Config:
         use_enum_values = True
@@ -411,38 +409,38 @@ class RecurrenceGroup(BaseModel):
 class Entity(BaseModel):
     """Information regarding an entity such as a merchant or intermediary"""
 
-    id: Optional[str] = Field(None, description="A unique identifier for the entity.")
-    logo: Optional[str] = Field(None, description="A link to the logo of the entity.")
-    name: Optional[str] = Field(None, description="The name of the transaction entity.")
-    website: Optional[str] = Field(None, description="Website of the merchant.")
+    id: str | None = Field(None, description="A unique identifier for the entity.")
+    logo: str | None = Field(None, description="A link to the logo of the entity.")
+    name: str | None = Field(None, description="The name of the transaction entity.")
+    website: str | None = Field(None, description="Website of the merchant.")
 
 
 class LocationStructured(BaseModel):
     """Information regarding the location of the merchant"""
 
-    address: Optional[str] = Field(
+    address: str | None = Field(
         None,
         description="The street address (including house number, apartment, suite, unit, or building number, if applicable).",
     )
-    city: Optional[str] = Field(
+    city: str | None = Field(
         None, description="City, district, suburb, town, or village."
     )
-    state: Optional[str] = Field(
+    state: str | None = Field(
         None, description="State, county, province, or region."
     )
-    postcode: Optional[str] = Field(None, description="ZIP or postal code.")
-    country: Optional[str] = Field(
+    postcode: str | None = Field(None, description="ZIP or postal code.")
+    country: str | None = Field(
         None, description="Two-letter country code (ISO 3166-1 alpha-2)."
     )
-    latitude: Optional[float] = Field(None, description="Latitude of the location.")
-    longitude: Optional[float] = Field(None, description="Longitude of the location.")
-    google_maps_url: Optional[str] = Field(
+    latitude: float | None = Field(None, description="Latitude of the location.")
+    longitude: float | None = Field(None, description="Longitude of the location.")
+    google_maps_url: str | None = Field(
         None, description="Google Maps URL of the location."
     )
-    apple_maps_url: Optional[str] = Field(
+    apple_maps_url: str | None = Field(
         None, description="Apple Maps URL of the location."
     )
-    store_number: Optional[str] = Field(
+    store_number: str | None = Field(
         None,
         description="Store number of the location if found in the transaction description.",
     )
@@ -451,7 +449,7 @@ class LocationStructured(BaseModel):
 class EnrichedTransaction(BaseModel):
     """An enriched financial transaction."""
 
-    _fields: ClassVar[List[str]] = [
+    _fields: ClassVar[list[str]] = [
         "sdk",
         "returned_fields",
         "labels",
@@ -479,69 +477,69 @@ class EnrichedTransaction(BaseModel):
     sdk: "SDK" = Field(
         description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
-    nonelabels: Optional[List[str]] = Field(
+    nonelabels: list[str] | None = Field(
         None, description="Label for the transaction."
     )
-    label_group: Optional[str] = Field(
+    label_group: str | None = Field(
         None, description="Higher level category that groups together related labels"
     )
-    location: Optional[str] = Field(
+    location: str | None = Field(
         None, description="Location of the merchant as a formatted string."
     )
-    location_structured: Optional[LocationStructured] = Field(
+    location_structured: LocationStructured | None = Field(
         None, description="Location of the merchant as a structured object."
     )
-    logo: Optional[str] = Field(None, description="A link to the logo of the merchant.")
-    merchant: Optional[str] = Field(
+    logo: str | None = Field(None, description="A link to the logo of the merchant.")
+    merchant: str | None = Field(
         None, description="The name of the transaction merchant."
     )
-    merchant_id: Optional[str] = Field(
+    merchant_id: str | None = Field(
         None, description="A unique identifier for the merchant."
     )
-    person: Optional[str] = Field(
+    person: str | None = Field(
         None, description="Name of the person in the transaction."
     )
-    transaction_id: Optional[str] = Field(
+    transaction_id: str | None = Field(
         None, description="Unique transaction identifier."
     )
-    website: Optional[str] = Field(None, description="Website of the merchant.")
-    recurrence: Optional[RecurrenceType] = Field(
+    website: str | None = Field(None, description="Website of the merchant.")
+    recurrence: RecurrenceType | None = Field(
         None,
         description="Indicates if the Transaction is recurring and the type of recurrence",
     )
-    recurrence_group: Optional[RecurrenceGroup] = Field(
+    recurrence_group: RecurrenceGroup | None = Field(
         None,
         description="Contains the information of the recurrence group if the transaction is recurrent",
     )
-    confidence: Optional[NonNegativeFloat] = Field(
+    confidence: NonNegativeFloat | None = Field(
         None,
         description="A numerical score between 0.0 and 1.0 indicating the confidence",
     )
-    transaction_type: Optional[TransactionType] = Field(
+    transaction_type: TransactionType | None = Field(
         None, description="Type of the transaction."
     )
-    mcc: Optional[List[int]] = Field(
+    mcc: list[int] | None = Field(
         None,
         description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245).",
     )
-    intermediaries: Optional[List[Entity]] = Field(
+    intermediaries: list[Entity] | None = Field(
         None,
         description="An object containing a list of the intermediary entities, if available",
     )
-    parent_tx: Optional[Transaction] = Field(
+    parent_tx: Transaction | None = Field(
         None, description="The original Transaction of the EnrichedTransaction."
     )
-    returned_fields: List[str] = Field(
+    returned_fields: list[str] = Field(
         None, description="The list of returned properties by the API"
     )
-    created_at: Optional[str] = Field(
+    created_at: str | None = Field(
         None, description="Timestamp of the moment that the transaction was enriched"
     )
-    error: Optional[Any] = Field(
+    error: Any | None = Field(
         None,
         description="Error object or string",
     )
-    error_details: Optional[str] = Field(None, description="Details of the error")
+    error_details: str | None = Field(None, description="Details of the error")
 
     @validator("confidence")
     def _confidence_validator(cls, v):
@@ -567,7 +565,7 @@ class EnrichedTransaction(BaseModel):
         super().__init__(**fields, returned_fields=returned_fields)
         self.kwargs = extra
 
-    def _parse_recurrence_group(self, kwargs: dict) -> Optional[RecurrenceGroup]:
+    def _parse_recurrence_group(self, kwargs: dict) -> RecurrenceGroup | None:
         def _from_recurrence_v1(kwargs):
             return RecurrenceGroup(
                 id=kwargs["recurrence_group_id"],
@@ -579,7 +577,7 @@ class EnrichedTransaction(BaseModel):
         def _from_recurrence_v2(kwargs):
             return RecurrenceGroup(**kwargs["recurrence_group"])
 
-        recurrence_group: Optional[RecurrenceGroup] = None
+        recurrence_group: RecurrenceGroup | None = None
         # parse recurrence api v1
         if all(
             [
@@ -667,7 +665,7 @@ class EnrichedTransaction(BaseModel):
 class EnrichedTransactionList(list):
     """A list of EnrichedTransaction objects."""
 
-    def __init__(self, transactions: List[EnrichedTransaction]):
+    def __init__(self, transactions: list[EnrichedTransaction]):
         """Parameters
         ----------
         transactions : List[EnrichedTransaction]
@@ -700,7 +698,7 @@ class EnrichedTransactionList(list):
 
         Parameters
         ----------
-        vals : List[dict]
+        vals : list[dict]
             A list of dictionaries representing EnrichedTransaction fields.
 
         Returns
@@ -715,7 +713,7 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_err_list(
-        cls, sdk, original_txs: List[Transaction], exc: Exception, parent_txs: list = []
+        cls, sdk, original_txs: list[Transaction], exc: Exception, parent_txs: list = []
     ):
         etx_list = [cls._from_err(sdk, tx.transaction_id, exc) for tx in original_txs]
         for tx, etx in zip(parent_txs, etx_list):
@@ -737,16 +735,16 @@ class EnrichedTransactionList(list):
 
     @classmethod
     def from_list_or_err(
-        cls, sdk, transactions: List[dict], parent_txs: List = [], exc: Exception = None
+        cls, sdk, transactions: list[dict], parent_txs: list = [], exc: Exception = None
     ):
         """Constructs a list of EnrichedTransaction objects from a list of dictionaries containing corresponding fields.
         Additionally, for every transaction that contains errors, add `exc`
 
         Parameters
         ----------
-        transactions : List[dict]
+        transactions : list[dict]
             A list of input transactions as dictionaries representing EnrichedTransaction fields.
-        parent_txs: List[EnrichedTransaction]
+        parent_txs: list[EnrichedTransaction]
             Parent transaction to be assigned to the input `transactions`
         exc: Exception
             The exception to assign to each transaction with errors
@@ -790,7 +788,7 @@ class EnrichedTransactionList(list):
 
         return pd.DataFrame.from_records(_tx_generator())
 
-    def dict(self) -> List[Dict[str, Any]]:
+    def dict(self) -> list[Dict[str, Any]]:
         return [t.dict() for t in self]
 
     def _repr_df(self) -> Any:
@@ -964,23 +962,23 @@ class Model(BaseModel):
 
     sdk: "SDK" = Field(description="A SDK associated with the model.")
     name: str = Field(description="The name of the model.")
-    created_at: Optional[str] = Field(
+    created_at: str | None = Field(
         None, description="The date the model was created."
     )
-    account_holder_type: Optional[AccountHolderType] = Field(
+    account_holder_type: AccountHolderType | None = Field(
         None,
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown.",
     )
-    status: Optional[str] = Field(
+    status: str | None = Field(
         None, description="The status of the batch enrichment."
     )
-    progress: Optional[int] = Field(
+    progress: int | None = Field(
         None, description="The progress from 0 to 100 of the training process"
     )
-    timeout: Optional[int] = Field(
+    timeout: int | None = Field(
         20 * 60 * 60, description="A timeout for retrieving the batch result."
     )
-    poll_interval: Optional[int] = Field(
+    poll_interval: int | None = Field(
         10, description="The interval between polling retries."
     )
 
@@ -1135,12 +1133,12 @@ class Model(BaseModel):
 class Report(BaseModel):
     """A transaction report."""
 
-    sdk: Optional["SDK"] = Field(None, description="A SDK associated with the model.")
+    sdk: SDK | None = Field(None, description="A SDK associated with the model.")
     id: str = Field(description="Unique identifier for the report.")
     transaction_id: str = Field(description="Identifier of the reported transaction.")
     status: str = Field(description="Current status of the report.")
     created_at: str = Field(description="Timestamp at which the report was created.")
-    webhook_url: Optional[str] = Field(
+    webhook_url: str | None = Field(
         None,
         description="Optional webhook_url that will be notified about status changes.",
     )
@@ -1222,9 +1220,9 @@ class Report(BaseModel):
 
 class BankStatement(BaseModel):
     id: str
-    batch_id: Optional[str] = None
+    batch_id: str | None = None
     status: str
-    transactions: Optional[List] = []
+    transactions: list | None = []
     account_type: AccountHolderType
 
     class Config:
@@ -1360,7 +1358,7 @@ class SDK:
 
     def __init__(
         self,
-        token: Optional[str] = None,
+        token: str | None = None,
         timeout: int = DEFAULT_TIMEOUT,
         retries: int = DEFAULT_RETRIES,
         retry_on_unhandled_exception: bool = False,
@@ -1414,7 +1412,7 @@ class SDK:
         self._raise_on_enrichment_error = raise_on_enrichment_error
 
     @staticmethod
-    def _validate_unique_ids(tx_ids: List[str]):
+    def _validate_unique_ids(tx_ids: list[str]):
         if len(tx_ids) != len(set(tx_ids)):
             warnings.warn(
                 "Duplicate transaction ids found in the input. "
@@ -1545,10 +1543,10 @@ class SDK:
     def df_to_transaction_list(
         self,
         df,
-        mapping: dict = None,
+        mapping: dict | None = None,
         inplace: bool = False,
         tx_class: Any = Transaction,
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """Transforms a dataframe with the expected format to a list of `Transacton` objects
 
         Parameters
@@ -1640,7 +1638,7 @@ class SDK:
 
         Returns
         -------
-        List[EnrichedTransaction], pandas.DataFrame
+        list[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
         """
         if labeling != _sentinel:
@@ -1803,7 +1801,7 @@ class SDK:
 
     def _add_transactions(
         self,
-        transactions: List[Transaction],
+        transactions: list[Transaction],
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
@@ -1968,7 +1966,7 @@ class SDK:
 
     def _add_transactions_async(
         self,
-        transactions: List[Transaction],
+        transactions: list[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
         model_name=None,
@@ -2006,9 +2004,9 @@ class SDK:
     def add_bank_statement(
         self,
         file: IOBase,
-        filename: Optional[str] = "file",
-        account_holder_id: Optional[str] = None,
-        account_type: Optional[AccountHolderType] = AccountHolderType.business,
+        filename: str = "file",
+        account_holder_id: str | None = None,
+        account_type: AccountHolderType = AccountHolderType.business,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 30,
     ) -> BankStatementRequest:
@@ -2105,7 +2103,7 @@ class SDK:
         return AccountHolder(**response)
 
     def get_account_holder_metrics(
-        self, account_holder_id: str, metrics: List[str], start: date, end: date
+        self, account_holder_id: str, metrics: list[str], start: date, end: date
     ) -> dict:
         """Returns the result of a metrics query for a specific account holder.
 
@@ -2113,7 +2111,7 @@ class SDK:
         ----------
         account_holder_id : str
             The unique identifier for the account holder.
-        metrics : List[str]
+        metrics : list[str]
             A list of metrics to query for.
         start : date
             A start date range.
@@ -2253,7 +2251,7 @@ class SDK:
         return response
 
     def _get_account_holder_transactions_txids(
-        self, account_holder_id: str, txids: List[str]
+        self, account_holder_id: str, txids: list[str]
     ):
         url = f"/v2/account-holder/{account_holder_id}/transactions"
         try:
@@ -2352,8 +2350,8 @@ class SDK:
         self,
         transactions,
         model_name: str,
-        poll_interval: Optional[int] = None,
-        timeout: Optional[int] = None,
+        poll_interval: int | None = None,
+        timeout: int | None = None,
     ) -> Model:
         """Trains a custom model for labeling transactions, using the provided transactions as training data,
         either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column.
@@ -2392,8 +2390,8 @@ class SDK:
         self,
         transactions,
         model_name: str,
-        poll_interval: Optional[int] = None,
-        timeout: Optional[int] = None,
+        poll_interval: int | None = None,
+        timeout: int | None = None,
     ) -> Model:
         txs = [tx.to_dict() for tx in transactions]
 
@@ -2405,12 +2403,12 @@ class SDK:
             self, response, poll_interval=poll_interval, timeout=timeout
         )
 
-    def get_all_custom_models(self) -> List[Model]:
+    def get_all_custom_models(self) -> list[Model]:
         """Returns a list of Model objects for all existing custom models previously trained
 
         Returns
         -------
-        List[Model]
+        list[Model]
             List of all trained models, independently of their status
         """
         url = "/v2/models"
