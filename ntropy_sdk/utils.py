@@ -28,7 +28,7 @@ class RecurrenceType(str, Enum):
     recurring = "recurring"
     subscription = "subscription"
     one_off = "one off"
-    repeating = "repeating"
+    possible_recurring = "possible recurring"
 
 
 def assert_type(value, name, expected_type):

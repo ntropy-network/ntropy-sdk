@@ -119,6 +119,7 @@ class Transaction(BaseModel):
     description: str = Field(description="Description text of the transaction.")
 
     account_holder_id: Optional[str] = Field(
+        None,
         min_length=1,
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
     )
@@ -126,14 +127,17 @@ class Transaction(BaseModel):
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
     country: Optional[str] = Field(
-        regex=COUNTRY_REGEX,
+        None,
+        pattern=COUNTRY_REGEX,
         description="Country where the transaction was made, in ISO-3166-2 format (e.g. US).",
     )
     transaction_id: Optional[str] = Field(
+        None,
         description="Unique identifier of the transaction in your system. If not supplied, a random transaction_id is used.",
         min_length=1,
     )
     mcc: Optional[int] = Field(
+        None,
         ge=700,
         le=9999,
         description="The Merchant Category Code of the merchant, according to ISO 18245.",
@@ -141,6 +145,7 @@ class Transaction(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         if not kwargs.get("transaction_id"):
             self.transaction_id = str(uuid.uuid4())
 
@@ -306,11 +311,11 @@ class AccountHolder(BaseModel):
     type: AccountHolderType = Field(
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
-    name: Optional[str] = Field(description="Name of the account holder.")
-    industry: Optional[str] = Field(description="Industry of the account holder.")
-    website: Optional[str] = Field(description="Website of the account holder.")
+    name: Optional[str] = Field(None, description="Name of the account holder.")
+    industry: Optional[str] = Field(None, description="Industry of the account holder.")
+    website: Optional[str] = Field(None, description="Website of the account holder.")
     sdk: Optional["SDK"] = Field(
-        description="An SDK to use with the EnrichedTransaction.", exclude=True
+        None, description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
 
     def __repr__(self):
@@ -386,14 +391,16 @@ class AccountHolder(BaseModel):
 class RecurrenceGroup(BaseModel):
     """Information regarding the recurrence group of one transaction"""
 
-    first_payment_date: Optional[date]
-    latest_payment_date: Optional[date]
-    periodicity: Optional[str]
-    periodicity_in_days: Optional[int]
-    average_amount: Optional[float]
-    other_party: Optional[str]
     id: str
     transaction_ids: List[str]
+
+    first_payment_date: Optional[date] = None
+    latest_payment_date: Optional[date] = None
+    average_amount: Optional[float] = None
+    other_party: Optional[str] = None
+    periodicity: Optional[str] = None
+    periodicity_in_days: Optional[float] = None
+    confidence: Optional[float] = None
 
     class Config:
         use_enum_values = True
@@ -404,32 +411,40 @@ class RecurrenceGroup(BaseModel):
 class Entity(BaseModel):
     """Information regarding an entity such as a merchant or intermediary"""
 
-    id: Optional[str] = Field(description="A unique identifier for the entity.")
-    logo: Optional[str] = Field(description="A link to the logo of the entity.")
-    name: Optional[str] = Field(description="The name of the transaction entity.")
-    website: Optional[str] = Field(description="Website of the merchant.")
+    id: Optional[str] = Field(None, description="A unique identifier for the entity.")
+    logo: Optional[str] = Field(None, description="A link to the logo of the entity.")
+    name: Optional[str] = Field(None, description="The name of the transaction entity.")
+    website: Optional[str] = Field(None, description="Website of the merchant.")
 
 
 class LocationStructured(BaseModel):
     """Information regarding the location of the merchant"""
 
     address: Optional[str] = Field(
-        description="The street address (including house number, apartment, suite, unit, or building number, if applicable)."
+        None,
+        description="The street address (including house number, apartment, suite, unit, or building number, if applicable).",
     )
-    city: Optional[str] = Field(description="City, district, suburb, town, or village.")
-    state: Optional[str] = Field(description="State, county, province, or region.")
-    postcode: Optional[str] = Field(description="ZIP or postal code.")
+    city: Optional[str] = Field(
+        None, description="City, district, suburb, town, or village."
+    )
+    state: Optional[str] = Field(
+        None, description="State, county, province, or region."
+    )
+    postcode: Optional[str] = Field(None, description="ZIP or postal code.")
     country: Optional[str] = Field(
-        description="Two-letter country code (ISO 3166-1 alpha-2)."
+        None, description="Two-letter country code (ISO 3166-1 alpha-2)."
     )
-    latitude: Optional[float] = Field(description="Latitude of the location.")
-    longitude: Optional[float] = Field(description="Longitude of the location.")
+    latitude: Optional[float] = Field(None, description="Latitude of the location.")
+    longitude: Optional[float] = Field(None, description="Longitude of the location.")
     google_maps_url: Optional[str] = Field(
-        description="Google Maps URL of the location."
+        None, description="Google Maps URL of the location."
     )
-    apple_maps_url: Optional[str] = Field(description="Apple Maps URL of the location.")
+    apple_maps_url: Optional[str] = Field(
+        None, description="Apple Maps URL of the location."
+    )
     store_number: Optional[str] = Field(
-        description="Store number of the location if found in the transaction description."
+        None,
+        description="Store number of the location if found in the transaction description.",
     )
 
 
@@ -464,55 +479,69 @@ class EnrichedTransaction(BaseModel):
     sdk: "SDK" = Field(
         description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
-    labels: Optional[List[str]] = Field(description="Label for the transaction.")
+    nonelabels: Optional[List[str]] = Field(
+        None, description="Label for the transaction."
+    )
     label_group: Optional[str] = Field(
-        description="Higher level category that groups together related labels"
+        None, description="Higher level category that groups together related labels"
     )
     location: Optional[str] = Field(
-        description="Location of the merchant as a formatted string."
+        None, description="Location of the merchant as a formatted string."
     )
     location_structured: Optional[LocationStructured] = Field(
-        description="Location of the merchant as a structured object."
+        None, description="Location of the merchant as a structured object."
     )
-    logo: Optional[str] = Field(description="A link to the logo of the merchant.")
-    merchant: Optional[str] = Field(description="The name of the transaction merchant.")
+    logo: Optional[str] = Field(None, description="A link to the logo of the merchant.")
+    merchant: Optional[str] = Field(
+        None, description="The name of the transaction merchant."
+    )
     merchant_id: Optional[str] = Field(
-        description="A unique identifier for the merchant."
+        None, description="A unique identifier for the merchant."
     )
-    person: Optional[str] = Field(description="Name of the person in the transaction.")
-    transaction_id: Optional[str] = Field(description="Unique transaction identifier.")
-    website: Optional[str] = Field(description="Website of the merchant.")
+    person: Optional[str] = Field(
+        None, description="Name of the person in the transaction."
+    )
+    transaction_id: Optional[str] = Field(
+        None, description="Unique transaction identifier."
+    )
+    website: Optional[str] = Field(None, description="Website of the merchant.")
     recurrence: Optional[RecurrenceType] = Field(
-        description="Indicates if the Transaction is recurring and the type of recurrence"
+        None,
+        description="Indicates if the Transaction is recurring and the type of recurrence",
     )
     recurrence_group: Optional[RecurrenceGroup] = Field(
-        description="Contains the information of the recurrence group if the transaction is recurrent"
+        None,
+        description="Contains the information of the recurrence group if the transaction is recurrent",
     )
     confidence: Optional[NonNegativeFloat] = Field(
+        None,
         description="A numerical score between 0.0 and 1.0 indicating the confidence",
     )
     transaction_type: Optional[TransactionType] = Field(
-        description="Type of the transaction."
+        None, description="Type of the transaction."
     )
     mcc: Optional[List[int]] = Field(
-        description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245)."
+        None,
+        description="A list of MCC (Merchant Category Code of the merchant, according to ISO 18245).",
     )
     intermediaries: Optional[List[Entity]] = Field(
-        description="An object containing a list of the intermediary entities, if available"
+        None,
+        description="An object containing a list of the intermediary entities, if available",
     )
     parent_tx: Optional[Transaction] = Field(
-        description="The original Transaction of the EnrichedTransaction."
+        None, description="The original Transaction of the EnrichedTransaction."
     )
     returned_fields: List[str] = Field(
-        description="The list of returned properties by the API"
+        None, description="The list of returned properties by the API"
     )
     created_at: Optional[str] = Field(
-        description="Timestamp of the moment that the transaction was enriched"
+        None, description="Timestamp of the moment that the transaction was enriched"
     )
     error: Optional[Any] = Field(
+        None,
         description="Error object or string",
     )
-    error_details: Optional[str] = Field(description="Details of the error")
+    error_details: Optional[str] = Field(None, description="Details of the error")
 
     @validator("confidence")
     def _confidence_validator(cls, v):
@@ -947,14 +976,19 @@ class Model(BaseModel):
     """A model reference with an associated name"""
 
     sdk: "SDK" = Field(description="A SDK associated with the model.")
-    model_name: str = Field(description="The name of the model.")
-    created_at: Optional[str] = Field(description="The date the model was created.")
-    account_holder_type: Optional[AccountHolderType] = Field(
-        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+    name: str = Field(description="The name of the model.")
+    created_at: Optional[str] = Field(
+        None, description="The date the model was created."
     )
-    status: Optional[str] = Field(description="The status of the batch enrichment.")
+    account_holder_type: Optional[AccountHolderType] = Field(
+        None,
+        description="Type of the account holder – must be one of consumer, business, freelance, or unknown.",
+    )
+    status: Optional[str] = Field(
+        None, description="The status of the batch enrichment."
+    )
     progress: Optional[int] = Field(
-        description="The progress from 0 to 100 of the training process"
+        None, description="The progress from 0 to 100 of the training process"
     )
     timeout: Optional[int] = Field(
         20 * 60 * 60, description="A timeout for retrieving the batch result."
@@ -995,7 +1029,7 @@ class Model(BaseModel):
         progress:
             The progress from 0 to 100 of the training process
         """
-        url = f"/v2/models/{self.model_name}"
+        url = f"/v2/models/{self.name}"
 
         json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
         status = json_resp.get("status")
@@ -1114,13 +1148,14 @@ class Model(BaseModel):
 class Report(BaseModel):
     """A transaction report."""
 
-    sdk: Optional["SDK"] = Field(description="A SDK associated with the model.")
+    sdk: Optional["SDK"] = Field(None, description="A SDK associated with the model.")
     id: str = Field(description="Unique identifier for the report.")
     transaction_id: str = Field(description="Identifier of the reported transaction.")
     status: str = Field(description="Current status of the report.")
     created_at: str = Field(description="Timestamp at which the report was created.")
     webhook_url: Optional[str] = Field(
-        description="Optional webhook_url that will be notified about status changes."
+        None,
+        description="Optional webhook_url that will be notified about status changes.",
     )
 
     def __repr__(self):
@@ -1200,16 +1235,16 @@ class Report(BaseModel):
 
 class BankStatement(BaseModel):
     id: str
-    batch_id: Optional[str]
+    batch_id: Optional[str] = None
     status: str
-    transactions: Optional[List]
+    transactions: Optional[List] = []
     account_type: AccountHolderType
 
     class Config:
         arbitrary_types_allowed = True
         extra = "allow"
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def transform_txs(cls, values):
         txs_json = values.get("transactions", [])
         if txs_json:
@@ -1709,9 +1744,15 @@ class SDK:
         mapping: dict = None,
     ):
         result = []
+
         for chunk in chunks(transactions, self.MAX_BATCH_SIZE):
             result += self._add_transactions_chunk(
-                chunk, timeout, poll_interval, with_progress, model_name, mapping
+                chunk,
+                timeout,
+                poll_interval,
+                with_progress,
+                model_name,
+                mapping,
             )
         return result
 
@@ -1979,15 +2020,50 @@ class SDK:
         self,
         file: IOBase,
         filename: Optional[str] = "file",
-        timeout=4 * 60 * 60,
+        account_holder_id: Optional[str] = None,
         account_type: Optional[AccountHolderType] = AccountHolderType.business,
-        poll_interval=30,
+        timeout: int = 4 * 60 * 60,
+        poll_interval: int = 30,
     ) -> BankStatementRequest:
+        """Enriches the transactions found in a Bank Statement.
+        Returns a `BankStatementRequest` object that can be used to get both raw and enriched transactions.
+
+        Parameters
+        ----------
+        file : IOBase
+            Bank statement file
+        filename : string, optional
+            Name to use for the bank statement,
+        account_holder_id : str, optional
+            Account holder to associate to underlying bank statement transactions.
+            If no account holder with the given id exists, one will be created with `account_type` or "business" if not
+            specified.
+        account_type : AccountHolderType, optional
+            Type of account holder to use when it is being created. Otherwise it'll override the type of the existing
+            one for the transactions on this bank statement.
+        timeout : int
+            Timeout for retrieving bank statement result.
+        poll_interval : int
+            The interval between consecutive polling retries.
+
+        Returns
+        -------
+        Batch
+            A Batch object that can be polled and awaited.
+        """
         try:
+            params = {
+                "account_type": account_type.value,
+            }
+
+            if account_holder_id:
+                params["account_holder_id"] = account_holder_id
+
             resp = self.retry_ratelimited_request(
                 "POST",
                 "/datasources/bank_statements",
-                payload=dict(account_type=account_type.value),
+                params=params,
+                payload=None,
                 files={
                     "file": (Path(getattr(file, "name", filename)).name, file),
                 },
