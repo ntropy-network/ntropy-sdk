@@ -24,7 +24,7 @@ from itertools import islice
 from json import JSONDecodeError
 
 import requests  # type: ignore
-from pydantic import BaseModel, Field, validator, NonNegativeFloat, root_validator
+from pydantic import BaseModel, Field, validator, NonNegativeFloat, root_validator, Extra
 from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tabulate import tabulate
 from tqdm.auto import tqdm
@@ -210,6 +210,7 @@ class Transaction(BaseModel):
         return self.dict(exclude_none=True)
 
     class Config:
+        extra = Extra.forbid
         use_enum_values = True
 
 
