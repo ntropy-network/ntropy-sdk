@@ -487,7 +487,7 @@ class EnrichedTransaction(BaseModel):
     sdk: "SDK" = Field(
         description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
-    nonelabels: Optional[List[str]] = Field(
+    labels: Optional[List[str]] = Field(
         None, description="Label for the transaction."
     )
     label_group: Optional[str] = Field(
