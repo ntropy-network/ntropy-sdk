@@ -66,7 +66,7 @@ from ntropy_sdk.errors import (
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
-DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
+DEFAULT_WITH_PROGRESS = False
 DEFAULT_REGION = "us"
 ALL_REGIONS = {"eu": "https://api.eu.ntropy.com", "us": "https://api.ntropy.com"}
 
@@ -938,10 +938,7 @@ class Batch(BaseModel):
             The JSON response of the batch poll.
         """
 
-        if with_progress:
-            return self._wait_with_progress(poll_interval=poll_interval)
-        else:
-            return self._wait(poll_interval=poll_interval)
+        return self._wait(poll_interval=poll_interval)
 
     def _wait(self, poll_interval=None):
         """Retrieve the current batch enrichment without progress updates."""
@@ -1073,10 +1070,7 @@ class Model(BaseModel):
             The JSON response of the model training.
         """
 
-        if with_progress:
-            return self._wait_with_progress(poll_interval=poll_interval)
-        else:
-            return self._wait(poll_interval=poll_interval)
+        return self._wait(poll_interval=poll_interval)
 
     def _wait(self, poll_interval=None):
         if not poll_interval:
