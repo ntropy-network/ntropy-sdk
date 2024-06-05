@@ -394,6 +394,7 @@ class AccountHolder(BaseModel):
     class Config:
         use_enum_values = True
         extra = "allow"
+        arbitrary_types_allowed = True
 
 
 class RecurrenceGroup(BaseModel):
@@ -1239,6 +1240,9 @@ class Report(BaseModel):
         self.created_at = created_at
 
         return json_resp, status
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class BankStatement(BaseModel):
