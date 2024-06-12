@@ -488,9 +488,7 @@ class EnrichedTransaction(BaseModel):
     sdk: "SDK" = Field(
         description="An SDK to use with the EnrichedTransaction.", exclude=True
     )
-    labels: Optional[List[str]] = Field(
-        None, description="Label for the transaction."
-    )
+    labels: Optional[List[str]] = Field(None, description="Label for the transaction.")
     label_group: Optional[str] = Field(
         None, description="Higher level category that groups together related labels"
     )
@@ -1499,6 +1497,17 @@ class SDK:
                 time.sleep(retry_after)
 
                 continue
+            elif resp.status_code == 503:
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 8)
+
+                self.logger.log(
+                    log_level,
+                    "Retrying in %s seconds due to unavailability in the server side",
+                    backoff,
+                )
+                continue
+
             elif (
                 resp.status_code >= 500 and resp.status_code <= 511
             ) and self._retry_on_unhandled_exception:
