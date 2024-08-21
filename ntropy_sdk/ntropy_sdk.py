@@ -37,6 +37,7 @@ from tabulate import tabulate
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
+from ntropy_sdk.bank_statements import StatementInfo
 from ntropy_sdk.income_check import IncomeReport, IncomeGroup
 from ntropy_sdk.recurring_payments import (
     RecurringPaymentsGroups,
@@ -131,6 +132,7 @@ class Transaction(BaseModel):
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
     )
     account_holder_type: Optional[AccountHolderType] = Field(
+        None,
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
     country: Optional[str] = Field(
@@ -1285,6 +1287,18 @@ class BankStatementRequest(BaseModel):
     def __repr__(self):
         return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
 
+    def statement_info(self) -> StatementInfo:
+        """Wait for and return statement info
+
+        Returns
+        -------
+        StatementInfo
+            The account holder level information of the bank statement.
+        """
+        url = f"/datasources/bank_statements/{self.bs_id}/statement-info"
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        return StatementInfo(**json_resp)
+
     def poll(self) -> BankStatement:
         """Polls the current bank statement status and returns the server response
 
@@ -1334,6 +1348,33 @@ class BankStatementRequest(BaseModel):
         batch_res = bs.wait_for_batch(
             sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval
         )
+
+        url = f"/datasources/bank_statements/{self.bs_id}/transactions"
+        batch_res = self.sdk.retry_ratelimited_request("GET", url, None).json()
+
+        batch_res = EnrichedTransactionList.from_list(
+            self.sdk,
+            batch_res,
+            [
+                Transaction.from_dict(
+                    {
+                        k: x.get(k)
+                        for k in [
+                            "account_holder_type",
+                            "account_holder_id",
+                            "description",
+                            "amount",
+                            "entry_type",
+                            "iso_currency_code",
+                            "date",
+                            "transaction_id",
+                        ]
+                    }
+                )
+                for x in batch_res
+            ],
+        )
+
         return batch_res
 
     def _wait(self, poll_interval=None):

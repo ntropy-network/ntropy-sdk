@@ -24,8 +24,8 @@ setup_requirements = []
 test_requirements = []
 
 setup(
-    author="David Buchmann",
-    author_email="david@ntropy.com",
+    author="Ntropy",
+    author_email="dev@ntropy.com",
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
@@ -54,6 +54,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="4.23.3",
+    version="4.24.0",
     zip_safe=False,
 )
