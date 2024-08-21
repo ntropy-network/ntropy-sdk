@@ -13,6 +13,9 @@ class Address(BaseModel):
     state: Optional[str]
     country: Optional[str]
 
+    class Config:
+        extra = "allow"
+
 
 class AccountHolder(BaseModel):
     type: Optional[AccountHolderType]
@@ -21,6 +24,7 @@ class AccountHolder(BaseModel):
 
     class Config:
         use_enum_values = True
+        extra = "allow"
 
 
 class Account(BaseModel):
@@ -30,6 +34,9 @@ class Account(BaseModel):
     closing_balance: Optional[float]
     iso_currency_code: Optional[str]
 
+    class Config:
+        extra = "allow"
+
 
 class StatementInfo(BaseModel):
     institution: Optional[str]
@@ -37,3 +44,6 @@ class StatementInfo(BaseModel):
     end_date: Optional[date]
     account_holder: Optional[AccountHolder]
     accounts: Optional[List[Account]]
+
+    class Config:
+        extra = "allow"
