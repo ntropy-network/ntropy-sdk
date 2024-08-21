@@ -131,6 +131,7 @@ class Transaction(BaseModel):
         description="ID of the account holder; if the account holder does not exist, create a new one with the specified account holder type.",
     )
     account_holder_type: Optional[AccountHolderType] = Field(
+        None,
         description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
     )
     country: Optional[str] = Field(

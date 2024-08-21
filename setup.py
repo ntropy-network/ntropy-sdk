@@ -24,16 +24,16 @@ setup_requirements = []
 test_requirements = []
 
 setup(
-    author="David Buchmann",
-    author_email="david@ntropy.com",
-    python_requires=">=3.6",
+    author="Ntropy",
+    author_email="dev@ntropy.com",
+    python_requires=">=3.10",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.10",
     ],
     description="SDK for the Ntropy API",
     entry_points={
