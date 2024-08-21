@@ -37,6 +37,7 @@ from tabulate import tabulate
 from tqdm.auto import tqdm
 
 from ntropy_sdk import __version__
+from ntropy_sdk.bank_statements import StatementInfo
 from ntropy_sdk.income_check import IncomeReport, IncomeGroup
 from ntropy_sdk.recurring_payments import (
     RecurringPaymentsGroups,
@@ -1284,6 +1285,18 @@ class BankStatementRequest(BaseModel):
 
     def __repr__(self):
         return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
+
+    def statement_info(self) -> StatementInfo:
+        """Wait for and return statement info
+
+        Returns
+        -------
+        StatementInfo
+            The account holder level information of the bank statement.
+        """
+        url = f"/datasources/bank_statements/{self.bs_id}/statement-info"
+        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
+        return StatementInfo(**json_resp)
 
     def poll(self) -> BankStatement:
         """Polls the current bank statement status and returns the server response
