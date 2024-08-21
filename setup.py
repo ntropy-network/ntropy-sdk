@@ -24,8 +24,8 @@ setup_requirements = []
 test_requirements = []
 
 setup(
-    author="David Buchmann",
-    author_email="david@ntropy.com",
+    author="Ntropy",
+    author_email="dev@ntropy.com",
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
