@@ -1334,6 +1334,33 @@ class BankStatementRequest(BaseModel):
         batch_res = bs.wait_for_batch(
             sdk=self.sdk, with_progress=with_progress, poll_interval=poll_interval
         )
+
+        url = f"/datasources/bank_statements/{self.bs_id}/transactions"
+        batch_res = self.sdk.retry_ratelimited_request("GET", url, None).json()
+
+        batch_res = EnrichedTransactionList.from_list(
+            self.sdk,
+            batch_res,
+            [
+                Transaction.from_dict(
+                    {
+                        k: x.get(k)
+                        for k in [
+                            "account_holder_type",
+                            "account_holder_id",
+                            "description",
+                            "amount",
+                            "entry_type",
+                            "iso_currency_code",
+                            "date",
+                            "transaction_id",
+                        ]
+                    }
+                )
+                for x in batch_res
+            ],
+        )
+
         return batch_res
 
     def _wait(self, poll_interval=None):
