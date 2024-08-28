@@ -29,7 +29,8 @@ tx = Transaction(
     transaction_id = "4yp49x3tbj9mD8DB4fM8DDY6Yxbx8YP14g565Xketw3tFmn",
     country = "US",
     account_holder_id = "id-1",
-    account_holder_type = "business"
+    account_holder_type = "business",
+    account_holder_name = "Robin's Tacos",
 )
 
 enriched_tx = sdk.add_transactions([tx])[0]
