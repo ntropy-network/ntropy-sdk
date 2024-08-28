@@ -71,7 +71,7 @@ DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
 DEFAULT_REGION = "us"
 ALL_REGIONS = {"eu": "https://api.eu.ntropy.com", "us": "https://api.ntropy.com"}
 
-ACCOUNT_HOLDER_TYPES = ["consumer", "business", "freelance", "unknown"]
+ACCOUNT_HOLDER_TYPES = ["consumer", "business", "unknown"]
 COUNTRY_REGEX = r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
 ENV_NTROPY_API_TOKEN = "NTROPY_API_KEY"
 
@@ -103,6 +103,7 @@ class Transaction(BaseModel):
     _fields: ClassVar[List[str]] = [
         "account_holder_id",
         "account_holder_type",
+        "account_holder_name",
         "transaction_id",
         "amount",
         "date",
@@ -133,7 +134,11 @@ class Transaction(BaseModel):
     )
     account_holder_type: Optional[AccountHolderType] = Field(
         None,
-        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+        description="Type of the account holder – must be one of consumer, business, or unknown.",
+    )
+    account_holder_name: Optional[str] = Field(
+        None,
+        description="Name of the account holder.",
     )
     country: Optional[str] = Field(
         None,
@@ -203,6 +208,7 @@ class Transaction(BaseModel):
             iso_currency_code=row["iso_currency_code"],
             account_holder_id=row.get("account_holder_id"),
             account_holder_type=row.get("account_holder_type"),
+            account_holder_name=row.get("account_holder_name"),
             mcc=row.get("mcc"),
             country=row.get("country"),
             transaction_id=row.get("transaction_id"),
@@ -319,7 +325,7 @@ class AccountHolder(BaseModel):
         description="Unique identifier for the account holder in your system."
     )
     type: AccountHolderType = Field(
-        description="Type of the account holder – must be one of consumer, business, freelance, or unknown."
+        description="Type of the account holder – must be one of consumer, business, or unknown."
     )
     name: Optional[str] = Field(None, description="Name of the account holder.")
     industry: Optional[str] = Field(None, description="Industry of the account holder.")
@@ -991,7 +997,7 @@ class Model(BaseModel):
     )
     account_holder_type: Optional[AccountHolderType] = Field(
         None,
-        description="Type of the account holder – must be one of consumer, business, freelance, or unknown.",
+        description="Type of the account holder – must be one of consumer, business, or unknown.",
     )
     status: Optional[str] = Field(
         None, description="The status of the batch enrichment."
@@ -2398,7 +2404,7 @@ class SDK:
 
         Parameters
         ----------
-        account_holder_type : {"consumer", "business", "freelance", "unknown"}
+        account_holder_type : {"consumer", "business", "unknown"}
             The account holder type.
 
         Returns

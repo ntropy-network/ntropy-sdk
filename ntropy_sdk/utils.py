@@ -7,7 +7,6 @@ from enum import Enum
 class AccountHolderType(Enum):
     consumer = "consumer"
     business = "business"
-    freelance = "freelance"
     unknown = "unknown"
 
 

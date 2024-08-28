@@ -274,7 +274,7 @@ def test_enrich_huge_batch(sdk):
 
 
 def test_hierarchy(sdk):
-    for account_holder_type in ["business", "consumer", "freelance", "unknown"]:
+    for account_holder_type in ["business", "consumer", "unknown"]:
         h = sdk.get_labels(account_holder_type)
         assert isinstance(h, dict)
 
