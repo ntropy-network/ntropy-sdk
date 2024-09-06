@@ -1251,12 +1251,23 @@ class Report(BaseModel):
         arbitrary_types_allowed = True
 
 
+class Statement(BaseModel):
+    begin_date: Optional[date]
+    end_date: Optional[date]
+    begin_balance: Optional[float]
+    end_balance: Optional[float]
+    total_incoming: Optional[float]
+    total_outgoing: Optional[float]
+    is_balance_reconciled: Optional[bool]
+
+
 class BankStatement(BaseModel):
     id: str
     batch_id: Optional[str] = None
     status: str
     transactions: Optional[List] = []
     account_type: AccountHolderType
+    statements: Optional[List[Statement]]
 
     class Config:
         arbitrary_types_allowed = True
@@ -1291,7 +1302,7 @@ class BankStatementRequest(BaseModel):
         self.timeout = time.time() + self.timeout
 
     def __repr__(self):
-        return f"Batch({dict_to_str(self.dict(exclude_none=True))})"
+        return f"BankStatementRequest({dict_to_str(self.dict(exclude_none=True))})"
 
     def statement_info(self) -> StatementInfo:
         """Wait for and return statement info
