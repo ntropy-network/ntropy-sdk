@@ -44,6 +44,9 @@ class BankStatementJob(BaseModel):
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
     ) -> "BankStatementResults":
+        """Continuously polls the status of this job, blocking until the job either succeeds
+        or fails. If the job is successful, returns the results. Otherwise, raises an
+        `NtropyDatasourceError` exception."""
         finish_statuses = [BankStatementJobStatus.PROCESSED, BankStatementJobStatus.FAILED]
         start_time = time.monotonic()
         while time.monotonic() - start_time < timeout:
@@ -58,6 +61,7 @@ class BankStatementJob(BaseModel):
             raise NtropyDatasourceError()
 
     def statement_info(self, sdk: "SDK") -> StatementInfo:
+        """Convenience function for `sdk.v3.bank_statements.statement_info`."""
         return sdk.v3.bank_statements.statement_info(self.id)
 
     class Config:
@@ -130,6 +134,9 @@ class BankStatementsResource:
         return BankStatementResults(**resp.json())
 
     def statement_info(self, id: str) -> StatementInfo:
+        """Waits for and returns preliminary statement information from the
+        first page of the PDF. This may not always be consistent with the
+        final results."""
         resp = self._sdk.retry_ratelimited_request(
             "GET",
             f"/v3/bank-statements/{id}/statement-info",
