@@ -64,6 +64,7 @@ from ntropy_sdk.errors import (
     NtropyQuotaExceededError,
     NtropyValidationError,
 )
+from ntropy_sdk.v3 import V3
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
@@ -1462,6 +1463,7 @@ class SDK:
         self.keep_alive = TCPKeepAliveAdapter()
         self.session.mount("https://", self.keep_alive)
         self.logger = logging.getLogger("Ntropy-SDK")
+        self.v3 = V3(self)
 
         self._extra_headers = {}
         self._timeout = timeout
