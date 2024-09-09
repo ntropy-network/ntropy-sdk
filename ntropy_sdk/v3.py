@@ -2,7 +2,7 @@ from datetime import datetime, date
 from enum import Enum
 from io import IOBase
 import time
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.bank_statements import StatementInfo
@@ -28,12 +28,12 @@ class BankStatementJobStatus(str, Enum):
 
 class BankStatementFile(BaseModel):
     no_pages: int
-    size: int | None
+    size: Optional[int]
 
 
 class BankStatementJob(BaseModel):
     id: str
-    name: str | None
+    name: Optional[str]
     status: BankStatementJobStatus
     created_at: datetime
     file: BankStatementFile
@@ -91,11 +91,11 @@ class BankStatementAccount(BaseModel):
     is_balance_reconciled: Optional[bool]
     total_incoming: Optional[float]
     total_outgoing: Optional[float]
-    transactions: list[BankStatementTransaction]
+    transactions: List[BankStatementTransaction]
 
 
 class BankStatementResults(BankStatementJob):
-    accounts: list[BankStatementAccount]
+    accounts: List[BankStatementAccount]
 
 
 class BankStatementsResource:
