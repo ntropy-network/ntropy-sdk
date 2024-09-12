@@ -44,6 +44,7 @@ class StatementInfo(BaseModel):
     end_date: Optional[date]
     account_holder: Optional[AccountHolder]
     accounts: Optional[List[Account]]
+    request_id: str
 
     class Config:
         extra = "allow"

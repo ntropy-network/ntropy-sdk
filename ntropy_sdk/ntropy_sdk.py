@@ -1314,8 +1314,14 @@ class BankStatementRequest(BaseModel):
             The account holder level information of the bank statement.
         """
         url = f"/datasources/bank_statements/{self.bs_id}/statement-info"
-        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
-        return StatementInfo(**json_resp)
+        request_id = uuid.uuid4().hex
+        json_resp = self.sdk.retry_ratelimited_request(
+            "GET",
+            url,
+            None,
+            request_id=request_id,
+        ).json()
+        return StatementInfo(**json_resp, request_id=request_id)
 
     def poll(self) -> BankStatement:
         """Polls the current bank statement status and returns the server response
@@ -1499,6 +1505,7 @@ class SDK:
         url: str,
         payload: object,
         log_level=logging.DEBUG,
+        request_id: Optional[str] = None,
         **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
@@ -1522,6 +1529,8 @@ class SDK:
             If the request failed after the maximum number of retries.
         """
 
+        if request_id is None:
+            request_id = uuid.uuid4().hex
         backoff = 1
         for _ in range(self._retries):
             try:
@@ -1532,6 +1541,7 @@ class SDK:
                     headers={
                         "X-API-Key": self.token,
                         "User-Agent": f"ntropy-sdk/{__version__}",
+                        "X-Request-ID": request_id,
                         **self._extra_headers,
                     },
                     timeout=self._timeout,
@@ -1592,7 +1602,7 @@ class SDK:
                 except JSONDecodeError:
                     content = {}
 
-                err = error_from_http_status_code(status_code, content)
+                err = error_from_http_status_code(request_id, status_code, content)
                 raise err
             return resp
         raise NtropyError(f"Failed to {method} {url} after {self._retries} attempts")

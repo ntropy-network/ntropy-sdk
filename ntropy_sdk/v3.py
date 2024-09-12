@@ -3,6 +3,7 @@ from enum import Enum
 from io import IOBase
 import time
 from typing import TYPE_CHECKING, List, Optional, Union
+import uuid
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.bank_statements import StatementInfo
@@ -37,6 +38,7 @@ class BankStatementJob(BaseModel):
     status: BankStatementJobStatus
     created_at: datetime
     file: BankStatementFile
+    request_id: str
 
     def wait(
         self,
@@ -96,6 +98,7 @@ class BankStatementAccount(BaseModel):
 
 class BankStatementResults(BankStatementJob):
     accounts: List[BankStatementAccount]
+    request_id: str
 
 
 class BankStatementsResource:
@@ -107,6 +110,7 @@ class BankStatementsResource:
         file: Union[IOBase, bytes],
         filename: Optional[str] = None,
     ) -> BankStatementJob:
+        request_id = uuid.uuid4().hex
         resp = self._sdk.retry_ratelimited_request(
             "POST",
             "/v3/bank-statements",
@@ -114,32 +118,39 @@ class BankStatementsResource:
             files={
                 "file": file if filename is None else (filename, file),
             },
+            request_id=request_id,
         )
-        return BankStatementJob(**resp.json())
+        return BankStatementJob(**resp.json(), request_id=request_id)
 
     def get(self, id: str) -> BankStatementJob:
+        request_id = uuid.uuid4().hex
         resp = self._sdk.retry_ratelimited_request(
             "GET",
             f"/v3/bank-statements/{id}",
             payload=None,
+            request_id=request_id,
         )
-        return BankStatementJob(**resp.json())
+        return BankStatementJob(**resp.json(), request_id=request_id)
 
     def results(self, id: str) -> BankStatementResults:
+        request_id = uuid.uuid4().hex
         resp = self._sdk.retry_ratelimited_request(
             "GET",
             f"/v3/bank-statements/{id}/results",
             payload=None,
+            request_id=request_id,
         )
-        return BankStatementResults(**resp.json())
+        return BankStatementResults(**resp.json(), request_id=request_id)
 
     def statement_info(self, id: str) -> StatementInfo:
         """Waits for and returns preliminary statement information from the
         first page of the PDF. This may not always be consistent with the
         final results."""
+        request_id = uuid.uuid4().hex
         resp = self._sdk.retry_ratelimited_request(
             "GET",
             f"/v3/bank-statements/{id}/statement-info",
             payload=None,
+            request_id=request_id,
         )
-        return StatementInfo(**resp.json())
+        return StatementInfo(**resp.json(), request_id=request_id)
