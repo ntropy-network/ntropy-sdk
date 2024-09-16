@@ -44,16 +44,17 @@ class NtropyModelTrainingError(NtropyError):
 class NtropyHTTPError(NtropyError):
     """An expected error returned from the server-side"""
 
-    def __init__(self, content=None):
+    def __init__(self, req_id=None, content=None):
         self.content = content
+        self.req_id = req_id
 
     def __str__(self):
         if self.content is not None:
             if "details" in self.content:
-                return f"{self.DESCRIPTION}: {self.content['details']}"
+                return f"Request {self.req_id}: {self.DESCRIPTION}: {self.content['details']}"
             elif "detail" in self.content:
-                return f"{self.DESCRIPTION}: {self.content['detail']}"
-        return self.DESCRIPTION
+                return f"Request {self.req_id}: {self.DESCRIPTION}: {self.content['detail']}"
+        return f"Request {self.req_id}: self.DESCRIPTION"
 
 
 class NtropyValidationError(NtropyHTTPError):
@@ -102,6 +103,6 @@ ERROR_MAP = {
 }
 
 
-def error_from_http_status_code(status_code: int, content: dict):
+def error_from_http_status_code(request_id: str, status_code: int, content: dict):
     ErrorClass = ERROR_MAP.get(status_code, NtropyHTTPError)
-    return ErrorClass(content)
+    return ErrorClass(request_id, content)
