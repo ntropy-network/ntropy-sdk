@@ -1688,11 +1688,9 @@ class SDK:
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
-        params_str = ""
-
         try:
             data = [transaction.to_dict() for transaction in transactions]
-            url = f"/v2/transactions/sync?" + params_str
+            url = "/v2/transactions/sync"
             resp = self.retry_ratelimited_request("POST", url, data)
 
             exc = None
@@ -1839,10 +1837,8 @@ class SDK:
         timeout=4 * 60 * 60,
         poll_interval=10,
     ) -> Batch:
-        params_str = ""
-
         try:
-            url = "/v2/transactions/async?" + params_str
+            url = "/v2/transactions/async"
 
             data = [transaction.to_dict() for transaction in transactions]
             resp = self.retry_ratelimited_request("POST", url, data)
