@@ -19,7 +19,6 @@ from typing import (
     Iterable,
     Union,
 )
-from urllib.parse import urlencode
 from itertools import islice
 from json import JSONDecodeError
 
@@ -1608,10 +1607,6 @@ class SDK:
 
         return transactions_enriched
 
-    @staticmethod
-    def _build_params_str() -> str:
-        return urlencode({})
-
     def _add_transactions(
         self,
         transactions: List[Transaction],
@@ -1629,7 +1624,7 @@ class SDK:
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
-        params_str = self._build_params_str()
+        params_str = ""
 
         try:
             data = [transaction.to_dict() for transaction in transactions]
@@ -1771,7 +1766,7 @@ class SDK:
         timeout=4 * 60 * 60,
         poll_interval=10,
     ) -> Batch:
-        params_str = self._build_params_str()
+        params_str = ""
 
         try:
             url = "/v2/transactions/async?" + params_str
