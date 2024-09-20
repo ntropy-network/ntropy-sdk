@@ -37,10 +37,6 @@ class NtropyTimeoutError(NtropyError):
     DESCRIPTION = "Operation timed out"
 
 
-class NtropyModelTrainingError(NtropyError):
-    DESCRIPTION = "Error during model training"
-
-
 class NtropyHTTPError(NtropyError):
     """An expected error returned from the server-side"""
 

@@ -11,8 +11,6 @@ from ntropy_sdk import (
     AccountHolder,
     Batch,
     EnrichedTransaction,
-    LabeledTransaction,
-    Model,
     SDK,
     Transaction,
     NtropyError,

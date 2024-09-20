@@ -19,7 +19,6 @@ from typing import (
     Iterable,
     Union,
 )
-from urllib.parse import urlencode
 from itertools import islice
 from json import JSONDecodeError
 
@@ -54,7 +53,6 @@ from ntropy_sdk.utils import (
 from ntropy_sdk.errors import (
     error_from_http_status_code,
     NtropyTimeoutError,
-    NtropyModelTrainingError,
     NtropyBatchError,
     NtropyError,
     NtropyDatasourceError,
@@ -228,95 +226,6 @@ class Transaction(BaseModel):
     class Config:
         extra = Extra.forbid
         use_enum_values = True
-
-
-class LabeledTransaction(Transaction):
-    """Represents a base Transaction object with an associated label for custom model training tasks. All other fields are the same as Transaction."""
-
-    label: str = Field(description="Ground truth label for a transaction.")
-
-    _required_fields: ClassVar[List[str]] = [
-        "amount",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-        "date",
-    ]
-
-    _fields: ClassVar[List[str]] = [
-        "account_holder_id",
-        "account_holder_type",
-        "transaction_id",
-        "amount",
-        "date",
-        "description",
-        "entry_type",
-        "iso_currency_code",
-        "country",
-        "mcc",
-        "label",
-    ]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def __repr__(self):
-        return f"LabeledTransaction({dict_to_str(self.to_dict())})"
-
-    @classmethod
-    def from_row(cls, row):
-        """Constructs a LabeledTransaction object from a pandas.Series containing LabeledTransaction fields.
-
-        Parameters
-        ----------
-        val
-            A pandas.Series containing LabeledTransaction fields
-
-        Returns
-        ------
-        LabeledTransaction
-            A corresponding LabeledTransaction object.
-        """
-        return cls(
-            amount=row["amount"],
-            date=row.get("date"),
-            description=row.get("description", ""),
-            entry_type=row["entry_type"],
-            iso_currency_code=row["iso_currency_code"],
-            account_holder_id=row.get("account_holder_id"),
-            account_holder_type=row.get("account_holder_type"),
-            mcc=row.get("mcc"),
-            country=row.get("country"),
-            transaction_id=row.get("transaction_id"),
-            label=row.get("label"),
-        )
-
-    @classmethod
-    def from_dict(cls, val: dict):
-        """Constructs a LabeledTransaction object from a dictionary of LabeledTransaction fields.
-
-        Parameters
-        ----------
-        val
-            A key-value dictionary of LabeledTransaction fields.
-
-        Returns
-        ------
-        LabeledTransaction
-            A corresponding LabeledTransaction object.
-        """
-
-        return cls(**val)
-
-    def to_dict(self):
-        """Returns a dictionary of non-empty fields for a LabeledTransaction.
-
-        Returns
-        ------
-        dict
-            A dictionary of the LabeledTransaction's fields.
-        """
-        return self.dict(exclude_none=True)
 
 
 class AccountHolder(BaseModel):
@@ -988,179 +897,6 @@ class Batch(BaseModel):
         extra = "allow"
 
 
-class Model(BaseModel):
-    """A model reference with an associated name"""
-
-    sdk: "SDK" = Field(description="A SDK associated with the model.")
-    name: str = Field(description="The name of the model.")
-    created_at: Optional[str] = Field(
-        None, description="The date the model was created."
-    )
-    account_holder_type: Optional[AccountHolderType] = Field(
-        None,
-        description="Type of the account holder – must be one of consumer, business, or unknown.",
-    )
-    status: Optional[str] = Field(
-        None, description="The status of the batch enrichment."
-    )
-    progress: Optional[int] = Field(
-        None, description="The progress from 0 to 100 of the training process"
-    )
-    timeout: Optional[int] = Field(
-        20 * 60 * 60, description="A timeout for retrieving the batch result."
-    )
-    poll_interval: Optional[int] = Field(
-        10, description="The interval between polling retries."
-    )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.account_holder_type = (self.account_holder_type,)
-        self.created_at = (self.created_at,)
-        self.status = (self.status,)
-        self.progress = (self.progress,)
-
-        self.timeout = time.time() + self.timeout
-
-    def __repr__(self):
-        return f"Model({dict_to_str(self.dict(exclude_none=True))})"
-
-    def is_synced(self) -> bool:
-        """Returns True if the model instance was already synced at least once with the server
-
-        Returns:
-            boolean
-        """
-        return self.status is not None
-
-    def poll(self):
-        """Polls the current model status and returns the server response, status and progress attributes.
-
-        Returns
-        -------
-        json_resp : str
-            The JSON response of the model poll
-        status : str
-            The status of the batch enrichment.
-        progress:
-            The progress from 0 to 100 of the training process
-        """
-        url = f"/v2/models/{self.name}"
-
-        json_resp = self.sdk.retry_ratelimited_request("GET", url, None).json()
-        status = json_resp.get("status")
-        progress = json_resp.get("progress")
-        created_at = json_resp.get("created_at")
-        account_holder_type = json_resp.get("account_holder_type")
-
-        self.status = status
-        self.progress = progress
-        self.created_at = created_at
-        self.account_holder_type = account_holder_type
-
-        return json_resp, status, progress
-
-    def wait(self, with_progress=DEFAULT_WITH_PROGRESS, poll_interval=None):
-        """Continuously polls the status of this model, blocking until the model status is
-        "ready" or "error"
-
-        Parameters
-        ----------
-        with_progress : bool
-            If True, the model training is displayed with a progress bar.
-            By default, progress is displayed only in interactive mode.
-        poll_interval : bool
-            The interval between polling retries. If not specified, defaults to
-            the batch's poll_interval.
-
-        Returns
-        -------
-        status : str
-            The status of the model training.
-        dict
-            The JSON response of the model training.
-        """
-
-        if with_progress:
-            return self._wait_with_progress(poll_interval=poll_interval)
-        else:
-            return self._wait(poll_interval=poll_interval)
-
-    def _wait(self, poll_interval=None):
-        if not poll_interval:
-            poll_interval = self.poll_interval
-        while self.timeout - time.time() > 0:
-            resp, status, _ = self.poll()
-            if status == "error":
-                raise NtropyModelTrainingError("Unexpected model training error")
-            if status != "ready":
-                time.sleep(poll_interval)
-                continue
-            return resp
-        raise NtropyTimeoutError("Model training wait timeout")
-
-    def _wait_with_progress(self, poll_interval=None):
-        if not poll_interval:
-            poll_interval = self.poll_interval
-        with tqdm(total=100, desc="started") as progress:
-            while self.timeout - time.time() > 0:
-                resp, status, pr = self.poll()
-                if status == "error":
-                    raise NtropyModelTrainingError("Unexpected model training error")
-                if status != "ready":
-                    diff_n = pr - progress.n
-                    progress.update(diff_n)
-                    time.sleep(poll_interval)
-                    continue
-                progress.desc = status
-                progress.update(100)
-                return resp
-            raise NtropyTimeoutError("Model training wait timeout")
-
-    @staticmethod
-    def from_response(
-        sdk: "SDK", response, poll_interval=None, timeout=None
-    ) -> "Model":
-        """Creates a model instance from an API response referencing a model
-
-        Parameters
-        ----------
-        sdk : SDK
-            SDK to bind to the model instance
-        response : dict
-            Server response referencing a model
-
-        Returns
-        -------
-        Model
-            The Model instance referencing the same model as in the response
-        """
-        name = response.get("name")
-        if name is None:
-            raise ValueError("Invalid response for creating a model - missing name")
-
-        kwargs = {
-            "sdk": sdk,
-            "model_name": name,
-            "created_at": response.get("created_at"),
-            "account_holder_type": response.get("account_holder_type"),
-            "status": response.get("status"),
-            "progress": response.get("progress"),
-        }
-
-        if poll_interval is not None:
-            kwargs["poll_interval"] = poll_interval
-
-        if timeout is not None:
-            kwargs["timeout"] = timeout
-
-        return Model(**kwargs)
-
-    class Config:
-        arbitrary_types_allowed = True
-        use_enum_values = True
-
-
 class Report(BaseModel):
     """A transaction report."""
 
@@ -1697,7 +1433,6 @@ class SDK:
         with_progress: bool = DEFAULT_WITH_PROGRESS,
         labeling: bool = _sentinel,
         create_account_holders: bool = _sentinel,
-        model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1720,9 +1455,6 @@ class SDK:
             Deprecated.
         create_account_holders : bool, optional
             Deprecated.
-        model_name: str, optional
-            Name of the custom model to use for labeling the transaction. If
-            provided, replaces the default labeler
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
             expected column names.
@@ -1754,7 +1486,6 @@ class SDK:
                 timeout=timeout,
                 poll_interval=poll_interval,
                 with_progress=with_progress,
-                model_name=model_name,
                 mapping=mapping,
                 inplace=inplace,
             )
@@ -1765,7 +1496,6 @@ class SDK:
                 timeout=timeout,
                 poll_interval=poll_interval,
                 with_progress=with_progress,
-                model_name=model_name,
                 mapping=mapping,
             )
 
@@ -1777,7 +1507,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1795,7 +1524,6 @@ class SDK:
             timeout=timeout,
             poll_interval=poll_interval,
             with_progress=with_progress,
-            model_name=model_name,
         )
 
         def get_tx_val(tx, v):
@@ -1818,7 +1546,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
-        model_name=None,
         mapping: dict = None,
     ):
         result = []
@@ -1829,7 +1556,6 @@ class SDK:
                 timeout,
                 poll_interval,
                 with_progress,
-                model_name,
                 mapping,
             )
         return result
@@ -1840,7 +1566,6 @@ class SDK:
         timeout: int = 4 * 60 * 60,
         poll_interval=10,
         with_progress=DEFAULT_WITH_PROGRESS,
-        model_name=None,
         mapping: dict = None,
     ):
         if None in transactions:
@@ -1860,7 +1585,6 @@ class SDK:
                 timeout,
                 poll_interval,
                 with_progress,
-                model_name,
             )
         except (
             NtropyValueError,
@@ -1883,22 +1607,12 @@ class SDK:
 
         return transactions_enriched
 
-    @staticmethod
-    def _build_params_str(model_name: str = None) -> str:
-        params = {}
-        if model_name is not None:
-            params["model_name"] = model_name
-
-        params_str = urlencode(params)
-        return params_str
-
     def _add_transactions(
         self,
         transactions: List[Transaction],
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
         with_progress: bool = DEFAULT_WITH_PROGRESS,
-        model_name: str = None,
     ) -> EnrichedTransactionList:
         is_sync = len(transactions) <= self.MAX_SYNC_BATCH
         if not is_sync:
@@ -1906,12 +1620,11 @@ class SDK:
                 transactions,
                 timeout,
                 poll_interval,
-                model_name,
             )
             with_progress = with_progress or self._with_progress
             return batch.wait(with_progress=with_progress)
 
-        params_str = self._build_params_str(model_name=model_name)
+        params_str = ""
 
         try:
             data = [transaction.to_dict() for transaction in transactions]
@@ -1943,7 +1656,6 @@ class SDK:
         poll_interval: int = 10,
         labeling: bool = _sentinel,
         create_account_holders: bool = _sentinel,
-        model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -1963,9 +1675,6 @@ class SDK:
             Deprecated.
         create_account_holders : bool, optional
             Deprecated.
-        model_name: str, optional
-            Name of the custom model to use for labeling the transaction. If
-            provided, replaces the default labeler
         mapping : dict, optional
             A mapping from the column names of the provided dataframe and the
             expected column names.
@@ -2000,7 +1709,6 @@ class SDK:
                 transactions,
                 timeout=timeout,
                 poll_interval=poll_interval,
-                model_name=model_name,
                 mapping=mapping,
                 inplace=inplace,
             )
@@ -2010,7 +1718,6 @@ class SDK:
                 transactions,
                 timeout=timeout,
                 poll_interval=poll_interval,
-                model_name=model_name,
             )
 
         raise TypeError("transactions must be either a pandas.Dataframe or an iterable")
@@ -2020,7 +1727,6 @@ class SDK:
         transactions,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
-        model_name: str = None,
         mapping: dict = None,
         inplace: bool = False,
     ):
@@ -2032,7 +1738,6 @@ class SDK:
             txs,
             timeout=timeout,
             poll_interval=poll_interval,
-            model_name=model_name,
         )
 
     def _add_transactions_async_iterable(
@@ -2040,7 +1745,6 @@ class SDK:
         transactions: Iterable[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        model_name=None,
     ):
         transactions = list(transactions)
 
@@ -2054,7 +1758,6 @@ class SDK:
             transactions,
             timeout=timeout,
             poll_interval=poll_interval,
-            model_name=model_name,
         )
 
     def _add_transactions_async(
@@ -2062,9 +1765,8 @@ class SDK:
         transactions: List[Transaction],
         timeout=4 * 60 * 60,
         poll_interval=10,
-        model_name=None,
     ) -> Batch:
-        params_str = self._build_params_str(model_name=model_name)
+        params_str = ""
 
         try:
             url = "/v2/transactions/async?" + params_str
@@ -2441,92 +2143,6 @@ class SDK:
         resp = self.retry_ratelimited_request("GET", url, None)
         return resp.json()
 
-    def train_custom_model(
-        self,
-        transactions,
-        model_name: str,
-        poll_interval: Optional[int] = None,
-        timeout: Optional[int] = None,
-    ) -> Model:
-        """Trains a custom model for labeling transactions, using the provided transactions as training data,
-        either as a list of LabeledTransactions, or as a dataframe with the Transactions attributes and a label column.
-        The model is associated with the provided name. Returns a Model instance that can be polled or waited for
-        while the training is running, and can be used in enrichment after ready.
-
-        Parameters
-        ----------
-        transactions : Union[List[LabeledTransaction], pandas.DataFrame]
-            Set of input transactions and corresponding new label for training
-        model_name : str
-            Name to associate to the model
-
-        Returns
-        -------
-        Model
-            Model instance referencing the in-training model
-        """
-        if self._is_dataframe(transactions):
-            transactions = self.df_to_transaction_list(
-                transactions,
-                mapping=None,
-                inplace=True,
-                tx_class=LabeledTransaction,
-            )
-        elif not isinstance(transactions, Iterable):
-            raise TypeError(
-                "transactions must be either a pandas.Dataframe or an iterable"
-            )
-
-        return self._train_custom_model(
-            transactions, model_name, poll_interval=poll_interval, timeout=timeout
-        )
-
-    def _train_custom_model(
-        self,
-        transactions,
-        model_name: str,
-        poll_interval: Optional[int] = None,
-        timeout: Optional[int] = None,
-    ) -> Model:
-        txs = [tx.to_dict() for tx in transactions]
-
-        url = f"/v2/models/{model_name}"
-        response = self.retry_ratelimited_request(
-            "POST", url, {"transactions": txs}
-        ).json()
-        return Model.from_response(
-            self, response, poll_interval=poll_interval, timeout=timeout
-        )
-
-    def get_all_custom_models(self) -> List[Model]:
-        """Returns a list of Model objects for all existing custom models previously trained
-
-        Returns
-        -------
-        List[Model]
-            List of all trained models, independently of their status
-        """
-        url = "/v2/models"
-        responses = self.retry_ratelimited_request("GET", url, None).json()
-        return [Model.from_response(self, r) for r in responses]
-
-    def get_custom_model(self, model_name: str) -> Model:
-        """Returns a specific model referenced by its model name
-
-        Parameters
-        ----------
-        model_name : str
-            Name of the model to query
-
-        Returns
-        -------
-        Model
-            Reference to the queried model
-        """
-        url = f"/v2/models/{model_name}"
-        response = self.retry_ratelimited_request("GET", url, None).json()
-        return Model.from_response(self, response)
-
     def create_report(
         self,
         transaction_id,
@@ -2611,4 +2227,3 @@ class SDK:
 Batch.update_forward_refs()
 BankStatementRequest.update_forward_refs()
 EnrichedTransaction.update_forward_refs()
-Model.update_forward_refs()

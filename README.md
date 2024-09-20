@@ -2,7 +2,7 @@
 
 This repository hosts the SDK for the Ntropy API.  To use the Ntropy API you require an API key which can be requested at [ntropy.com](https://ntropy.com).
 
-The Ntropy API provides transaction enrichment and categorization, account ledger, metrics and custom model training. The full documentation is available at the [developer portal](https://developers.ntropy.com/).
+The Ntropy API provides transaction enrichment and categorization, account ledger and metrics. The full documentation is available at the [developer portal](https://developers.ntropy.com/).
 
 
 ## Installation
