@@ -1162,6 +1162,56 @@ class BankStatementRequest(BaseModel):
 class SDK:
     """The main Ntropy SDK object that holds the connection to the API server and implements
     the fault-tolerant communication methods. An SDK instance is associated with an API key.
+
+    Methods
+    -------
+    create_account_holder(account_holder: AccountHolder)
+        Creates an AccountHolder for the current user.
+
+    add_transactions(transactions, timeout: int = 4 * 60 * 60, poll_interval: int = 10, with_progress: bool = DEFAULT_WITH_PROGRESS, mapping: dict = None, inplace: bool = False)
+        Enriches either an iterable of Transaction objects or a pandas dataframe synchronously.
+
+    add_transactions_async(transactions, timeout: int = 4 * 60 * 60, poll_interval: int = 10, mapping: dict = None, inplace: bool = False)
+        Enriches either an iterable of Transaction objects or a pandas dataframe asynchronously.
+
+    add_bank_statement(file: IOBase, filename: Optional[str] = "file", account_holder_id: Optional[str] = None, account_type: Optional[AccountHolderType] = AccountHolderType.business, timeout: int = 4 * 60 * 60, poll_interval: int = 30)
+        Enriches the transactions found in a Bank Statement.
+
+    get_account_holder(account_holder_id: str)
+        Returns an AccountHolder object for the account holder with the provided id.
+
+    get_account_holder_metrics(account_holder_id: str, metrics: List[str], start: date, end: date)
+        Returns the result of a metrics query for a specific account holder.
+
+    get_income_report(account_holder_id: str, fetch_transactions=True)
+        Returns the income report of an account holder's Transaction history.
+
+    get_recurring_payments(account_holder_id: str, fetch_transactions=True)
+        Returns the recurring payments report of an account holder's Transaction history.
+
+    get_account_holder_transactions(account_holder_id: str, limit=0, transaction_ids=None)
+        Returns EnrichTransaction list for the account holder with the provided id.
+
+    get_labels(account_holder_type: str)
+        Returns a hierarchy of possible labels for a specific type.
+
+    create_report(transaction_id, webhook_url=None, **kwargs)
+        Reports an incorrectly enriched transaction.
+
+    list_reports(status=None, transaction_id=None, page=0, per_page=50)
+        Paginated method to retrieve all existing reports.
+
+    get_report(report_id: str)
+        Retrieves a specific report given its id.
+
+    create_custom_hierarchy(account_holder_type: str, custom_hierarchy: dict)
+        Creates or updates a custom label hierarchy.
+
+    get_custom_hierarchy(account_holder_type: str)
+        Retrieves the current custom label hierarchy.
+
+    delete_custom_hierarchy(account_holder_type: str)
+        Deletes the custom label hierarchy.
     """
 
     MAX_BATCH_SIZE = 24960
@@ -1351,6 +1401,13 @@ class SDK:
         ----------
         account_holder : AccountHolder
             The AccountHolder to add.
+
+        Raises
+        ------
+        ValueError
+            If the account_holder is not of type AccountHolder.
+        NtropyError
+            If the request to create the account holder fails.
         """
 
         if not isinstance(account_holder, AccountHolder):
@@ -1466,6 +1523,13 @@ class SDK:
         -------
         List[EnrichedTransaction], pandas.DataFrame
             A list of EnrichedTransaction objects or a corresponding pandas DataFrame.
+
+        Raises
+        ------
+        TypeError
+            If transactions is neither a pandas.DataFrame nor an iterable.
+        NtropyError
+            If the enrichment process fails.
         """
         if labeling != _sentinel:
             warnings.warn(
@@ -1690,6 +1754,15 @@ class SDK:
         -------
         Batch
             A Batch object that can be polled and awaited.
+
+        Raises
+        ------
+        TypeError
+            If transactions is neither a pandas.DataFrame nor an iterable.
+        ValueError
+            If the number of transactions exceeds the maximum batch size.
+        NtropyError
+            If the enrichment process fails.
         """
 
         if labeling != _sentinel:
@@ -1833,8 +1906,15 @@ class SDK:
 
         Returns
         -------
-        Batch
-            A Batch object that can be polled and awaited.
+        BankStatementRequest
+            A BankStatementRequest object that can be polled and awaited.
+
+        Raises
+        ------
+        ValueError
+            If the response from the server is invalid.
+        NtropyError
+            If the request to add the bank statement fails.
         """
         try:
             params = {
@@ -1889,6 +1969,13 @@ class SDK:
         -------
         AccountHolder
             The AccountHolder corresponding to the id.
+
+        Raises
+        ------
+        ValueError
+            If the account holder is not found.
+        requests.HTTPError
+            If there's an error in the HTTP request.
         """
 
         url = f"/v2/account-holder/{account_holder_id}"
@@ -1922,6 +2009,13 @@ class SDK:
         -------
         dict:
             A JSON object of the query result
+
+        Raises
+        ------
+        ValueError
+            If account_holder_id is not a string.
+        NtropyError
+            If the request to get metrics fails.
         """
 
         if not isinstance(account_holder_id, str):
@@ -1955,6 +2049,13 @@ class SDK:
         -------
         IncomeReport:
             An IncomeReport object for this account holder's history
+
+        Raises
+        ------
+        ValueError
+            If account_holder_id is not a string.
+        NtropyError
+            If the request to get the income report fails.
         """
 
         if not isinstance(account_holder_id, str):
@@ -1996,11 +2097,21 @@ class SDK:
         ----------
         account_holder_id : str
             The unique identifier for the account holder.
+        fetch_transactions : bool
+            If true, fetches all transactions from account_holder to match with returned transaction_ids,
+            and ensures the transactions field of the RecurringPaymentsGroups is populated
 
         Returns
         -------
         RecurringPaymentsGroups:
             A list of Subscription objects for this account holder's history
+
+        Raises
+        ------
+        ValueError
+            If account_holder_id is not a string.
+        NtropyError
+            If the request to get recurring payments fails.
         """
 
         if not isinstance(account_holder_id, str):
@@ -2082,6 +2193,13 @@ class SDK:
         -------
         EnrichedTransactionList
             The EnrichedTransactionList corresponding to the account holder id.
+
+        Raises
+        ------
+        ValueError
+            If the account holder is not found.
+        NtropyError
+            If the request to get transactions fails.
         """
         txs = []
         page = 0
@@ -2141,6 +2259,13 @@ class SDK:
         -------
         dict
             A hierarchy of labels for the given account holder type.
+
+        Raises
+        ------
+        AssertionError
+            If the account_holder_type is not valid.
+        NtropyError
+            If the request to get labels fails.
         """
 
         assert account_holder_type in ACCOUNT_HOLDER_TYPES
@@ -2158,8 +2283,22 @@ class SDK:
 
         Parameters
         ----------
+        transaction_id : str or EnrichedTransaction
+            The ID of the transaction to report, or the EnrichedTransaction object itself.
+        webhook_url : str, optional
+            URL to receive webhook notifications about the report.
         **kwargs
-            Keyword arguments for the correct transaction.
+            Additional keyword arguments for the correct transaction data.
+
+        Returns
+        -------
+        Report
+            A Report object representing the created report.
+
+        Raises
+        ------
+        NtropyError
+            If the request to create the report fails.
         """
 
         if isinstance(transaction_id, EnrichedTransaction):
@@ -2185,14 +2324,26 @@ class SDK:
 
         Parameters
         ----------
-        status : str
+        status : str, optional
             If provided, lists reports only with the requested status.
-        transaction_id : str
+        transaction_id : str, optional
             If provided, lists reports only for requested transaction_id.
-        page : int
+        page : int, optional
             Selected page for the reports to retrieve.
-        per_page : int
+        per_page : int, optional
             How many reports to be fetched per page.
+
+        Returns
+        -------
+        List[Report]
+            A list of Report objects.
+
+        Raises
+        ------
+        ValueError
+            If the response from the server is invalid.
+        NtropyError
+            If the request to list reports fails.
         """
         try:
             url = f"/v2/report?page={page}&per_page={per_page}"
@@ -2214,7 +2365,25 @@ class SDK:
         return [Report.from_response(self, r) for r in reports]
 
     def get_report(self, report_id: str):
-        """Retrieves a specific report given it's id"""
+        """Retrieves a specific report given its id
+
+        Parameters
+        ----------
+        report_id : str
+            The unique identifier of the report to retrieve.
+
+        Returns
+        -------
+        Report
+            A Report object representing the retrieved report.
+
+        Raises
+        ------
+        ValueError
+            If the report is not found.
+        NtropyError
+            If the request to get the report fails.
+        """
         try:
             result = self.retry_ratelimited_request(
                 "GET", f"/v2/report/{report_id}", None
@@ -2227,6 +2396,70 @@ class SDK:
 
         data = result.json()
         return Report.from_response(self, data)
+
+    def create_custom_hierarchy(self, account_holder_type: str, custom_hierarchy: dict):
+        """Creates or updates a custom label hierarchy.
+
+        Parameters
+        ----------
+        account_holder_type : str
+            The type of account holder (e.g., "consumer" or "business").
+        custom_hierarchy : dict
+            A dictionary containing the custom hierarchy with "incoming" and "outgoing" keys.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NtropyError
+            If the request to create the custom hierarchy fails.
+        """
+        endpoint = f"/v2/labels/hierarchy/custom/{account_holder_type}"
+        self.retry_ratelimited_request("POST", endpoint, json=custom_hierarchy)
+
+    def get_custom_hierarchy(self, account_holder_type: str):
+        """Retrieves the current custom label hierarchy.
+
+        Parameters
+        ----------
+        account_holder_type : str
+            The type of account holder (e.g., "consumer" or "business").
+
+        Returns
+        -------
+        dict
+            The custom hierarchy for the specified account holder type.
+
+        Raises
+        ------
+        NtropyError
+            If the request to get the custom hierarchy fails.
+        """
+        endpoint = f"/v2/labels/hierarchy/custom/{account_holder_type}"
+        response = self.retry_ratelimited_request("GET", endpoint)
+        return response.json()
+
+    def delete_custom_hierarchy(self, account_holder_type: str):
+        """Deletes the custom label hierarchy.
+
+        Parameters
+        ----------
+        account_holder_type : str
+            The type of account holder (e.g., "consumer" or "business").
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NtropyError
+            If the request to delete the custom hierarchy fails.
+        """
+        endpoint = f"/v2/labels/hierarchy/custom/{account_holder_type}"
+        self.retry_ratelimited_request("DELETE", endpoint)
 
 
 Batch.update_forward_refs()
