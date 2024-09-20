@@ -1289,7 +1289,7 @@ class SDK:
         self,
         method: str,
         url: str,
-        payload: object,
+        payload: Optional[object] = None,
         log_level=logging.DEBUG,
         request_id: Optional[str] = None,
         **request_kwargs,
@@ -2408,7 +2408,7 @@ class SDK:
             If the request to create the custom hierarchy fails.
         """
         endpoint = f"/v2/labels/hierarchy/custom/{account_holder_type}"
-        self.retry_ratelimited_request("POST", endpoint, json=custom_hierarchy)
+        self.retry_ratelimited_request("POST", endpoint, custom_hierarchy)
 
     def get_custom_hierarchy(self, account_holder_type: str):
         """Retrieves the current custom label hierarchy.
