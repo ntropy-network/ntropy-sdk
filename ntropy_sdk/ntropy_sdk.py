@@ -1292,6 +1292,8 @@ class SDK:
         payload: Optional[object] = None,
         log_level=logging.DEBUG,
         request_id: Optional[str] = None,
+        api_key: Optional[str] = None,
+        session: Optional[requests.Session] = None,
         **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
@@ -1317,15 +1319,19 @@ class SDK:
 
         if request_id is None:
             request_id = uuid.uuid4().hex
+        if api_key is None:
+            api_key = self.token
+        if session is None:
+            session = self.session
         backoff = 1
         for _ in range(self._retries):
             try:
-                resp = self.session.request(
+                resp = session.request(
                     method,
                     self.base_url + url,
                     json=payload,
                     headers={
-                        "X-API-Key": self.token,
+                        "X-API-Key": api_key,
                         "User-Agent": f"ntropy-sdk/{__version__}",
                         "X-Request-ID": request_id,
                         **self._extra_headers,
