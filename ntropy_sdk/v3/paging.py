@@ -34,7 +34,8 @@ class ListableResource(Protocol[T]):
         cursor: str,
         limit: Optional[int],
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> "PagedResponse[T]": ...
+    ) -> "PagedResponse[T]":
+        ...
 
 
 class PagedResponse(GenericModel, Generic[T]):
