@@ -1262,9 +1262,7 @@ class SDK:
         self.base_url = ALL_REGIONS[region]
 
         self.token = token
-        self.session = requests.Session()
-        self.keep_alive = TCPKeepAliveAdapter()
-        self.session.mount("https://", self.keep_alive)
+        self._session: Optional[requests.Session] = None
         self.logger = logging.getLogger("Ntropy-SDK")
         self.v3 = V3(self)
 
@@ -1284,6 +1282,12 @@ class SDK:
                 "or use unique id for each transaction if they're not actually duplicates.",
                 UserWarning,
             )
+
+    def get_session(self) -> requests.Session:
+        if self._session is None:
+            self._session = requests.Session()
+            self._session.mount("https://", TCPKeepAliveAdapter())
+        return self._session
 
     def retry_ratelimited_request(
         self,
@@ -1325,8 +1329,9 @@ class SDK:
             request_id = uuid.uuid4().hex
         if api_key is None:
             api_key = self.token
-        if session is None:
-            session = self.session
+        cur_session = session
+        if cur_session is None:
+            cur_session = self.get_session()
 
         headers = {
             "X-API-Key": api_key,
@@ -1343,7 +1348,7 @@ class SDK:
         backoff = 1
         for _ in range(self._retries):
             try:
-                resp = session.request(
+                resp = cur_session.request(
                     method,
                     self.base_url + url,
                     headers=headers,
@@ -1352,9 +1357,12 @@ class SDK:
                 )
             except requests.ConnectionError:
                 # Rebuild session on connection error and retry
-                self.session = requests.Session()
-                self.session.mount("https://", self.keep_alive)
-                continue
+                if session is None:
+                    self._session = None
+                    cur_session = self.get_session()
+                    continue
+                else:
+                    raise
 
             if resp.status_code == 429:
                 try:
