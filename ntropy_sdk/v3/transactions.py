@@ -1,9 +1,12 @@
 from datetime import date as dt_date, date, datetime
 import enum
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional, TYPE_CHECKING
 import uuid
+
 from pydantic import BaseModel, Field, NonNegativeFloat
-from ntropy_sdk.utils import PYDANTIC_V2, EntryType, pydantic_json
+
+from ntropy_sdk.utils import EntryType, PYDANTIC_V2, pydantic_json
+from ntropy_sdk.v3.paging import PagedResponse
 
 PYDANTIC_PATTERN = "pattern" if PYDANTIC_V2 else "regex"
 MAX_SYNC_BATCH = 1000
@@ -310,7 +313,7 @@ class TransactionsResource:
         account_holder_id: Optional[str] = None,
         dataset_id: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> List[Transaction]:
+    ) -> PagedResponse[Transaction]:
         """List all transactions"""
 
         request_id = extra_kwargs.get("request_id")
@@ -331,7 +334,15 @@ class TransactionsResource:
             payload=None,
             **extra_kwargs,
         )
-        return [Transaction(**j, request_id=request_id) for j in resp.json()["data"]]
+        page = PagedResponse[Transaction](
+            **resp.json(),
+            request_id=request_id,
+            _resource=self,
+            _extra_kwargs=extra_kwargs,
+        )
+        for t in page.data:
+            t.request_id = request_id
+        return page
 
     def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Transaction:
         """Retrieve a transaction"""

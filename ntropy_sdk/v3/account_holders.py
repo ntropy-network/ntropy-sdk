@@ -1,11 +1,12 @@
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional
+from typing import Optional, TYPE_CHECKING
 import uuid
 
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.utils import pydantic_json
+from ntropy_sdk.v3.paging import PagedResponse
 
 if TYPE_CHECKING:
     from ntropy_sdk.ntropy_sdk import SDK
@@ -45,7 +46,7 @@ class AccountHoldersResource:
         cursor: Optional[str] = None,
         limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> List[AccountHolder]:
+    ) -> PagedResponse[AccountHolder]:
         """List all account holders"""
 
         request_id = extra_kwargs.get("request_id")
@@ -63,7 +64,15 @@ class AccountHoldersResource:
             },
             **extra_kwargs,
         )
-        return [AccountHolder(**j, request_id=request_id) for j in resp.json()["data"]]
+        page = PagedResponse[AccountHolder](
+            **resp.json(),
+            request_id=request_id,
+            _resource=self,
+            _extra_kwargs=extra_kwargs,
+        )
+        for t in page.data:
+            t.request_id = request_id
+        return page
 
     def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
         """Retrieve an account holder"""
