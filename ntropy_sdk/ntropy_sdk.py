@@ -1338,7 +1338,7 @@ class SDK:
         else:
             headers["Content-Type"] = "application/json"
             request_kwargs["data"] = payload_json_str
-        headers |= self._extra_headers
+        headers.update(self._extra_headers)
 
         backoff = 1
         for _ in range(self._retries):
