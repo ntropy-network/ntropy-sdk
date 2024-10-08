@@ -1283,11 +1283,19 @@ class SDK:
                 UserWarning,
             )
 
-    def get_session(self) -> requests.Session:
+    def _get_session(self) -> requests.Session:
         if self._session is None:
             self._session = requests.Session()
             self._session.mount("https://", TCPKeepAliveAdapter())
         return self._session
+
+    @property
+    def session(self) -> requests.Session:
+        return self._get_session()
+
+    @session.setter
+    def session(self, session: requests.Session):
+        self._session = session
 
     def retry_ratelimited_request(
         self,
@@ -1331,7 +1339,7 @@ class SDK:
             api_key = self.token
         cur_session = session
         if cur_session is None:
-            cur_session = self.get_session()
+            cur_session = self._get_session()
 
         headers = {
             "X-API-Key": api_key,
@@ -1359,7 +1367,7 @@ class SDK:
                 # Rebuild session on connection error and retry
                 if session is None:
                     self._session = None
-                    cur_session = self.get_session()
+                    cur_session = self._get_session()
                     continue
                 else:
                     raise
