@@ -130,7 +130,7 @@ class BatchesResource:
         )
         return Batch(**resp.json(), request_id=request_id)
 
-    def enrich(
+    def create(
         self,
         *,
         input: EnrichmentInput,

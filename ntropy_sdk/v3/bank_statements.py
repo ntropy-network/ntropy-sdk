@@ -65,7 +65,7 @@ class BankStatementJob(BaseModel):
             raise NtropyDatasourceError()
 
     def overview(self, sdk: "SDK") -> StatementInfo:
-        """Convenience function for `sdk.v3.bank_statements.statement_info`."""
+        """Convenience function for `sdk.v3.bank_statements.overview`."""
         return sdk.v3.bank_statements.overview(id=self.id)
 
     class Config:
@@ -137,7 +137,7 @@ class BankStatementsResource:
             BankStatementJob(**j, request_id=request_id) for j in resp.json()["data"]
         ]
 
-    def upload_pdf(
+    def create(
         self,
         *,
         file: Union[IOBase, bytes],
