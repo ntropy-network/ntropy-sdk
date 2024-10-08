@@ -1,9 +1,10 @@
-from datetime import datetime, date
+from datetime import date, datetime
 from enum import Enum
 from io import IOBase
 import time
 from typing import TYPE_CHECKING, List, Optional, Union
 import uuid
+
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.bank_statements import StatementInfo
@@ -12,19 +13,14 @@ from ntropy_sdk.utils import EntryType
 
 if TYPE_CHECKING:
     from ntropy_sdk.ntropy_sdk import SDK
-
-
-class V3:
-    def __init__(self, sdk: "SDK"):
-        self._sdk = sdk
-        self.bank_statements = BankStatementsResource(sdk)
+    from . import ExtraKwargs
+    from typing_extensions import Unpack
 
 
 class BankStatementJobStatus(str, Enum):
-    QUEUED = "queued"
     PROCESSING = "processing"
-    PROCESSED = "processed"
-    FAILED = "failed"
+    COMPLETED = "completed"
+    ERROR = "error"
 
 
 class BankStatementFile(BaseModel):
@@ -38,33 +34,39 @@ class BankStatementJob(BaseModel):
     status: BankStatementJobStatus
     created_at: datetime
     file: BankStatementFile
-    request_id: str
+    request_id: Optional[str] = None
 
     def wait(
         self,
         sdk: "SDK",
+        *,
         timeout: int = 4 * 60 * 60,
         poll_interval: int = 10,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> "BankStatementResults":
         """Continuously polls the status of this job, blocking until the job either succeeds
         or fails. If the job is successful, returns the results. Otherwise, raises an
         `NtropyDatasourceError` exception."""
-        finish_statuses = [BankStatementJobStatus.PROCESSED, BankStatementJobStatus.FAILED]
+
+        finish_statuses = [
+            BankStatementJobStatus.COMPLETED,
+            BankStatementJobStatus.ERROR,
+        ]
         start_time = time.monotonic()
         while time.monotonic() - start_time < timeout:
-            self.status = sdk.v3.bank_statements.get(self.id).status
+            self.status = sdk.v3.bank_statements.get(id=self.id).status
             if self.status in finish_statuses:
                 break
             time.sleep(poll_interval)
 
-        if self.status is BankStatementJobStatus.PROCESSED:
-            return sdk.v3.bank_statements.results(self.id)
+        if self.status is BankStatementJobStatus.COMPLETED:
+            return sdk.v3.bank_statements.results(id=self.id, **extra_kwargs)
         else:
             raise NtropyDatasourceError()
 
-    def statement_info(self, sdk: "SDK") -> StatementInfo:
-        """Convenience function for `sdk.v3.bank_statements.statement_info`."""
-        return sdk.v3.bank_statements.statement_info(self.id)
+    def overview(self, sdk: "SDK") -> StatementInfo:
+        """Convenience function for `sdk.v3.bank_statements.overview`."""
+        return sdk.v3.bank_statements.overview(id=self.id)
 
     class Config:
         extra = "allow"
@@ -98,59 +100,109 @@ class BankStatementAccount(BaseModel):
 
 class BankStatementResults(BankStatementJob):
     accounts: List[BankStatementAccount]
-    request_id: str
 
 
 class BankStatementsResource:
     def __init__(self, sdk: "SDK"):
         self._sdk = sdk
 
-    def upload_pdf(
+    def list(
         self,
+        *,
+        created_before: Optional[datetime] = None,
+        created_after: Optional[datetime] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+        status: Optional[BankStatementJobStatus] = None,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ) -> List[BankStatementJob]:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = self._sdk.retry_ratelimited_request(
+            "GET",
+            "/v3/bank_statements",
+            params={
+                "created_before": created_before,
+                "created_after": created_after,
+                "cursor": cursor,
+                "limit": limit,
+                "status": status.value if status else None,
+            },
+            payload=None,
+            **extra_kwargs,
+        )
+        return [
+            BankStatementJob(**j, request_id=request_id) for j in resp.json()["data"]
+        ]
+
+    def create(
+        self,
+        *,
         file: Union[IOBase, bytes],
         filename: Optional[str] = None,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> BankStatementJob:
-        request_id = uuid.uuid4().hex
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
             "POST",
-            "/v3/bank-statements",
+            "/v3/bank_statements",
             payload=None,
             files={
                 "file": file if filename is None else (filename, file),
             },
-            request_id=request_id,
+            **extra_kwargs,
         )
         return BankStatementJob(**resp.json(), request_id=request_id)
 
-    def get(self, id: str) -> BankStatementJob:
-        request_id = uuid.uuid4().hex
+    def get(
+        self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+    ) -> BankStatementJob:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
             "GET",
-            f"/v3/bank-statements/{id}",
+            f"/v3/bank_statements/{id}",
             payload=None,
-            request_id=request_id,
+            **extra_kwargs,
         )
         return BankStatementJob(**resp.json(), request_id=request_id)
 
-    def results(self, id: str) -> BankStatementResults:
-        request_id = uuid.uuid4().hex
+    def results(
+        self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+    ) -> BankStatementResults:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
             "GET",
-            f"/v3/bank-statements/{id}/results",
+            f"/v3/bank_statements/{id}/results",
             payload=None,
-            request_id=request_id,
+            **extra_kwargs,
         )
         return BankStatementResults(**resp.json(), request_id=request_id)
 
-    def statement_info(self, id: str) -> StatementInfo:
+    def overview(
+        self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+    ) -> StatementInfo:
         """Waits for and returns preliminary statement information from the
         first page of the PDF. This may not always be consistent with the
         final results."""
-        request_id = uuid.uuid4().hex
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
             "GET",
-            f"/v3/bank-statements/{id}/statement-info",
+            f"/v3/bank_statements/{id}/overview",
             payload=None,
-            request_id=request_id,
+            **extra_kwargs,
         )
         return StatementInfo(**resp.json(), request_id=request_id)

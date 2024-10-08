@@ -1262,9 +1262,7 @@ class SDK:
         self.base_url = ALL_REGIONS[region]
 
         self.token = token
-        self.session = requests.Session()
-        self.keep_alive = TCPKeepAliveAdapter()
-        self.session.mount("https://", self.keep_alive)
+        self._session: Optional[requests.Session] = None
         self.logger = logging.getLogger("Ntropy-SDK")
         self.v3 = V3(self)
 
@@ -1285,6 +1283,20 @@ class SDK:
                 UserWarning,
             )
 
+    def _get_session(self) -> requests.Session:
+        if self._session is None:
+            self._session = requests.Session()
+            self._session.mount("https://", TCPKeepAliveAdapter())
+        return self._session
+
+    @property
+    def session(self) -> requests.Session:
+        return self._get_session()
+
+    @session.setter
+    def session(self, session: requests.Session):
+        self._session = session
+
     def retry_ratelimited_request(
         self,
         method: str,
@@ -1292,6 +1304,9 @@ class SDK:
         payload: Optional[object] = None,
         log_level=logging.DEBUG,
         request_id: Optional[str] = None,
+        api_key: Optional[str] = None,
+        session: Optional[requests.Session] = None,
+        payload_json_str: Optional[str] = None,
         **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
@@ -1315,29 +1330,47 @@ class SDK:
             If the request failed after the maximum number of retries.
         """
 
+        if payload_json_str is not None and payload is not None:
+            raise ValueError("payload_json_str and payload cannot be used simultaneously")
+
         if request_id is None:
             request_id = uuid.uuid4().hex
+        if api_key is None:
+            api_key = self.token
+        cur_session = session
+        if cur_session is None:
+            cur_session = self._get_session()
+
+        headers = {
+            "X-API-Key": api_key,
+            "User-Agent": f"ntropy-sdk/{__version__}",
+            "X-Request-ID": request_id,
+        }
+        if payload_json_str is None:
+            request_kwargs["json"] = payload
+        else:
+            headers["Content-Type"] = "application/json"
+            request_kwargs["data"] = payload_json_str
+        headers.update(self._extra_headers)
+
         backoff = 1
         for _ in range(self._retries):
             try:
-                resp = self.session.request(
+                resp = cur_session.request(
                     method,
                     self.base_url + url,
-                    json=payload,
-                    headers={
-                        "X-API-Key": self.token,
-                        "User-Agent": f"ntropy-sdk/{__version__}",
-                        "X-Request-ID": request_id,
-                        **self._extra_headers,
-                    },
+                    headers=headers,
                     timeout=self._timeout,
                     **request_kwargs,
                 )
             except requests.ConnectionError:
                 # Rebuild session on connection error and retry
-                self.session = requests.Session()
-                self.session.mount("https://", self.keep_alive)
-                continue
+                if session is None:
+                    self._session = None
+                    cur_session = self._get_session()
+                    continue
+                else:
+                    raise
 
             if resp.status_code == 429:
                 try:
