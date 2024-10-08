@@ -50,7 +50,7 @@ class NtropyHTTPError(NtropyError):
                 return f"Request {self.req_id}: {self.DESCRIPTION}: {self.content['details']}"
             elif "detail" in self.content:
                 return f"Request {self.req_id}: {self.DESCRIPTION}: {self.content['detail']}"
-        return f"Request {self.req_id}: self.DESCRIPTION"
+        return f"Request {self.req_id}: {self.DESCRIPTION}"
 
 
 class NtropyValidationError(NtropyHTTPError):

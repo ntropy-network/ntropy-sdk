@@ -1294,6 +1294,7 @@ class SDK:
         request_id: Optional[str] = None,
         api_key: Optional[str] = None,
         session: Optional[requests.Session] = None,
+        payload_json_str: Optional[str] = None,
         **request_kwargs,
     ):
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
@@ -1317,25 +1318,35 @@ class SDK:
             If the request failed after the maximum number of retries.
         """
 
+        if payload_json_str is not None and payload is not None:
+            raise ValueError("payload_json_str and payload cannot be used simultaneously")
+
         if request_id is None:
             request_id = uuid.uuid4().hex
         if api_key is None:
             api_key = self.token
         if session is None:
             session = self.session
+
+        headers = {
+            "X-API-Key": api_key,
+            "User-Agent": f"ntropy-sdk/{__version__}",
+            "X-Request-ID": request_id,
+        }
+        if payload_json_str is None:
+            request_kwargs["json"] = payload
+        else:
+            headers["Content-Type"] = "application/json"
+            request_kwargs["data"] = payload_json_str
+        headers |= self._extra_headers
+
         backoff = 1
         for _ in range(self._retries):
             try:
                 resp = session.request(
                     method,
                     self.base_url + url,
-                    json=payload,
-                    headers={
-                        "X-API-Key": api_key,
-                        "User-Agent": f"ntropy-sdk/{__version__}",
-                        "X-Request-ID": request_id,
-                        **self._extra_headers,
-                    },
+                    headers=headers,
                     timeout=self._timeout,
                     **request_kwargs,
                 )

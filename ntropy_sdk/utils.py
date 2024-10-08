@@ -1,7 +1,31 @@
 import math
 from datetime import datetime, date
-from typing import Union
+from typing import Generic, List, TypeVar, Union
 from enum import Enum
+import pydantic
+
+PYDANTIC_V2 = pydantic.VERSION.startswith("2.")
+
+T = TypeVar("T")
+if PYDANTIC_V2:
+    class PydanticList(pydantic.RootModel[T]):  # type: ignore
+        pass
+
+    def pydantic_list_json(l: List[T]) -> str:  # type: ignore
+        return PydanticList(l).model_dump_json()
+
+    def pydantic_json(m: pydantic.BaseModel) -> str:
+        return m.model_dump_json()
+else:
+    import pydantic.generics
+    class PydanticList(pydantic.generics.GenericModel, Generic[T]):
+        __root__: List[T]
+
+    def pydantic_list_json(l: List[T]) -> str:
+        return PydanticList(__root__=l).json()
+
+    def pydantic_json(m: pydantic.BaseModel) -> str:
+        return m.json()
 
 
 class AccountHolderType(Enum):
