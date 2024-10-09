@@ -17,7 +17,7 @@ from ntropy_sdk.utils import PYDANTIC_V2
 if TYPE_CHECKING:
     from . import ExtraKwargs
     from pydantic import BaseModel as GenericModel
-    from typing_extensions import Unpack
+    from typing_extensions import Unpack, Self
 
 elif PYDANTIC_V2:
     from pydantic import BaseModel as GenericModel
@@ -112,3 +112,6 @@ class AutoPaginateIterator(Generic[T]):
             self.current_iter = iter(next_page.data)
             self.next_cursor = next_page.next_cursor
             return next(self.current_iter)
+
+    def __iter__(self) -> "Self":
+        return self
