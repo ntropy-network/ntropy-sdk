@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 import requests
 
+
 if TYPE_CHECKING:
     from ntropy_sdk.ntropy_sdk import SDK
     from typing_extensions import TypedDict

@@ -2,7 +2,7 @@ from datetime import date, datetime
 from enum import Enum
 from io import IOBase
 import time
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import List, Optional, TYPE_CHECKING, Union
 import uuid
 
 from pydantic import BaseModel, Field, NonNegativeFloat
@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, NonNegativeFloat
 from ntropy_sdk.bank_statements import StatementInfo
 from ntropy_sdk.errors import NtropyDatasourceError
 from ntropy_sdk.utils import EntryType
+from ntropy_sdk.v3.paging import PagedResponse
 
 if TYPE_CHECKING:
     from ntropy_sdk.ntropy_sdk import SDK
@@ -115,7 +116,7 @@ class BankStatementsResource:
         limit: Optional[int] = None,
         status: Optional[BankStatementJobStatus] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> List[BankStatementJob]:
+    ) -> PagedResponse[BankStatementJob]:
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
@@ -133,9 +134,15 @@ class BankStatementsResource:
             payload=None,
             **extra_kwargs,
         )
-        return [
-            BankStatementJob(**j, request_id=request_id) for j in resp.json()["data"]
-        ]
+        page = PagedResponse[BankStatementJob](
+            **resp.json(),
+            request_id=request_id,
+            _resource=self,
+            _extra_kwargs=extra_kwargs,
+        )
+        for b in page.data:
+            b.request_id = request_id
+        return page
 
     def create(
         self,

@@ -1,13 +1,14 @@
 from datetime import datetime
 from enum import Enum
 import time
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional, TYPE_CHECKING
 import uuid
 
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.errors import NtropyBatchError
 from ntropy_sdk.utils import pydantic_json
+from ntropy_sdk.v3.paging import PagedResponse
 from ntropy_sdk.v3.transactions import EnrichedTransaction, EnrichmentInput
 
 if TYPE_CHECKING:
@@ -95,7 +96,7 @@ class BatchesResource:
         limit: Optional[int] = None,
         status: Optional[BatchStatus] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> List[Batch]:
+    ) -> PagedResponse[Batch]:
         """List all batches"""
 
         request_id = extra_kwargs.get("request_id")
@@ -114,7 +115,15 @@ class BatchesResource:
             },
             **extra_kwargs,
         )
-        return [Batch(**j, request_id=request_id) for j in resp.json()["data"]]
+        page = PagedResponse[Batch](
+            **resp.json(),
+            request_id=request_id,
+            _resource=self,
+            _extra_kwargs=extra_kwargs,
+        )
+        for t in page.data:
+            t.request_id = request_id
+        return page
 
     def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Batch:
         """Retrieve a batch"""
