@@ -7,7 +7,6 @@ import requests
 
 
 if TYPE_CHECKING:
-    from ntropy_sdk.v2.ntropy_sdk import SDK
     from typing_extensions import TypedDict
 
     class ExtraKwargs(TypedDict, total=False):
