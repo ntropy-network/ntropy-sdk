@@ -15,7 +15,7 @@ from pydantic import PrivateAttr
 from ntropy_sdk.utils import PYDANTIC_V2
 
 if TYPE_CHECKING:
-    from . import ExtraKwargs
+    from ntropy_sdk.v3 import ExtraKwargs
     from pydantic import BaseModel as GenericModel
     from typing_extensions import Unpack, Self
 
