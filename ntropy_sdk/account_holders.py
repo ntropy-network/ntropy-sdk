@@ -6,11 +6,11 @@ import uuid
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.utils import pydantic_json
-from ntropy_sdk.v3.paging import PagedResponse
+from ntropy_sdk.paging import PagedResponse
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
-    from . import ExtraKwargs
+    from ntropy_sdk import ExtraKwargs
+    from ntropy_sdk import SDK
     from typing_extensions import Unpack
 
 
@@ -74,7 +74,7 @@ class AccountHoldersResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
         """Retrieve an account holder"""
 
         request_id = extra_kwargs.get("request_id")
@@ -90,8 +90,7 @@ class AccountHoldersResource:
 
     def create(
         self,
-        *,
-        input: AccountHolder,
+        account_holder: AccountHolder,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> AccountHolder:
         """Create an account holder"""
@@ -103,7 +102,9 @@ class AccountHoldersResource:
         resp = self._sdk.retry_ratelimited_request(
             "POST",
             "/v3/account_holders",
-            payload_json_str=pydantic_json(input),
+            payload_json_str=pydantic_json(account_holder),
             **extra_kwargs,
         )
         return AccountHolder(**resp.json(), request_id=request_id)
+
+    # TODO: Recurring groups

@@ -7,6 +7,7 @@ import pydantic
 PYDANTIC_V2 = pydantic.VERSION.startswith("2.")
 
 if PYDANTIC_V2:
+
     class PydanticList(pydantic.RootModel[Any]):  # type: ignore
         pass
 
@@ -15,6 +16,7 @@ if PYDANTIC_V2:
 
     def pydantic_json(m: pydantic.BaseModel) -> str:
         return m.model_dump_json()
+
 else:
     import pydantic.generics
 

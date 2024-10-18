@@ -38,7 +38,9 @@ from tqdm.auto import tqdm
 from ntropy_sdk import __version__
 from ntropy_sdk.bank_statements import StatementInfo
 from ntropy_sdk.income_check import IncomeReport, IncomeGroup
-from ntropy_sdk.recurring_payments import (
+
+from ntropy_sdk.http import HttpClient
+from ntropy_sdk.v2.recurring_payments import (
     RecurringPaymentsGroups,
     RecurringPaymentsGroup,
 )
@@ -1262,7 +1264,7 @@ class SDK:
         self.base_url = ALL_REGIONS[region]
 
         self.token = token
-        self._session: Optional[requests.Session] = None
+        self.http_client = HttpClient()
         self.logger = logging.getLogger("Ntropy-SDK")
         self.v3 = V3(self)
 
@@ -1282,20 +1284,6 @@ class SDK:
                 "or use unique id for each transaction if they're not actually duplicates.",
                 UserWarning,
             )
-
-    def _get_session(self) -> requests.Session:
-        if self._session is None:
-            self._session = requests.Session()
-            self._session.mount("https://", TCPKeepAliveAdapter())
-        return self._session
-
-    @property
-    def session(self) -> requests.Session:
-        return self._get_session()
-
-    @session.setter
-    def session(self, session: requests.Session):
-        self._session = session
 
     def retry_ratelimited_request(
         self,
@@ -1329,102 +1317,22 @@ class SDK:
         NtropyError
             If the request failed after the maximum number of retries.
         """
-
-        if payload_json_str is not None and payload is not None:
-            raise ValueError("payload_json_str and payload cannot be used simultaneously")
-
-        if request_id is None:
-            request_id = uuid.uuid4().hex
-        if api_key is None:
-            api_key = self.token
-        cur_session = session
-        if cur_session is None:
-            cur_session = self._get_session()
-
-        headers = {
-            "X-API-Key": api_key,
-            "User-Agent": f"ntropy-sdk/{__version__}",
-            "X-Request-ID": request_id,
-        }
-        if payload_json_str is None:
-            request_kwargs["json"] = payload
-        else:
-            headers["Content-Type"] = "application/json"
-            request_kwargs["data"] = payload_json_str
-        headers.update(self._extra_headers)
-
-        backoff = 1
-        for _ in range(self._retries):
-            try:
-                resp = cur_session.request(
-                    method,
-                    self.base_url + url,
-                    headers=headers,
-                    timeout=self._timeout,
-                    **request_kwargs,
-                )
-            except requests.ConnectionError:
-                # Rebuild session on connection error and retry
-                if session is None:
-                    self._session = None
-                    cur_session = self._get_session()
-                    continue
-                else:
-                    raise
-
-            if resp.status_code == 429:
-                try:
-                    retry_after = int(resp.headers.get("retry-after", "1"))
-                except ValueError:
-                    retry_after = 1
-                if retry_after <= 0:
-                    retry_after = 1
-
-                self.logger.log(
-                    log_level, "Retrying in %s seconds due to ratelimit", retry_after
-                )
-                time.sleep(retry_after)
-
-                continue
-            elif resp.status_code == 503:
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 8)
-
-                self.logger.log(
-                    log_level,
-                    "Retrying in %s seconds due to unavailability in the server side",
-                    backoff,
-                )
-                continue
-
-            elif (
-                resp.status_code >= 500 and resp.status_code <= 511
-            ) and self._retry_on_unhandled_exception:
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 8)
-
-                self.logger.log(
-                    log_level,
-                    "Retrying in %s seconds due to unhandled exception in the server side",
-                    backoff,
-                )
-
-                continue
-
-            try:
-                resp.raise_for_status()
-            except requests.HTTPError as e:
-                status_code = e.response.status_code
-
-                try:
-                    content = e.response.json()
-                except JSONDecodeError:
-                    content = {}
-
-                err = error_from_http_status_code(request_id, status_code, content)
-                raise err
-            return resp
-        raise NtropyError(f"Failed to {method} {url} after {self._retries} attempts")
+        return self.http_client.retry_ratelimited_request(
+            method=method,
+            url=self.base_url + url,
+            payload=payload,
+            payload_json_str=payload_json_str,
+            log_level=log_level,
+            request_id=request_id,
+            api_key=api_key or self.token,
+            session=session,
+            request_kwargs=request_kwargs,
+            logger=self.logger,
+            retries=self._retries,
+            timeout=self._timeout,
+            retry_on_unhandled_exception=self._retry_on_unhandled_exception,
+            extra_headers=self._extra_headers,
+        )
 
     def create_account_holder(self, account_holder: AccountHolder):
         """Creates an AccountHolder for the current user.
