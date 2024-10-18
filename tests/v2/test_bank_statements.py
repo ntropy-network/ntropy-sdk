@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from ntropy_sdk.errors import NtropyDatasourceError
+from ntropy_sdk.v2.errors import NtropyDatasourceError
 from ntropy_sdk.v2.ntropy_sdk import BankStatementRequest
 from ntropy_sdk.utils import AccountHolderType
 

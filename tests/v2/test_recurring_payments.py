@@ -1,6 +1,6 @@
 import os
 import pytest
-from ntropy_sdk import SDK, Transaction
+from ntropy_sdk.v2 import SDK, Transaction
 from tests import API_KEY
 
 
