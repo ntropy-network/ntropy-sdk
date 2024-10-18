@@ -6,14 +6,14 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-from ntropy_sdk.errors import NtropyBatchError
+from ntropy_sdk.v2.errors import NtropyBatchError
 from ntropy_sdk.utils import pydantic_json
 from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.transactions import EnrichedTransaction, EnrichmentInput
 
 if TYPE_CHECKING:
-    from ntropy_sdk.v2.ntropy_sdk import SDK
-    from ntropy_sdk.v3 import ExtraKwargs
+    from ntropy_sdk import ExtraKwargs
+    from ntropy_sdk import SDK
     from typing_extensions import Unpack
 
 
