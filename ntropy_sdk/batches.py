@@ -12,7 +12,7 @@ from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.transactions import (
     EnrichedTransaction,
     EnrichmentInput,
-    InputTransaction,
+    TransactionInput,
 )
 
 if TYPE_CHECKING:
@@ -151,7 +151,7 @@ class BatchesResource:
 
     def create(
         self,
-        transactions: List[InputTransaction],
+        transactions: List[TransactionInput],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Batch:
         """Submit a batch of transactions for enrichment"""

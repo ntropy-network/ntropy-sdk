@@ -62,7 +62,7 @@ class _TransactionBase(BaseModel):
     )
 
 
-class InputTransaction(_TransactionBase):
+class TransactionInput(_TransactionBase):
     account_holder_id: Optional[str] = Field(
         None,
         description="The id of the account holder. Unsetting it will disable categorization.",
@@ -280,7 +280,7 @@ class EnrichedTransaction(_EnrichedTransactionBase):
 
 
 class EnrichmentInput(BaseModel):
-    transactions: List[InputTransaction]
+    transactions: List[TransactionInput]
 
 
 class EnrichmentResult(BaseModel):
@@ -361,7 +361,7 @@ class TransactionsResource:
 
     def create(
         self,
-        transactions: List[InputTransaction],
+        transactions: List[TransactionInput],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> EnrichmentResult:
         """Synchronously enrich transactions"""
