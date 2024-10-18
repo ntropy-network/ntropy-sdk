@@ -75,16 +75,24 @@ class NtropyValueError(NtropyHTTPError):
 
 class NtropyQuotaExceededError(NtropyHTTPError):
     DESCRIPTION = (
-        "Reached the transaction limit for this API key. Please contact Ntropy support"
+        "Not enough credits to perform this operation. Please top up your account"
     )
 
 
 class NtropyNotSupportedError(NtropyHTTPError):
-    DESCRIPTION = "The requested operation is not support for this API key. Please contact Ntropy support"
+    DESCRIPTION = "The requested operation is not supported for this API key. Please contact Ntropy support"
 
 
 class NtropyResourceOccupiedError(NtropyHTTPError):
     DESCRIPTION = "The resource you're trying to access is busy or not ready yet"
+
+
+class NtropyServerConnectionError(NtropyHTTPError):
+    DESCRIPTION = "Server connection error. Please try again later."
+
+
+class NtropyRateLimitError(NtropyHTTPError):
+    DESCRIPTION = "Too many requests. Please try again later."
 
 
 ERROR_MAP = {
@@ -96,6 +104,9 @@ ERROR_MAP = {
     422: NtropyValidationError,
     423: NtropyQuotaExceededError,
     500: NtropyRuntimeError,
+    502: NtropyServerConnectionError,
+    503: NtropyServerConnectionError,
+    504: NtropyServerConnectionError,
 }
 
 
