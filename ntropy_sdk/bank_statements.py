@@ -38,10 +38,10 @@ class BankStatementJob(BaseModel):
     request_id: Optional[str] = None
 
     def is_completed(self):
-        ...
+        return self.status == BankStatementJobStatus.COMPLETED
 
-    def is_failed(self):
-        ...
+    def is_error(self):
+        return self.status == BankStatementJobStatus.ERROR
 
     def wait_for_results(
         self,
@@ -66,7 +66,7 @@ class BankStatementJob(BaseModel):
                 break
             time.sleep(poll_interval)
 
-        if self.status is BankStatementJobStatus.COMPLETED:
+        if self.is_completed():
             return sdk.v3.bank_statements.results(id=self.id, **extra_kwargs)
         else:
             raise NtropyDatasourceError()
@@ -148,8 +148,8 @@ class BankStatementsResource:
 
     def create(
         self,
-        *,
         file: Union[IOBase, bytes],
+        *,
         filename: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> BankStatementJob:
@@ -168,9 +168,7 @@ class BankStatementsResource:
         )
         return BankStatementJob(**resp.json(), request_id=request_id)
 
-    def get(
-        self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
-    ) -> BankStatementJob:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BankStatementJob:
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
@@ -184,7 +182,7 @@ class BankStatementsResource:
         return BankStatementJob(**resp.json(), request_id=request_id)
 
     def results(
-        self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
     ) -> BankStatementResults:
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
@@ -198,9 +196,7 @@ class BankStatementsResource:
         )
         return BankStatementResults(**resp.json(), request_id=request_id)
 
-    def overview(
-        self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
-    ) -> StatementInfo:
+    def overview(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> StatementInfo:
         """Waits for and returns preliminary statement information from the
         first page of the PDF. This may not always be consistent with the
         final results."""

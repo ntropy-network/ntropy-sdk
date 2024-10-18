@@ -344,7 +344,7 @@ class TransactionsResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Transaction:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Transaction:
         """Retrieve a transaction"""
 
         request_id = extra_kwargs.get("request_id")
@@ -361,8 +361,7 @@ class TransactionsResource:
 
     def create(
         self,
-        *,
-        input: EnrichmentInput,
+        transactions: List[InputTransaction],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> EnrichmentResult:
         """Synchronously enrich transactions"""
@@ -374,13 +373,16 @@ class TransactionsResource:
         resp = self._sdk.retry_ratelimited_request(
             "POST",
             "/v3/transactions",
-            payload_json_str=pydantic_json(input),
+            payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
         return EnrichmentResult(**resp.json(), request_id=request_id)
 
     def assign(
-        self, *, id: str, account_holder_id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+        self,
+        transaction_id: str,
+        account_holder_id: str,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Transaction:
         """Assign a transaction to an account holder"""
 
@@ -390,7 +392,7 @@ class TransactionsResource:
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
             "POST",
-            f"/v3/transactions/{id}/assign",
+            f"/v3/transactions/{transaction_id}/assign",
             params={
                 "account_holder_id": account_holder_id,
             },

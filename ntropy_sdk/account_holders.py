@@ -74,7 +74,7 @@ class AccountHoldersResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
         """Retrieve an account holder"""
 
         request_id = extra_kwargs.get("request_id")
@@ -90,8 +90,7 @@ class AccountHoldersResource:
 
     def create(
         self,
-        *,
-        input: AccountHolder,
+        account_holder: AccountHolder,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> AccountHolder:
         """Create an account holder"""
@@ -103,7 +102,7 @@ class AccountHoldersResource:
         resp = self._sdk.retry_ratelimited_request(
             "POST",
             "/v3/account_holders",
-            payload_json_str=pydantic_json(input),
+            payload_json_str=pydantic_json(account_holder),
             **extra_kwargs,
         )
         return AccountHolder(**resp.json(), request_id=request_id)

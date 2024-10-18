@@ -9,7 +9,11 @@ from pydantic import BaseModel, Field
 from ntropy_sdk.v2.errors import NtropyBatchError
 from ntropy_sdk.utils import pydantic_json
 from ntropy_sdk.paging import PagedResponse
-from ntropy_sdk.transactions import EnrichedTransaction, EnrichmentInput
+from ntropy_sdk.transactions import (
+    EnrichedTransaction,
+    EnrichmentInput,
+    InputTransaction,
+)
 
 if TYPE_CHECKING:
     from ntropy_sdk import ExtraKwargs
@@ -40,7 +44,13 @@ class Batch(BaseModel):
     total: int = Field(description="The total number of transactions in the batch.")
     request_id: Optional[str] = None
 
-    def wait(
+    def is_completed(self):
+        return self.status == BatchStatus.COMPLETED
+
+    def is_error(self):
+        return self.status == BatchStatus.ERROR
+
+    def wait_for_results(
         self,
         sdk: "SDK",
         *,
@@ -60,7 +70,7 @@ class Batch(BaseModel):
                 break
             time.sleep(poll_interval)
 
-        if self.status is BatchStatus.COMPLETED:
+        if self.is_completed():
             return sdk.v3.batches.results(id=self.id, **extra_kwargs)
         else:
             raise NtropyBatchError(f"Batch[{self.id}] contains errors")
@@ -125,7 +135,7 @@ class BatchesResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Batch:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Batch:
         """Retrieve a batch"""
 
         request_id = extra_kwargs.get("request_id")
@@ -141,8 +151,7 @@ class BatchesResource:
 
     def create(
         self,
-        *,
-        input: EnrichmentInput,
+        transactions: List[InputTransaction],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Batch:
         """Submit a batch of transactions for enrichment"""
@@ -154,12 +163,12 @@ class BatchesResource:
         resp = self._sdk.retry_ratelimited_request(
             "POST",
             "/v3/batches",
-            payload_json_str=pydantic_json(input),
+            payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
         return Batch(**resp.json(), request_id=request_id)
 
-    def results(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BatchResult:
+    def results(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BatchResult:
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
