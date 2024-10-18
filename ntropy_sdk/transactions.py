@@ -6,7 +6,7 @@ import uuid
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.utils import EntryType, PYDANTIC_V2, pydantic_json
-from ntropy_sdk.v3.paging import PagedResponse
+from ntropy_sdk.paging import PagedResponse
 
 PYDANTIC_PATTERN = "pattern" if PYDANTIC_V2 else "regex"
 MAX_SYNC_BATCH = 1000
@@ -14,7 +14,7 @@ MAX_ASYNC_BATCH = 24960
 
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
+    from ntropy_sdk.v2.ntropy_sdk import SDK
     from ntropy_sdk.v3 import ExtraKwargs
     from typing_extensions import Unpack
 
@@ -62,7 +62,7 @@ class _TransactionBase(BaseModel):
     )
 
 
-class TransactionInput(_TransactionBase):
+class InputTransaction(_TransactionBase):
     account_holder_id: Optional[str] = Field(
         None,
         description="The id of the account holder. Unsetting it will disable categorization.",
@@ -280,7 +280,7 @@ class EnrichedTransaction(_EnrichedTransactionBase):
 
 
 class EnrichmentInput(BaseModel):
-    transactions: List[TransactionInput]
+    transactions: List[InputTransaction]
 
 
 class EnrichmentResult(BaseModel):

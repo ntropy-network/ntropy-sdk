@@ -13,11 +13,10 @@ from ntropy_sdk import (
     EnrichedTransaction,
     SDK,
     Transaction,
-    NtropyError,
 )
 from ntropy_sdk.errors import NtropyValueError, NtropyBatchError
 from ntropy_sdk.utils import TransactionType
-from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
+from ntropy_sdk.v2.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 from tests import API_KEY
 
 

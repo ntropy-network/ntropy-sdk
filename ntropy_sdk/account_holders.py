@@ -6,11 +6,11 @@ import uuid
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.utils import pydantic_json
-from ntropy_sdk.v3.paging import PagedResponse
+from ntropy_sdk.paging import PagedResponse
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
-    from . import ExtraKwargs
+    from ntropy_sdk.v2.ntropy_sdk import SDK
+    from ntropy_sdk.v3 import ExtraKwargs
     from typing_extensions import Unpack
 
 
@@ -107,3 +107,5 @@ class AccountHoldersResource:
             **extra_kwargs,
         )
         return AccountHolder(**resp.json(), request_id=request_id)
+
+    # TODO: Recurring groups

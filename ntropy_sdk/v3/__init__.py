@@ -3,7 +3,7 @@ import requests
 
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
+    from ntropy_sdk.v2.ntropy_sdk import SDK
     from typing_extensions import TypedDict
 
     class ExtraKwargs(TypedDict, total=False):
@@ -12,10 +12,10 @@ if TYPE_CHECKING:
         session: Optional[requests.Session]
 
 
-from .transactions import TransactionsResource
-from .batches import BatchesResource
-from .bank_statements import BankStatementsResource
-from .account_holders import AccountHoldersResource
+from ntropy_sdk.transactions import TransactionsResource
+from ntropy_sdk.batches import BatchesResource
+from ntropy_sdk.bank_statements import BankStatementsResource
+from ntropy_sdk.account_holders import AccountHoldersResource
 
 
 class V3:
