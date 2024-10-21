@@ -1,12 +1,13 @@
+import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional, TYPE_CHECKING, Literal
-import uuid
+from typing import Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from ntropy_sdk.utils import pydantic_json
 from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.transactions import RecurrenceGroup, RecurrenceGroups
+from ntropy_sdk.utils import pydantic_json
 
 if TYPE_CHECKING:
     from ntropy_sdk import ExtraKwargs
@@ -107,4 +108,20 @@ class AccountHoldersResource:
         )
         return AccountHolder(**resp.json(), request_id=request_id)
 
-    # TODO: Recurring groups
+    def recurring_groups(
+        self,
+        id: str,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ) -> RecurrenceGroups:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = self._sdk.retry_ratelimited_request(
+            method="POST",
+            url=f"/v3/account_holders/{id}/recurring_groups",
+            **extra_kwargs,
+        )
+        return RecurrenceGroups(
+            groups=[RecurrenceGroup(**r) for r in resp.json()], request_id=request_id
+        )

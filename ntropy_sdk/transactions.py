@@ -237,6 +237,11 @@ class RecurrenceGroup(BaseModel):
     )
 
 
+class RecurrenceGroups(BaseModel):
+    groups: List[RecurrenceGroup]
+    request_id: Optional[str]
+
+
 class Recurrence(BaseModel):
     """
     The `Recurrence` object represents the recurrence pattern of a transaction. It provides information about
