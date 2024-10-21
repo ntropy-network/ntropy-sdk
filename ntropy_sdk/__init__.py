@@ -38,8 +38,6 @@ from .v2.errors import (
     NtropyRuntimeError,
 )
 
-from .transactions import (
-    TransactionInput, LocationInput
-)
+from .transactions import TransactionInput, LocationInput
 
 from .account_holders import AccountHolder

@@ -1,18 +1,6 @@
 import os
 import pytest
 from ntropy_sdk.v2 import SDK, Transaction
-from tests import API_KEY
-
-
-@pytest.fixture
-def sdk():
-    sdk = SDK(API_KEY)
-
-    url = os.environ.get("NTROPY_API_URL")
-    if url is not None:
-        sdk.base_url = url
-
-    return sdk
 
 
 @pytest.fixture

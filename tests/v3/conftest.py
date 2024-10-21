@@ -3,12 +3,11 @@ import os
 import pytest as pytest
 
 from ntropy_sdk import SDK
-from .. import API_KEY
 
 
 @pytest.fixture
-def sdk():
-    sdk = SDK(API_KEY)
+def sdk(api_key):
+    sdk = SDK(api_key)
 
     url = os.environ.get("NTROPY_API_URL")
     if url is not None:

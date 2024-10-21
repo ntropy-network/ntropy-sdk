@@ -44,9 +44,11 @@ class SDK:
         if self.api_key and not kwargs_copy.get("api_key"):
             kwargs_copy["api_key"] = self.api_key
 
-        return self.http_client.retry_ratelimited_request(method=method,
-                                                          url=self.base_url + url,
-                                                          params=params,
-                                                          payload=payload,
-                                                          payload_json_str=payload_json_str,
-                                                          **kwargs_copy)
+        return self.http_client.retry_ratelimited_request(
+            method=method,
+            url=self.base_url + url,
+            params=params,
+            payload=payload,
+            payload_json_str=payload_json_str,
+            **kwargs_copy,
+        )

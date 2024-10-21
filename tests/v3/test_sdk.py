@@ -1,7 +1,6 @@
 import os
 from itertools import islice
 from ntropy_sdk import SDK
-from .. import API_KEY
 
 
 def test_pagination(sdk: SDK):
@@ -12,10 +11,10 @@ def test_pagination(sdk: SDK):
     assert len(tx_ids) == 10
 
 
-def test_readme():
+def test_readme(api_key):
     readme_file = open(
         os.path.join(os.path.dirname(__file__), "..", "..", "README.md")
     ).read()
     readme_data = readme_file.split("```python")[1].split("```")[0]
-    readme_data = readme_data.replace("YOUR-API-KEY", API_KEY)
+    readme_data = readme_data.replace("YOUR-API-KEY", api_key)
     exec(readme_data, globals())
