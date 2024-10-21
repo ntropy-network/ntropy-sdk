@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional, TYPE_CHECKING
+from typing import List, Literal, Optional, TYPE_CHECKING, Union
 import uuid
 
 from pydantic import BaseModel, Field
@@ -10,6 +10,13 @@ if TYPE_CHECKING:
     from ntropy_sdk import ExtraKwargs
     from ntropy_sdk import SDK
     from typing_extensions import Unpack
+
+
+class _Unset:
+    pass
+
+
+UNSET = _Unset()
 
 WebhookEventType = Literal[
     "reports.resolved",
@@ -40,6 +47,9 @@ class Webhook(BaseModel):
         description="A secret string used to authenticate the webhook. This "
         "value will be included in the `X-Ntropy-Token` header when sending "
         "requests to the webhook",
+    )
+    enabled: bool = Field(
+        description="Whether the webhook is enabled or not.",
     )
     request_id: Optional[str] = None
 
@@ -118,5 +128,36 @@ class WebhooksResource:
         self._sdk.retry_ratelimited_request(
             method="DELETE",
             url=f"/v3/webhooks/{id}",
+            **extra_kwargs,
+        )
+
+    def patch(
+        self,
+        id: str,
+        *,
+        url: Union[str, _Unset] = UNSET,
+        events: Union[List[WebhookEventType], _Unset] = UNSET,
+        token: Union[str, None, _Unset] = UNSET,
+        enabled: Union[bool, _Unset] = UNSET,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ):
+        payload = {}
+        if url is not UNSET:
+            payload["url"] = url
+        if events is not UNSET:
+            payload["events"] = events
+        if token is not UNSET:
+            payload["token"] = token
+        if enabled is not UNSET:
+            payload["enabled"] = enabled
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        self._sdk.retry_ratelimited_request(
+            method="PATCH",
+            url=f"/v3/webhooks/{id}",
+            payload=payload,
             **extra_kwargs,
         )
