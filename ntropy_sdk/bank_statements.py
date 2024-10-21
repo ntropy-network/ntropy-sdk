@@ -61,13 +61,13 @@ class BankStatementJob(BaseModel):
         ]
         start_time = time.monotonic()
         while time.monotonic() - start_time < timeout:
-            self.status = sdk.v3.bank_statements.get(id=self.id).status
+            self.status = sdk.bank_statements.get(id=self.id).status
             if self.status in finish_statuses:
                 break
             time.sleep(poll_interval)
 
         if self.is_completed():
-            return sdk.v3.bank_statements.results(id=self.id, **extra_kwargs)
+            return sdk.bank_statements.results(id=self.id, **extra_kwargs)
         else:
             raise NtropyDatasourceError()
 

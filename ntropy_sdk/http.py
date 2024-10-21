@@ -2,7 +2,7 @@ import logging
 import time
 import uuid
 from json import JSONDecodeError
-from typing import Optional
+from typing import Dict, Optional
 
 import requests
 
@@ -34,6 +34,7 @@ class HttpClient:
         *,
         method: str,
         url: str,
+        params: Optional[Dict[str, str]] = None,
         payload: Optional[object] = None,
         payload_json_str: Optional[str] = None,
         logger: Optional[logging.Logger] = None,
@@ -89,6 +90,7 @@ class HttpClient:
                 resp = cur_session.request(
                     method,
                     url,
+                    params=params,
                     headers=headers,
                     timeout=timeout,
                     **request_kwargs,

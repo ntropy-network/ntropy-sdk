@@ -13,10 +13,10 @@ if TYPE_CHECKING:
         request_id: Optional[str]
         api_key: Optional[str]
         session: Optional[requests.Session]
-        retries: Optional[int]
-        timeout: Optional[int]
-        retry_on_unhandled_exception: Optional[int]
-        extra_headers: Optional[int]
+        retries: int
+        timeout: int
+        retry_on_unhandled_exception: bool
+        extra_headers: Optional[dict]
 
 
 from .sdk import SDK
