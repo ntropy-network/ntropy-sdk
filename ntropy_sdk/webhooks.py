@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Literal, Optional
+from typing import List, Literal, Optional, TYPE_CHECKING
 import uuid
+
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.paging import PagedResponse
