@@ -3,7 +3,7 @@ import os
 import pytest as pytest
 
 from ntropy_sdk.v2 import SDK
-from tests import API_KEY
+from .. import API_KEY
 
 
 @pytest.fixture

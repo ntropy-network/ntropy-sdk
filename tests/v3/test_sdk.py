@@ -1,7 +1,7 @@
 import os
 from itertools import islice
 from ntropy_sdk import SDK
-from tests import API_KEY
+from .. import API_KEY
 
 
 def test_pagination(sdk: SDK):
