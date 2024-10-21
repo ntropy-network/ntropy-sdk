@@ -17,9 +17,8 @@ class HttpClient:
     def _get_session(self) -> requests.Session:
         if self._session is None:
             self._session = requests.Session()
-            # from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
-            # self._session.mount("https://", TCPKeepAliveAdapter())
-            # self._session.mount("https://")
+            from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
+            self._session.mount("https://", TCPKeepAliveAdapter())
         return self._session
 
     @property
