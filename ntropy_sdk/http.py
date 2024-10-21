@@ -5,7 +5,6 @@ from json import JSONDecodeError
 from typing import Optional
 
 import requests
-from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
 
 from ntropy_sdk import VERSION
 from ntropy_sdk.v2.errors import error_from_http_status_code, NtropyError
@@ -18,7 +17,9 @@ class HttpClient:
     def _get_session(self) -> requests.Session:
         if self._session is None:
             self._session = requests.Session()
-            self._session.mount("https://", TCPKeepAliveAdapter())
+            # from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
+            # self._session.mount("https://", TCPKeepAliveAdapter())
+            # self._session.mount("https://")
         return self._session
 
     @property
@@ -31,6 +32,7 @@ class HttpClient:
 
     def retry_ratelimited_request(
         self,
+        *,
         method: str,
         url: str,
         payload: Optional[object] = None,

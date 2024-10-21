@@ -20,9 +20,8 @@ from typing import (
     Union,
 )
 from itertools import islice
-from json import JSONDecodeError
 
-import requests  # type: ignore
+import requests
 from pydantic import (
     BaseModel,
     Field,
@@ -31,16 +30,14 @@ from pydantic import (
     root_validator,
     Extra,
 )
-from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tabulate import tabulate
 from tqdm.auto import tqdm
 
-from ntropy_sdk import __version__
-from ntropy_sdk.bank_statements import StatementInfo
-from ntropy_sdk.income_check import IncomeReport, IncomeGroup
+from .bank_statements import StatementInfo
+from .income_check import IncomeReport, IncomeGroup
 
 from ntropy_sdk.http import HttpClient
-from ntropy_sdk.v2.recurring_payments import (
+from .recurring_payments import (
     RecurringPaymentsGroups,
     RecurringPaymentsGroup,
 )
@@ -52,8 +49,7 @@ from ntropy_sdk.utils import (
     dict_to_str,
     validate_date,
 )
-from ntropy_sdk.errors import (
-    error_from_http_status_code,
+from .errors import (
     NtropyTimeoutError,
     NtropyBatchError,
     NtropyError,
@@ -64,7 +60,6 @@ from ntropy_sdk.errors import (
     NtropyQuotaExceededError,
     NtropyValidationError,
 )
-from ntropy_sdk.v3 import V3
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
@@ -1266,7 +1261,6 @@ class SDK:
         self.token = token
         self.http_client = HttpClient()
         self.logger = logging.getLogger("Ntropy-SDK")
-        self.v3 = V3(self)
 
         self._extra_headers = {}
         self._timeout = timeout
@@ -1326,12 +1320,12 @@ class SDK:
             request_id=request_id,
             api_key=api_key or self.token,
             session=session,
-            request_kwargs=request_kwargs,
             logger=self.logger,
             retries=self._retries,
             timeout=self._timeout,
             retry_on_unhandled_exception=self._retry_on_unhandled_exception,
             extra_headers=self._extra_headers,
+            **request_kwargs,
         )
 
     def create_account_holder(self, account_holder: AccountHolder):

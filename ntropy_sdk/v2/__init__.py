@@ -1,4 +1,4 @@
-from ntropy_sdk.v2.ntropy_sdk import (
+from .ntropy_sdk import (
     AccountHolder,
     AccountHolderType,
     Transaction,
@@ -9,8 +9,9 @@ from ntropy_sdk.v2.ntropy_sdk import (
     BankStatement,
     BankStatementRequest,
     Report,
+    StatementInfo,
 )
-from ntropy_sdk.v2.errors import (
+from .errors import (
     NtropyError,
     NtropyBatchError,
 )
@@ -28,4 +29,5 @@ __all__ = (
     "BankStatement",
     "BankStatementRequest",
     "Report",
+    "StatementInfo",
 )

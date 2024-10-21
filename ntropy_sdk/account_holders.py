@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Literal
 import uuid
 
 from pydantic import BaseModel, Field
@@ -54,8 +54,8 @@ class AccountHoldersResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/account_holders",
+            method="GET",
+            url="/v3/account_holders",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -82,8 +82,8 @@ class AccountHoldersResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/account_holders/{id}",
+            method="GET",
+            url=f"/v3/account_holders/{id}",
             **extra_kwargs,
         )
         return AccountHolder(**resp.json(), request_id=request_id)
@@ -100,8 +100,8 @@ class AccountHoldersResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/account_holders",
+            method="POST",
+            url="/v3/account_holders",
             payload_json_str=pydantic_json(account_holder),
             **extra_kwargs,
         )

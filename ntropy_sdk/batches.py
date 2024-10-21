@@ -6,7 +6,7 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-from ntropy_sdk.v2.errors import NtropyBatchError
+from ntropy_sdk.v2 import NtropyBatchError
 from ntropy_sdk.utils import pydantic_json
 from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.transactions import (
@@ -114,8 +114,8 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/batches",
+            method="GET",
+            url="/v3/batches",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -143,8 +143,8 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/batches/{id}",
+            method="GET",
+            url=f"/v3/batches/{id}",
             **extra_kwargs,
         )
         return Batch(**resp.json(), request_id=request_id)
@@ -161,8 +161,8 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/batches",
+            method="POST",
+            url="/v3/batches",
             payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
@@ -174,8 +174,8 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/batches/{id}/results",
+            method="GET",
+            url=f"/v3/batches/{id}/results",
             **extra_kwargs,
         )
         return BatchResult(**resp.json(), request_id=request_id)

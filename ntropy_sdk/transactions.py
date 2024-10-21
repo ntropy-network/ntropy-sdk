@@ -321,8 +321,8 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/transactions",
+            method="GET",
+            url="/v3/transactions",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -352,8 +352,8 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/transactions/{id}",
+            method="GET",
+            url=f"/v3/transactions/{id}",
             payload=None,
             **extra_kwargs,
         )
@@ -371,8 +371,8 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/transactions",
+            method="POST",
+            url="/v3/transactions",
             payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
@@ -391,8 +391,8 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            f"/v3/transactions/{transaction_id}/assign",
+            method="POST",
+            url=f"/v3/transactions/{transaction_id}/assign",
             params={
                 "account_holder_id": account_holder_id,
             },

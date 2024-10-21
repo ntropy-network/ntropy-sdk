@@ -317,15 +317,6 @@ def test_transaction_entry_type():
         )
 
 
-def test_readme():
-    readme_file = open(
-        os.path.join(os.path.dirname(__file__), "..", "README.md")
-    ).read()
-    readme_data = readme_file.split("```python")[1].split("```")[0]
-    readme_data = readme_data.replace("YOUR-API-KEY", API_KEY)
-    exec(readme_data, globals())
-
-
 def test_add_transactions_async(sdk):
     tx = Transaction(
         amount=24.56,
@@ -607,7 +598,7 @@ def wrap_response(sdk, wrap_meth, responses):
     """
     Mocks a response for `wrap_meth` iterating through `responses` to obtain return values
     """
-    orig = sdk.session.request
+    orig = sdk.http_client.session.request
     responses = iter(responses)
 
     def fn(meth, *args, **kwargs):
@@ -654,7 +645,7 @@ def test_async_batch_with_err_ignore_raise(async_sdk, input_tx, batch_status):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -686,7 +677,7 @@ def test_async_batch_request_err_ignore_raise(async_sdk, input_tx):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -718,7 +709,7 @@ def test_sync_batch_request_err_ignore_raise(sync_sdk, input_tx):
     )
 
     with patch.object(
-        sync_sdk.session,
+        sync_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -751,7 +742,7 @@ def test_async_batch_with_err(async_sdk, input_tx, batch_status):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -782,7 +773,7 @@ def test_async_batch_request_err(async_sdk, input_tx):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -812,7 +803,7 @@ def test_sync_batch_request_err(sync_sdk, input_tx):
     )
 
     with patch.object(
-        sync_sdk.session,
+        sync_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:

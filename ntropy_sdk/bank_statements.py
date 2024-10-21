@@ -124,8 +124,8 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/bank_statements",
+            method="GET",
+            url="/v3/bank_statements",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -158,8 +158,8 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/bank_statements",
+            method="POST",
+            url="/v3/bank_statements",
             payload=None,
             files={
                 "file": file if filename is None else (filename, file),
@@ -174,8 +174,8 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/bank_statements/{id}",
+            method="GET",
+            url=f"/v3/bank_statements/{id}",
             payload=None,
             **extra_kwargs,
         )
@@ -189,8 +189,8 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/bank_statements/{id}/results",
+            method="GET",
+            url=f"/v3/bank_statements/{id}/results",
             payload=None,
             **extra_kwargs,
         )
@@ -205,8 +205,8 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/bank_statements/{id}/overview",
+            method="GET",
+            url=f"/v3/bank_statements/{id}/overview",
             payload=None,
             **extra_kwargs,
         )
