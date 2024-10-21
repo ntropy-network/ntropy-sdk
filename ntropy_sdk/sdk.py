@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from ntropy_sdk.account_holders import AccountHoldersResource
 from ntropy_sdk.bank_statements import BankStatementsResource
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class SDK:
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
         region: str = DEFAULT_REGION,
     ):
         self.base_url = ALL_REGIONS[region]

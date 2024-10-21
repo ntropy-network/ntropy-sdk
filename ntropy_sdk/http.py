@@ -11,7 +11,7 @@ from ntropy_sdk.v2.errors import error_from_http_status_code, NtropyError
 
 
 class HttpClient:
-    def __init__(self, session: requests.Session | None = None):
+    def __init__(self, session: Optional[requests.Session] = None):
         self._session = session
 
     def _get_session(self) -> requests.Session:
@@ -36,7 +36,7 @@ class HttpClient:
         url: str,
         payload: Optional[object] = None,
         payload_json_str: Optional[str] = None,
-        logger: logging.Logger | None = None,
+        logger: Optional[logging.Logger] = None,
         log_level=logging.DEBUG,
         request_id: Optional[str] = None,
         api_key: Optional[str] = None,
