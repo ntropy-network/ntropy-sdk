@@ -45,7 +45,7 @@ class BankStatementJob(BaseModel):
     created_at: datetime
     file: BankStatementFile
     request_id: Optional[str] = None
-    error: BankStatementError | None = None
+    error: Optional[BankStatementError] = None
 
     def is_completed(self):
         return self.status == BankStatementJobStatus.COMPLETED
