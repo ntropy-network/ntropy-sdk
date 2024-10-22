@@ -1048,13 +1048,13 @@ class BankStatementRequest(BaseModel):
         """
         url = f"/datasources/bank_statements/{self.bs_id}/statement-info"
         request_id = uuid.uuid4().hex
-        json_resp = self.sdk.retry_ratelimited_request(
+        resp = self.sdk.retry_ratelimited_request(
             "GET",
             url,
             None,
             request_id=request_id,
-        ).json()
-        return StatementInfo(**json_resp, request_id=request_id)
+        )
+        return StatementInfo(**resp.json(), request_id=resp.headers.get("x-request-id", request_id))
 
     def poll(self) -> BankStatement:
         """Polls the current bank statement status and returns the server response

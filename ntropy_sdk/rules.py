@@ -18,7 +18,7 @@ class RulesResource:
 
     def create(
         self,
-        rules: Rules,
+        rule: Rule,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ):
         request_id = extra_kwargs.get("request_id")
@@ -28,7 +28,7 @@ class RulesResource:
         self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/rules",
-            payload=rules,
+            payload=rule,
             **extra_kwargs,
         )
 
@@ -47,9 +47,9 @@ class RulesResource:
         )
         return resp.json()
 
-    def append(
+    def replace(
         self,
-        rule: Rule,
+        rules: Rules,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ):
         request_id = extra_kwargs.get("request_id")
@@ -58,8 +58,8 @@ class RulesResource:
             extra_kwargs["request_id"] = request_id
         self._sdk.retry_ratelimited_request(
             method="POST",
-            url="/v3/rules/append",
-            payload=rule,
+            url="/v3/rules/replace",
+            payload=rules,
             **extra_kwargs,
         )
 

@@ -127,7 +127,7 @@ class BatchesResource:
         )
         page = PagedResponse[Batch](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -147,7 +147,9 @@ class BatchesResource:
             url=f"/v3/batches/{id}",
             **extra_kwargs,
         )
-        return Batch(**resp.json(), request_id=request_id)
+        return Batch(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def create(
         self,
@@ -166,7 +168,9 @@ class BatchesResource:
             payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
-        return Batch(**resp.json(), request_id=request_id)
+        return Batch(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def results(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BatchResult:
         request_id = extra_kwargs.get("request_id")
@@ -178,4 +182,6 @@ class BatchesResource:
             url=f"/v3/batches/{id}/results",
             **extra_kwargs,
         )
-        return BatchResult(**resp.json(), request_id=request_id)
+        return BatchResult(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )

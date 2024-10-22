@@ -138,7 +138,7 @@ class BankStatementsResource:
         )
         page = PagedResponse[BankStatementJob](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -166,7 +166,9 @@ class BankStatementsResource:
             },
             **extra_kwargs,
         )
-        return BankStatementJob(**resp.json(), request_id=request_id)
+        return BankStatementJob(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BankStatementJob:
         request_id = extra_kwargs.get("request_id")
@@ -179,7 +181,9 @@ class BankStatementsResource:
             payload=None,
             **extra_kwargs,
         )
-        return BankStatementJob(**resp.json(), request_id=request_id)
+        return BankStatementJob(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def results(
         self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
@@ -194,7 +198,9 @@ class BankStatementsResource:
             payload=None,
             **extra_kwargs,
         )
-        return BankStatementResults(**resp.json(), request_id=request_id)
+        return BankStatementResults(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def overview(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> StatementInfo:
         """Waits for and returns preliminary statement information from the
@@ -210,4 +216,6 @@ class BankStatementsResource:
             payload=None,
             **extra_kwargs,
         )
-        return StatementInfo(**resp.json(), request_id=request_id)
+        return StatementInfo(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )

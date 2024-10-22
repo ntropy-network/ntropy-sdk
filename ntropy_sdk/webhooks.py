@@ -76,7 +76,7 @@ class WebhooksResource:
         )
         page = PagedResponse[Webhook](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -106,7 +106,9 @@ class WebhooksResource:
             },
             **extra_kwargs,
         )
-        return Webhook(**resp.json(), request_id=request_id)
+        return Webhook(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Webhook:
         request_id = extra_kwargs.get("request_id")
@@ -118,7 +120,9 @@ class WebhooksResource:
             url=f"/v3/webhooks/{id}",
             **extra_kwargs,
         )
-        return Webhook(**resp.json(), request_id=request_id)
+        return Webhook(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"):
         request_id = extra_kwargs.get("request_id")

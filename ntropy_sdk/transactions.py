@@ -341,7 +341,7 @@ class TransactionsResource:
         )
         page = PagedResponse[Transaction](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -362,7 +362,9 @@ class TransactionsResource:
             payload=None,
             **extra_kwargs,
         )
-        return Transaction(**resp.json(), request_id=request_id)
+        return Transaction(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def create(
         self,
@@ -381,7 +383,9 @@ class TransactionsResource:
             payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
-        return EnrichmentResult(**resp.json(), request_id=request_id)
+        return EnrichmentResult(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def assign(
         self,
@@ -403,4 +407,6 @@ class TransactionsResource:
             },
             **extra_kwargs,
         )
-        return Transaction(**resp.json(), request_id=request_id)
+        return Transaction(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )

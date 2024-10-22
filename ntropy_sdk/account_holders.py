@@ -67,7 +67,7 @@ class AccountHoldersResource:
         )
         page = PagedResponse[AccountHolder](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -87,7 +87,9 @@ class AccountHoldersResource:
             url=f"/v3/account_holders/{id}",
             **extra_kwargs,
         )
-        return AccountHolder(**resp.json(), request_id=request_id)
+        return AccountHolder(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def create(
         self,
@@ -106,7 +108,9 @@ class AccountHoldersResource:
             payload_json_str=pydantic_json(account_holder),
             **extra_kwargs,
         )
-        return AccountHolder(**resp.json(), request_id=request_id)
+        return AccountHolder(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def recurring_groups(
         self,
@@ -123,5 +127,6 @@ class AccountHoldersResource:
             **extra_kwargs,
         )
         return RecurrenceGroups(
-            groups=[RecurrenceGroup(**r) for r in resp.json()], request_id=request_id
+            groups=[RecurrenceGroup(**r) for r in resp.json()],
+            request_id=resp.headers.get("x-request-id", request_id),
         )
