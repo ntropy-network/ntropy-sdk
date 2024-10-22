@@ -256,8 +256,6 @@ class Recurrence(BaseModel):
 
 class TransactionErrorCode(str, enum.Enum):
     ACCOUNT_HOLDER_NOT_FOUND = "account_holder_not_found"
-    UNSUPPORTED_CURRENCY = "unsupported_currency"
-    UNSUPPORTED_COUNTRY = "unsupported_country"
     INTERNAL_ERROR = "internal_error"
 
 

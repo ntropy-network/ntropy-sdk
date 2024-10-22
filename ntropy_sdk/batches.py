@@ -16,7 +16,7 @@ from ntropy_sdk.transactions import (
 )
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs
+    from ntropy_sdk import ExtraKwargs, NtropyTimeoutError
     from ntropy_sdk import SDK
     from typing_extensions import Unpack
 
@@ -50,30 +50,9 @@ class Batch(BaseModel):
     def is_error(self):
         return self.status == BatchStatus.ERROR
 
-    def wait_for_results(
-        self,
-        sdk: "SDK",
-        *,
-        timeout: int = 4 * 60 * 60,
-        poll_interval: int = 10,
-        **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> "BatchResult":
-        """Continuously polls the status of this batch, blocking until the batch
-        either succeeds or fails. If successful, returns the results. Otherwise,
-        raises an `NtropyBatchError` exception."""
 
-        finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
-        start_time = time.monotonic()
-        while time.monotonic() - start_time < timeout:
-            self.status = sdk.v3.batches.get(id=self.id).status
-            if self.status in finish_statuses:
-                break
-            time.sleep(poll_interval)
-
-        if self.is_completed():
-            return sdk.v3.batches.results(id=self.id, **extra_kwargs)
-        else:
-            raise NtropyBatchError(f"Batch[{self.id}] contains errors")
+class EnrichmentResult(BaseModel):
+    transactions: List[EnrichedTransaction]
 
 
 class BatchResult(BaseModel):
@@ -87,7 +66,7 @@ class BatchResult(BaseModel):
         description="The total number of transactions in the batch result."
     )
     status: BatchStatus = Field(description="The current status of the batch job.")
-    results: List[EnrichedTransaction] = Field(
+    results: EnrichmentResult = Field(
         description="A list of enriched transactions resulting from the enrichment of this batch."
     )
     request_id: Optional[str] = None

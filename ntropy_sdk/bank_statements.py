@@ -194,7 +194,7 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            method="GET",
+            method="POST",
             url=f"/v3/bank_statements/{id}/overview",
             payload=None,
             **extra_kwargs,
