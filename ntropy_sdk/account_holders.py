@@ -1,16 +1,17 @@
+import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
-import uuid
 
 from pydantic import BaseModel, Field
 
+from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.transactions import RecurrenceGroup, RecurrenceGroups
 from ntropy_sdk.utils import pydantic_json
-from ntropy_sdk.v3.paging import PagedResponse
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
-    from . import ExtraKwargs
+    from ntropy_sdk import ExtraKwargs
+    from ntropy_sdk import SDK
     from typing_extensions import Unpack
 
 
@@ -54,8 +55,8 @@ class AccountHoldersResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/account_holders",
+            method="GET",
+            url="/v3/account_holders",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -66,7 +67,7 @@ class AccountHoldersResource:
         )
         page = PagedResponse[AccountHolder](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -74,7 +75,7 @@ class AccountHoldersResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
         """Retrieve an account holder"""
 
         request_id = extra_kwargs.get("request_id")
@@ -82,16 +83,17 @@ class AccountHoldersResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/account_holders/{id}",
+            method="GET",
+            url=f"/v3/account_holders/{id}",
             **extra_kwargs,
         )
-        return AccountHolder(**resp.json(), request_id=request_id)
+        return AccountHolder(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def create(
         self,
-        *,
-        input: AccountHolder,
+        account_holder: AccountHolder,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> AccountHolder:
         """Create an account holder"""
@@ -101,9 +103,30 @@ class AccountHoldersResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/account_holders",
-            payload_json_str=pydantic_json(input),
+            method="POST",
+            url="/v3/account_holders",
+            payload_json_str=pydantic_json(account_holder),
             **extra_kwargs,
         )
-        return AccountHolder(**resp.json(), request_id=request_id)
+        return AccountHolder(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
+
+    def recurring_groups(
+        self,
+        id: str,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ) -> RecurrenceGroups:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = self._sdk.retry_ratelimited_request(
+            method="POST",
+            url=f"/v3/account_holders/{id}/recurring_groups",
+            **extra_kwargs,
+        )
+        return RecurrenceGroups(
+            groups=[RecurrenceGroup(**r) for r in resp.json()],
+            request_id=resp.headers.get("x-request-id", request_id),
+        )

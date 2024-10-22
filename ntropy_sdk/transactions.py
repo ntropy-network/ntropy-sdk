@@ -6,7 +6,7 @@ import uuid
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.utils import EntryType, PYDANTIC_V2, pydantic_json
-from ntropy_sdk.v3.paging import PagedResponse
+from ntropy_sdk.paging import PagedResponse
 
 PYDANTIC_PATTERN = "pattern" if PYDANTIC_V2 else "regex"
 MAX_SYNC_BATCH = 1000
@@ -14,8 +14,8 @@ MAX_ASYNC_BATCH = 24960
 
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
-    from ntropy_sdk.v3 import ExtraKwargs
+    from ntropy_sdk import ExtraKwargs
+    from ntropy_sdk import SDK
     from typing_extensions import Unpack
 
 
@@ -237,6 +237,11 @@ class RecurrenceGroup(BaseModel):
     )
 
 
+class RecurrenceGroups(BaseModel):
+    groups: List[RecurrenceGroup]
+    request_id: Optional[str]
+
+
 class Recurrence(BaseModel):
     """
     The `Recurrence` object represents the recurrence pattern of a transaction. It provides information about
@@ -247,15 +252,10 @@ class Recurrence(BaseModel):
         description="Whether the transaction is a one-time transfer `one-off`, regularly with varying pricing "
         "`recurring` or with fixed pricing `subscription`",
     )
-    group_id: Optional[str] = Field(
-        None, description="If the transaction is recurrent, the group it belongs to."
-    )
 
 
 class TransactionErrorCode(str, enum.Enum):
     ACCOUNT_HOLDER_NOT_FOUND = "account_holder_not_found"
-    UNSUPPORTED_CURRENCY = "unsupported_currency"
-    UNSUPPORTED_COUNTRY = "unsupported_country"
     INTERNAL_ERROR = "internal_error"
 
 
@@ -321,8 +321,8 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/transactions",
+            method="GET",
+            url="/v3/transactions",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -336,7 +336,7 @@ class TransactionsResource:
         )
         page = PagedResponse[Transaction](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -344,7 +344,7 @@ class TransactionsResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Transaction:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Transaction:
         """Retrieve a transaction"""
 
         request_id = extra_kwargs.get("request_id")
@@ -352,17 +352,18 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/transactions/{id}",
+            method="GET",
+            url=f"/v3/transactions/{id}",
             payload=None,
             **extra_kwargs,
         )
-        return Transaction(**resp.json(), request_id=request_id)
+        return Transaction(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def create(
         self,
-        *,
-        input: EnrichmentInput,
+        transactions: List[TransactionInput],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> EnrichmentResult:
         """Synchronously enrich transactions"""
@@ -372,15 +373,20 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/transactions",
-            payload_json_str=pydantic_json(input),
+            method="POST",
+            url="/v3/transactions",
+            payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
             **extra_kwargs,
         )
-        return EnrichmentResult(**resp.json(), request_id=request_id)
+        return EnrichmentResult(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def assign(
-        self, *, id: str, account_holder_id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+        self,
+        transaction_id: str,
+        account_holder_id: str,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Transaction:
         """Assign a transaction to an account holder"""
 
@@ -389,11 +395,13 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            f"/v3/transactions/{id}/assign",
+            method="POST",
+            url=f"/v3/transactions/{transaction_id}/assign",
             params={
                 "account_holder_id": account_holder_id,
             },
             **extra_kwargs,
         )
-        return Transaction(**resp.json(), request_id=request_id)
+        return Transaction(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )

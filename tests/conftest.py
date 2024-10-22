@@ -1,17 +1,13 @@
 import os
 
-import pytest as pytest
-
-from ntropy_sdk import SDK
-from tests import API_KEY
+import pytest
 
 
-@pytest.fixture
-def sdk():
-    sdk = SDK(API_KEY)
+@pytest.fixture()
+def api_key():
+    key = os.environ.get("NTROPY_API_KEY")
 
-    url = os.environ.get("NTROPY_API_URL")
-    if url is not None:
-        sdk.base_url = url
+    if not key:
+        raise RuntimeError("Environment variable NTROPY_API_KEY is not defined")
 
-    return sdk
+    return key

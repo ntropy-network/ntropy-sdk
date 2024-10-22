@@ -7,18 +7,16 @@ import pandas as pd
 import pytest
 from requests import Response
 
-from ntropy_sdk import (
+from ntropy_sdk.v2 import (
     AccountHolder,
     Batch,
     EnrichedTransaction,
     SDK,
     Transaction,
-    NtropyError,
 )
-from ntropy_sdk.errors import NtropyValueError, NtropyBatchError
+from ntropy_sdk.v2.errors import NtropyValueError, NtropyBatchError
 from ntropy_sdk.utils import TransactionType
-from ntropy_sdk.ntropy_sdk import ACCOUNT_HOLDER_TYPES
-from tests import API_KEY
+from ntropy_sdk.v2.ntropy_sdk import ACCOUNT_HOLDER_TYPES
 
 
 def test_account_holder_type():
@@ -318,15 +316,6 @@ def test_transaction_entry_type():
         )
 
 
-def test_readme():
-    readme_file = open(
-        os.path.join(os.path.dirname(__file__), "..", "README.md")
-    ).read()
-    readme_data = readme_file.split("```python")[1].split("```")[0]
-    readme_data = readme_data.replace("YOUR-API-KEY", API_KEY)
-    exec(readme_data, globals())
-
-
 def test_add_transactions_async(sdk):
     tx = Transaction(
         amount=24.56,
@@ -513,7 +502,7 @@ def test_enriched_fields(sdk):
         # assert 5432 in enriched.mcc
 
 
-def test_sdk_region():
+def test_sdk_region(api_key):
     ah_id = str(uuid.uuid4())
     tx = Transaction(
         amount=24.56,
@@ -525,28 +514,28 @@ def test_sdk_region():
         iso_currency_code="USD",
     )
 
-    _sdk = SDK(API_KEY)
+    _sdk = SDK(api_key)
     assert _sdk.base_url == "https://api.ntropy.com"
     res = _sdk.add_transactions([tx])[0]
     assert res.website is not None
 
-    _sdk = SDK(API_KEY, region="us")
+    _sdk = SDK(api_key, region="us")
     assert _sdk.base_url == "https://api.ntropy.com"
     res = _sdk.add_transactions([tx])[0]
     assert res.website is not None
 
-    _sdk = SDK(API_KEY, region="eu")
+    _sdk = SDK(api_key, region="eu")
     assert _sdk.base_url == "https://api.eu.ntropy.com"
     res = _sdk.add_transactions([tx])[0]
     assert res.website is not None
 
     with pytest.raises(ValueError):
-        _sdk = SDK(API_KEY, region="atlantida")
+        _sdk = SDK(api_key, region="atlantida")
 
 
 @pytest.fixture()
-def async_sdk():
-    sdk = SDK(API_KEY)
+def async_sdk(api_key):
+    sdk = SDK(api_key)
     sdk._make_batch = make_batch
 
     with patch.object(sdk, "MAX_SYNC_BATCH", 0):
@@ -555,8 +544,8 @@ def async_sdk():
 
 
 @pytest.fixture()
-def sync_sdk():
-    sdk = SDK(API_KEY)
+def sync_sdk(api_key):
+    sdk = SDK(api_key)
     sdk._make_batch = lambda batch_status, results: results
 
     with patch.object(sdk, "MAX_SYNC_BATCH", 999999):
@@ -608,7 +597,7 @@ def wrap_response(sdk, wrap_meth, responses):
     """
     Mocks a response for `wrap_meth` iterating through `responses` to obtain return values
     """
-    orig = sdk.session.request
+    orig = sdk.http_client.session.request
     responses = iter(responses)
 
     def fn(meth, *args, **kwargs):
@@ -655,7 +644,7 @@ def test_async_batch_with_err_ignore_raise(async_sdk, input_tx, batch_status):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -687,7 +676,7 @@ def test_async_batch_request_err_ignore_raise(async_sdk, input_tx):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -719,7 +708,7 @@ def test_sync_batch_request_err_ignore_raise(sync_sdk, input_tx):
     )
 
     with patch.object(
-        sync_sdk.session,
+        sync_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -752,7 +741,7 @@ def test_async_batch_with_err(async_sdk, input_tx, batch_status):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -783,7 +772,7 @@ def test_async_batch_request_err(async_sdk, input_tx):
     )
 
     with patch.object(
-        async_sdk.session,
+        async_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:
@@ -813,7 +802,7 @@ def test_sync_batch_request_err(sync_sdk, input_tx):
     )
 
     with patch.object(
-        sync_sdk.session,
+        sync_sdk.http_client.session,
         "request",
         side_effect=responses,
     ) as m:

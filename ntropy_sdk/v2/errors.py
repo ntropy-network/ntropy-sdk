@@ -14,9 +14,9 @@ class NtropyError(Exception):
 class NtropyBatchError(Exception):
     """One or more errors in one or more transactions of a submitted transaction batch"""
 
-    def __init__(self, message, batch_id=None, errors=None):
+    def __init__(self, message, id=None, errors=None):
         super().__init__(message)
-        self.batch_id = batch_id
+        self.id = id
         self.errors = errors
 
 
@@ -31,6 +31,20 @@ class NtropyDatasourceError(Exception):
 
     def __str__(self):
         return f"{self.DESCRIPTION}: {self.error_code}: {self.error}"
+
+
+class NtropyBankStatementError(Exception):
+    """Errors in processing underlying document"""
+
+    DESCRIPTION = "Error processing submitted document"
+
+    def __init__(self, id: str, code, message):
+        self.id = id
+        self.code = code
+        self.message = message
+
+    def __str__(self):
+        return f"{self.DESCRIPTION}: {self.code}: {self.message}"
 
 
 class NtropyTimeoutError(NtropyError):
@@ -75,16 +89,24 @@ class NtropyValueError(NtropyHTTPError):
 
 class NtropyQuotaExceededError(NtropyHTTPError):
     DESCRIPTION = (
-        "Reached the transaction limit for this API key. Please contact Ntropy support"
+        "Not enough credits to perform this operation. Please top up your account"
     )
 
 
 class NtropyNotSupportedError(NtropyHTTPError):
-    DESCRIPTION = "The requested operation is not support for this API key. Please contact Ntropy support"
+    DESCRIPTION = "The requested operation is not supported for this API key. Please contact Ntropy support"
 
 
 class NtropyResourceOccupiedError(NtropyHTTPError):
     DESCRIPTION = "The resource you're trying to access is busy or not ready yet"
+
+
+class NtropyServerConnectionError(NtropyHTTPError):
+    DESCRIPTION = "Server connection error. Please try again later."
+
+
+class NtropyRateLimitError(NtropyHTTPError):
+    DESCRIPTION = "Too many requests. Please try again later."
 
 
 ERROR_MAP = {
@@ -96,6 +118,9 @@ ERROR_MAP = {
     422: NtropyValidationError,
     423: NtropyQuotaExceededError,
     500: NtropyRuntimeError,
+    502: NtropyServerConnectionError,
+    503: NtropyServerConnectionError,
+    504: NtropyServerConnectionError,
 }
 
 
