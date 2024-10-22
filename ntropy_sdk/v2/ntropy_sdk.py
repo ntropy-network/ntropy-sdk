@@ -1054,7 +1054,9 @@ class BankStatementRequest(BaseModel):
             None,
             request_id=request_id,
         )
-        return StatementInfo(**resp.json(), request_id=resp.headers.get("x-request-id", request_id))
+        return StatementInfo(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def poll(self) -> BankStatement:
         """Polls the current bank statement status and returns the server response

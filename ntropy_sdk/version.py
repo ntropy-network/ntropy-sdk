@@ -1,1 +1,3 @@
-VERSION = "4.26.0"
+from ntropy_sdk import __version__
+
+VERSION = __version__

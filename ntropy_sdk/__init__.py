@@ -1,6 +1,6 @@
 from .version import VERSION
 
-__version__ = VERSION
+__version__ = "4.26.0"
 
 from typing import TYPE_CHECKING, Optional
 import requests
