@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 import requests
 
-from ntropy_sdk import VERSION
+from ntropy_sdk.version import VERSION
 from ntropy_sdk.v2.errors import error_from_http_status_code, NtropyError
 
 

@@ -1,5 +1,3 @@
-from .version import VERSION
-
 __version__ = "5.0.0rc1"
 
 from typing import TYPE_CHECKING, Optional
