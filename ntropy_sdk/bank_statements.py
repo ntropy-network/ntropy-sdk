@@ -8,7 +8,11 @@ import uuid
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.v2.bank_statements import StatementInfo
-from ntropy_sdk.v2.errors import NtropyDatasourceError
+from ntropy_sdk.v2.errors import (
+    NtropyDatasourceError,
+    NtropyTimeoutError,
+    NtropyBankStatementError,
+)
 from ntropy_sdk.utils import EntryType
 from ntropy_sdk.paging import PagedResponse
 
@@ -29,6 +33,11 @@ class BankStatementFile(BaseModel):
     size: Optional[int]
 
 
+class BankStatementError(BaseModel):
+    code: str
+    message: str
+
+
 class BankStatementJob(BaseModel):
     id: str
     name: Optional[str]
@@ -36,6 +45,7 @@ class BankStatementJob(BaseModel):
     created_at: datetime
     file: BankStatementFile
     request_id: Optional[str] = None
+    error: BankStatementError | None = None
 
     def is_completed(self):
         return self.status == BankStatementJobStatus.COMPLETED
