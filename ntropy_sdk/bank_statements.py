@@ -90,11 +90,11 @@ class BankStatementTransaction(BaseModel):
     entry_type: EntryType
     amount: NonNegativeFloat
     running_balance: Optional[float]
-    iso_currency_code: str = Field(
+    currency: str = Field(
         description="The currency of the transaction in ISO 4217 format"
     )
     description: str
-    transaction_id: str = Field(
+    id: str = Field(
         description="A generated unique identifier for the transaction", min_length=1
     )
 
@@ -109,9 +109,10 @@ class BankStatementAccount(BaseModel):
     total_incoming: Optional[float]
     total_outgoing: Optional[float]
     transactions: List[BankStatementTransaction]
+    request_id: Optional[str] = None
 
 
-class BankStatementResults(BankStatementJob):
+class BankStatementResults(BaseModel):
     accounts: List[BankStatementAccount]
 
 
