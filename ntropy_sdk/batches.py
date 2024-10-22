@@ -185,3 +185,31 @@ class BatchesResource:
         return BatchResult(
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
+
+    def wait_for_results(
+        self,
+        id: str,
+        *,
+        timeout: int = 10 * 60 * 60,
+        poll_interval: int = 10,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ) -> "BatchResult":
+        """Continuously polls the status of this batch, blocking until the batch
+        either succeeds or fails. Raises `NtropyTimeoutError` if the `timeout` is exceeded or `NtropyBatchError`
+        if the batch contains errors."""
+
+        finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
+        start_time = time.monotonic()
+
+        batch = None
+        while time.monotonic() - start_time < timeout:
+            batch = self._sdk.batches.get(id=id)
+            if batch.status in finish_statuses:
+                break
+            time.sleep(poll_interval)
+
+        if batch and batch.status not in finish_statuses:
+            raise NtropyTimeoutError()
+        if batch.is_error():
+            raise NtropyBatchError("Some transactions contain errors", id=batch.id)
+        return self._sdk.batches.results(id=id, **extra_kwargs)

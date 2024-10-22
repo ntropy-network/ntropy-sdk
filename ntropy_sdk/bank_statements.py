@@ -53,34 +53,6 @@ class BankStatementJob(BaseModel):
     def is_error(self):
         return self.status == BankStatementJobStatus.ERROR
 
-    def wait_for_results(
-        self,
-        sdk: "SDK",
-        *,
-        timeout: int = 4 * 60 * 60,
-        poll_interval: int = 10,
-        **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> "BankStatementResults":
-        """Continuously polls the status of this job, blocking until the job either succeeds
-        or fails. If the job is successful, returns the results. Otherwise, raises an
-        `NtropyDatasourceError` exception."""
-
-        finish_statuses = [
-            BankStatementJobStatus.COMPLETED,
-            BankStatementJobStatus.ERROR,
-        ]
-        start_time = time.monotonic()
-        while time.monotonic() - start_time < timeout:
-            self.status = sdk.bank_statements.get(id=self.id).status
-            if self.status in finish_statuses:
-                break
-            time.sleep(poll_interval)
-
-        if self.is_completed():
-            return sdk.bank_statements.results(id=self.id, **extra_kwargs)
-        else:
-            raise NtropyDatasourceError()
-
     class Config:
         extra = "allow"
 
@@ -230,3 +202,37 @@ class BankStatementsResource:
         return StatementInfo(
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
+
+    def wait_for_results(
+        self,
+        id: str,
+        *,
+        timeout: int = 10 * 60 * 60,
+        poll_interval: int = 10,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ) -> "BankStatementResults":
+        """Continuously polls the status of this job, blocking until the job either succeeds
+        or fails. If the job is successful, returns the results. Otherwise, raises an
+        `NtropyBankStatementError` on a bank statement processing error or `NtropyTimeoutError`
+        if the `timeout` is exceeded."""
+
+        finish_statuses = [
+            BankStatementJobStatus.COMPLETED,
+            BankStatementJobStatus.ERROR,
+        ]
+        start_time = time.monotonic()
+        stmt = None
+        while time.monotonic() - start_time < timeout:
+            stmt = self._sdk.bank_statements.get(id=id)
+            if stmt.status in finish_statuses:
+                break
+            time.sleep(poll_interval)
+
+        if stmt and stmt.status not in finish_statuses:
+            raise NtropyTimeoutError()
+        if stmt.is_error():
+            assert stmt.error is not None
+            raise NtropyBankStatementError(
+                id=stmt.id, code=stmt.error.code, message=stmt.error.message
+            )
+        return self._sdk.bank_statements.results(id=id, **extra_kwargs)

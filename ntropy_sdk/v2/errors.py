@@ -14,9 +14,9 @@ class NtropyError(Exception):
 class NtropyBatchError(Exception):
     """One or more errors in one or more transactions of a submitted transaction batch"""
 
-    def __init__(self, message, batch_id=None, errors=None):
+    def __init__(self, message, id=None, errors=None):
         super().__init__(message)
-        self.batch_id = batch_id
+        self.id = id
         self.errors = errors
 
 
@@ -31,6 +31,20 @@ class NtropyDatasourceError(Exception):
 
     def __str__(self):
         return f"{self.DESCRIPTION}: {self.error_code}: {self.error}"
+
+
+class NtropyBankStatementError(Exception):
+    """Errors in processing underlying document"""
+
+    DESCRIPTION = "Error processing submitted document"
+
+    def __init__(self, id: str, code, message):
+        self.id = id
+        self.code = code
+        self.message = message
+
+    def __str__(self):
+        return f"{self.DESCRIPTION}: {self.code}: {self.message}"
 
 
 class NtropyTimeoutError(NtropyError):
