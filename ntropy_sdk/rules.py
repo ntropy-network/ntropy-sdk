@@ -16,7 +16,7 @@ class RulesResource:
     def __init__(self, sdk: "SDK"):
         self._sdk = sdk
 
-    def set(
+    def create(
         self,
         rules: Rules,
         **extra_kwargs: "Unpack[ExtraKwargs]",
