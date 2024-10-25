@@ -24,7 +24,7 @@ WebhookEventType = Literal[
     "reports.pending",
     "bank_statements.processing",
     "bank_statements.processed",
-    "bank_statements.failed",
+    "bank_statements.error",
     "batches.completed",
     "batches.error",
 ]
