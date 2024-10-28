@@ -148,8 +148,7 @@ class Counterparty(Entity):
     type: CounterpartyType
 
 
-class Intermediary(Entity):
-    ...
+class Intermediary(Entity): ...
 
 
 class Entities(BaseModel):
@@ -229,9 +228,6 @@ class RecurrenceGroup(BaseModel):
     categories: Categories = Field(
         description="Categories of the transactions in the recurrence group"
     )
-    transaction_ids: List[str] = Field(
-        description="Transactions that belong to the group"
-    )
 
 
 class RecurrenceGroups(BaseModel):
@@ -276,12 +272,7 @@ class EnrichedTransaction(_EnrichedTransactionBase):
     )
 
 
-class EnrichmentInput(BaseModel):
-    transactions: List[TransactionInput]
-
-
-class EnrichmentResult(BaseModel):
-    transactions: List[EnrichedTransaction]
+class EnrichedTransactionResponse(EnrichedTransaction):
     request_id: Optional[str] = None
 
 
@@ -360,11 +351,16 @@ class TransactionsResource:
 
     def create(
         self,
-        transactions: List[TransactionInput],
+        id: str,
+        description: str,
+        date: str,
+        amount: int,
+        entry_type: str,
+        currency: str,
+        account_holder_id: Optional[str] = None,
+        location: Optional[dict] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> EnrichmentResult:
-        """Synchronously enrich transactions"""
-
+    ):
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
@@ -372,10 +368,21 @@ class TransactionsResource:
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/transactions",
-            payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
+            payload_json_str=pydantic_json(
+                TransactionInput(
+                    id=id,
+                    description=description,
+                    date=date,
+                    amount=amount,
+                    entry_type=entry_type,
+                    currency=currency,
+                    account_holder_id=account_holder_id,
+                    location=location,
+                )
+            ),
             **extra_kwargs,
         )
-        return EnrichmentResult(
+        return EnrichedTransactionResponse(
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
 

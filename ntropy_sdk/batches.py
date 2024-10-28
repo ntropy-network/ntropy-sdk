@@ -1,19 +1,16 @@
+import time
+import uuid
 from datetime import datetime
 from enum import Enum
-import time
 from typing import List, Optional, TYPE_CHECKING
-import uuid
 
 from pydantic import BaseModel, Field
 
-from ntropy_sdk.v2 import NtropyBatchError
-from ntropy_sdk.utils import pydantic_json
 from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.transactions import (
     EnrichedTransaction,
-    EnrichmentInput,
-    TransactionInput,
 )
+from ntropy_sdk.v2 import NtropyBatchError
 
 if TYPE_CHECKING:
     from ntropy_sdk import ExtraKwargs, NtropyTimeoutError
@@ -33,6 +30,7 @@ class Batch(BaseModel):
     """
 
     id: str = Field(description="A unique identifier for the batch.")
+    operation: str = Field(description="Operation for the batch")
     status: BatchStatus = Field(description="The current status of the batch.")
     created_at: datetime = Field(
         description="The timestamp of when the batch was created."
@@ -40,8 +38,8 @@ class Batch(BaseModel):
     updated_at: datetime = Field(
         description="The timestamp of when the batch was last updated."
     )
-    progress: int = Field(description="The number of transactions processed so far.")
-    total: int = Field(description="The total number of transactions in the batch.")
+    progress: int = Field(description="The number of requests processed so far.")
+    total: int = Field(description="The total number of requests in the batch.")
     request_id: Optional[str] = None
 
     def is_completed(self):
@@ -51,14 +49,9 @@ class Batch(BaseModel):
         return self.status == BatchStatus.ERROR
 
 
-class EnrichmentResult(BaseModel):
-    transactions: List[EnrichedTransaction]
-
-
 class BatchResult(BaseModel):
     """
-    The `BatchResult` object represents the result of a batch enrichment job, including its status and
-    enriched transactions.
+    The `BatchResult` object represents the result of a batch enrichment job
     """
 
     id: str = Field(description="A unique identifier for the batch.")
@@ -66,7 +59,7 @@ class BatchResult(BaseModel):
         description="The total number of transactions in the batch result."
     )
     status: BatchStatus = Field(description="The current status of the batch job.")
-    results: EnrichmentResult = Field(
+    results: list[EnrichedTransaction] = Field(
         description="A list of enriched transactions resulting from the enrichment of this batch."
     )
     request_id: Optional[str] = None
@@ -132,7 +125,8 @@ class BatchesResource:
 
     def create(
         self,
-        transactions: List[TransactionInput],
+        operation: str,
+        data: List[dict],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Batch:
         """Submit a batch of transactions for enrichment"""
@@ -144,7 +138,10 @@ class BatchesResource:
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/batches",
-            payload_json_str=pydantic_json(EnrichmentInput(transactions=transactions)),
+            payload_json={
+                "operation": operation,
+                "data": data,
+            },
             **extra_kwargs,
         )
         return Batch(

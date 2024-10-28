@@ -93,7 +93,9 @@ class AccountHoldersResource:
 
     def create(
         self,
-        account_holder: AccountHolder,
+        id: str,
+        type: AccountHolderType,
+        name: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> AccountHolder:
         """Create an account holder"""
@@ -105,7 +107,13 @@ class AccountHoldersResource:
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/account_holders",
-            payload_json_str=pydantic_json(account_holder),
+            payload_json_str=pydantic_json(
+                AccountHolder(
+                    id=id,
+                    type=type,
+                    name=name,
+                )
+            ),
             **extra_kwargs,
         )
         return AccountHolder(
