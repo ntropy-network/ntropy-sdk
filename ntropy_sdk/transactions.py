@@ -245,6 +245,9 @@ class Recurrence(BaseModel):
         description="Whether the transaction is a one-time transfer `one-off`, regularly with varying pricing "
         "`recurring` or with fixed pricing `subscription`",
     )
+    group_id: str = Field(
+        description="ID of recurrence group"
+    )
 
 
 class TransactionErrorCode(str, enum.Enum):
@@ -283,7 +286,6 @@ class Transaction(_EnrichedTransactionBase, _TransactionBase):
         min_length=1,
     )
 
-    recurrence: Optional[Recurrence] = None
     request_id: Optional[str] = None
 
 
