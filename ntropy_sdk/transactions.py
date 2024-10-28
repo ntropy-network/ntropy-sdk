@@ -148,14 +148,8 @@ class Counterparty(Entity):
     type: CounterpartyType
 
 
-class IntermediaryType(str, enum.Enum):
-    DELIVERY_SERVICE = "delivery_service"
-    PAYMENT_PROCESSOR = "payment_processor"
-    MARKETPLACE = "marketplace"
-
-
 class Intermediary(Entity):
-    type: IntermediaryType
+    ...
 
 
 class Entities(BaseModel):
