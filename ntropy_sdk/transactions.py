@@ -148,7 +148,8 @@ class Counterparty(Entity):
     type: CounterpartyType
 
 
-class Intermediary(Entity): ...
+class Intermediary(Entity):
+    ...
 
 
 class Entities(BaseModel):
