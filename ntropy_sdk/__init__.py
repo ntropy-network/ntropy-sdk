@@ -1,4 +1,4 @@
-__version__ = "5.0.0rc1"
+__version__ = "5.0.0rc2"
 
 from typing import TYPE_CHECKING, Optional
 import requests
