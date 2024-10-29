@@ -185,7 +185,7 @@ class BankStatementsResource:
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
 
-    def overview(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> StatementInfo:
+    def verify(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> StatementInfo:
         """Waits for and returns preliminary statement information from the
         first page of the PDF. This may not always be consistent with the
         final results."""
@@ -195,7 +195,7 @@ class BankStatementsResource:
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
-            url=f"/v3/bank_statements/{id}/overview",
+            url=f"/v3/bank_statements/{id}/verify",
             payload=None,
             **extra_kwargs,
         )
