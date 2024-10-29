@@ -6,6 +6,7 @@ from ntropy_sdk.batches import BatchesResource
 from ntropy_sdk.categories import CategoriesResource
 from ntropy_sdk.entities import EntitiesResource
 from ntropy_sdk.http import HttpClient
+from ntropy_sdk.reports import ReportsResource
 from ntropy_sdk.rules import RulesResource
 from ntropy_sdk.transactions import TransactionsResource
 from ntropy_sdk.v2.ntropy_sdk import DEFAULT_REGION, ALL_REGIONS
@@ -31,6 +32,7 @@ class SDK:
         self.categories = CategoriesResource(self)
         self.entities = EntitiesResource(self)
         self.webhooks = WebhooksResource(self)
+        self.reports = ReportsResource(self)
         self.rules = RulesResource(self)
         self.transactions = TransactionsResource(self)
 
