@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Dict, Optional
 from ntropy_sdk.account_holders import AccountHoldersResource
 from ntropy_sdk.bank_statements import BankStatementsResource
 from ntropy_sdk.batches import BatchesResource
+from ntropy_sdk.categories import CategoriesResource
+from ntropy_sdk.entities import EntitiesResource
 from ntropy_sdk.http import HttpClient
 from ntropy_sdk.rules import RulesResource
 from ntropy_sdk.transactions import TransactionsResource
@@ -23,12 +25,14 @@ class SDK:
         self.base_url = ALL_REGIONS[region]
         self.api_key = api_key
         self.http_client = HttpClient()
-        self.transactions = TransactionsResource(self)
+        self.account_holders = AccountHoldersResource(self)
         self.batches = BatchesResource(self)
         self.bank_statements = BankStatementsResource(self)
-        self.account_holders = AccountHoldersResource(self)
+        self.categories = CategoriesResource(self)
+        self.entities = EntitiesResource(self)
         self.webhooks = WebhooksResource(self)
         self.rules = RulesResource(self)
+        self.transactions = TransactionsResource(self)
 
     def retry_ratelimited_request(
         self,
