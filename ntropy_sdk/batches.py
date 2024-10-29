@@ -172,7 +172,7 @@ class BatchesResource:
     ) -> "BatchResult":
         """Continuously polls the status of this batch, blocking until the batch
         either succeeds or fails. Raises `NtropyTimeoutError` if the `timeout` is exceeded or `NtropyBatchError`
-        if the batch contains errors."""
+        if the batch encountered an error during processing."""
 
         finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
         start_time = time.monotonic()
@@ -187,5 +187,5 @@ class BatchesResource:
         if batch and batch.status not in finish_statuses:
             raise NtropyTimeoutError()
         if batch.is_error():
-            raise NtropyBatchError("Some transactions contain errors", id=batch.id)
+            raise NtropyBatchError("Batch terminated with an error", id=batch.id)
         return self._sdk.batches.results(id=id, **extra_kwargs)
