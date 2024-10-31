@@ -355,7 +355,7 @@ class TransactionsResource:
         id: str,
         description: str,
         date: str,
-        amount: int,
+        amount: float,
         entry_type: str,
         currency: str,
         account_holder_id: Optional[str] = None,
@@ -409,4 +409,18 @@ class TransactionsResource:
         )
         return Transaction(
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
+
+    def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"):
+        """Delete a transaction"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/transactions/{id}",
+            payload=None,
+            **extra_kwargs,
         )

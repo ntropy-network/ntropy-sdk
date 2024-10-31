@@ -36,7 +36,7 @@ class ReportsResource:
         *,
         transaction_id: str,
         description: str,
-        fields: str,
+        fields: list[str],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> ReportResponse:
         request_id = extra_kwargs.get("request_id")
@@ -58,7 +58,7 @@ class ReportsResource:
         )
 
     def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Report:
-        """Retrieve an account holder"""
+        """Retrieve a report"""
 
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
@@ -83,7 +83,7 @@ class ReportsResource:
         limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> PagedResponse[ReportResponse]:
-        """List all account holders"""
+        """List all reports"""
 
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
@@ -110,3 +110,16 @@ class ReportsResource:
         for t in page.data:
             t.request_id = request_id
         return page
+
+    def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Report:
+        """Delete a report"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/reports/{id}",
+            **extra_kwargs,
+        )

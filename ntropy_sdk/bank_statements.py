@@ -236,3 +236,15 @@ class BankStatementsResource:
                 id=stmt.id, code=stmt.error.code, message=stmt.error.message
             )
         return self._sdk.bank_statements.results(id=id, **extra_kwargs)
+
+    def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"):
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/bank_statements/{id}",
+            payload=None,
+            **extra_kwargs,
+        )
