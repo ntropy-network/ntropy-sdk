@@ -111,7 +111,7 @@ class ReportsResource:
             t.request_id = request_id
         return page
 
-    def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Report:
+    def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"):
         """Delete a report"""
 
         request_id = extra_kwargs.get("request_id")

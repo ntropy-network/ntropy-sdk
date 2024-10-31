@@ -138,7 +138,7 @@ class BatchesResource:
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/batches",
-            payload_json={
+            payload={
                 "operation": operation,
                 "data": data,
             },
