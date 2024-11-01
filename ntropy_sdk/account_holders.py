@@ -138,3 +138,16 @@ class AccountHoldersResource:
             groups=[RecurrenceGroup(**r) for r in resp.json()],
             request_id=resp.headers.get("x-request-id", request_id),
         )
+
+    def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"):
+        """Retrieve an account holder"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/account_holders/{id}",
+            **extra_kwargs,
+        )

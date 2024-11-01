@@ -20,7 +20,7 @@ class Report(BaseModel):
 
     transaction_id: str
     description: str
-    fields: dict[str, str]
+    fields: list[str]
 
 
 class ReportResponse(Report):

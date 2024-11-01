@@ -402,7 +402,7 @@ class TransactionsResource:
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url=f"/v3/transactions/{transaction_id}/assign",
-            params={
+            payload={
                 "account_holder_id": account_holder_id,
             },
             **extra_kwargs,
