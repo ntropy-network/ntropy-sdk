@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 import uuid
 
 from ntropy_sdk.account_holders import AccountHolderType
@@ -15,13 +15,15 @@ class CategoriesResource:
 
     def get(
         self,
-        account_holder_type: AccountHolderType,
+        account_holder_type: Union[AccountHolderType, str],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> dict:
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
+        if not isinstance(account_holder_type, AccountHolderType):
+            account_holder_type = AccountHolderType(account_holder_type)
         resp = self._sdk.retry_ratelimited_request(
             method="GET",
             url=f"/v3/categories/{account_holder_type.value}",
@@ -31,7 +33,7 @@ class CategoriesResource:
 
     def set(
         self,
-        account_holder_type: AccountHolderType,
+        account_holder_type: Union[AccountHolderType, str],
         categories: dict,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ):
@@ -39,22 +41,26 @@ class CategoriesResource:
         if request_id is None:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
+        if not isinstance(account_holder_type, AccountHolderType):
+            account_holder_type = AccountHolderType(account_holder_type)
         self._sdk.retry_ratelimited_request(
             method="POST",
             url=f"/v3/categories/{account_holder_type.value}",
-            json=categories,
+            payload=categories,
             **extra_kwargs,
         )
 
     def reset(
         self,
-        account_holder_type: AccountHolderType,
+        account_holder_type: Union[AccountHolderType, str],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ):
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
+        if not isinstance(account_holder_type, AccountHolderType):
+            account_holder_type = AccountHolderType(account_holder_type)
         self._sdk.retry_ratelimited_request(
             method="POST",
             url=f"/v3/categories/{account_holder_type.value}/reset",

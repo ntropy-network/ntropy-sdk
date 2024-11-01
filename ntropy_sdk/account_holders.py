@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Union
 
 from pydantic import BaseModel, Field
 
@@ -94,7 +94,7 @@ class AccountHoldersResource:
     def create(
         self,
         id: str,
-        type: AccountHolderType,
+        type: Union[AccountHolderType, str],
         name: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> AccountHolder:
