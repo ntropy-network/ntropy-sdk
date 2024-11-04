@@ -20,7 +20,7 @@ class AccountHolderType(str, Enum):
     business = "business"
 
 
-class AccountHolder(BaseModel):
+class AccountHolderCreate(BaseModel):
     id: str = Field(
         description="The unique ID of the account holder of the transaction",
         min_length=1,
@@ -32,11 +32,14 @@ class AccountHolder(BaseModel):
         default=None,
         description="The name of the account holder",
     )
+    request_id: Optional[str] = None
+
+
+class AccountHolderResponse(AccountHolderCreate):
     created_at: datetime = Field(
         ...,
         description="Date of creation of the account holder",
     )
-    request_id: Optional[str] = None
 
 
 class AccountHoldersResource:
@@ -51,7 +54,7 @@ class AccountHoldersResource:
         cursor: Optional[str] = None,
         limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> PagedResponse[AccountHolder]:
+    ) -> PagedResponse[AccountHolderResponse]:
         """List all account holders"""
 
         request_id = extra_kwargs.get("request_id")
@@ -69,7 +72,7 @@ class AccountHoldersResource:
             },
             **extra_kwargs,
         )
-        page = PagedResponse[AccountHolder](
+        page = PagedResponse[AccountHolderResponse](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
@@ -79,7 +82,9 @@ class AccountHoldersResource:
             t.request_id = request_id
         return page
 
-    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> AccountHolder:
+    def get(
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]"
+    ) -> AccountHolderResponse:
         """Retrieve an account holder"""
 
         request_id = extra_kwargs.get("request_id")
@@ -91,7 +96,7 @@ class AccountHoldersResource:
             url=f"/v3/account_holders/{id}",
             **extra_kwargs,
         )
-        return AccountHolder(
+        return AccountHolderResponse(
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
 
@@ -101,7 +106,7 @@ class AccountHoldersResource:
         type: Union[AccountHolderType, str],
         name: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> AccountHolder:
+    ) -> AccountHolderResponse:
         """Create an account holder"""
 
         request_id = extra_kwargs.get("request_id")
@@ -112,7 +117,7 @@ class AccountHoldersResource:
             method="POST",
             url="/v3/account_holders",
             payload_json_str=pydantic_json(
-                AccountHolder(
+                AccountHolderCreate(
                     id=id,
                     type=type,
                     name=name,
@@ -120,7 +125,7 @@ class AccountHoldersResource:
             ),
             **extra_kwargs,
         )
-        return AccountHolder(
+        return AccountHolderResponse(
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
 
