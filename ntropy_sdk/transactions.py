@@ -265,6 +265,11 @@ class _EnrichedTransactionBase(BaseModel):
     location: Optional[Location] = None
     error: Optional[TransactionError] = None
 
+    created_at: datetime = Field(
+        ...,
+        description="Date of creation of the transaction",
+    )
+
 
 class EnrichedTransaction(_EnrichedTransactionBase):
     id: str = Field(

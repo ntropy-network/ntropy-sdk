@@ -32,6 +32,10 @@ class AccountHolder(BaseModel):
         default=None,
         description="The name of the account holder",
     )
+    created_at: datetime = Field(
+        ...,
+        description="Date of creation of the account holder",
+    )
     request_id: Optional[str] = None
 
 
