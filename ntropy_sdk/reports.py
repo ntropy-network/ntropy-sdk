@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ class Report(BaseModel):
 
     transaction_id: str
     description: str
-    fields: list[str]
+    fields: List[str]
 
 
 class ReportResponse(Report):
@@ -36,7 +36,7 @@ class ReportsResource:
         *,
         transaction_id: str,
         description: str,
-        fields: list[str],
+        fields: List[str],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> ReportResponse:
         request_id = extra_kwargs.get("request_id")

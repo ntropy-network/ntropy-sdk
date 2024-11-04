@@ -59,7 +59,7 @@ class BatchResult(BaseModel):
         description="The total number of transactions in the batch result."
     )
     status: BatchStatus = Field(description="The current status of the batch job.")
-    results: list[EnrichedTransaction] = Field(
+    results: List[EnrichedTransaction] = Field(
         description="A list of enriched transactions resulting from the enrichment of this batch."
     )
     request_id: Optional[str] = None
