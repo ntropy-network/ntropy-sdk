@@ -43,12 +43,13 @@ class CategoriesResource:
             extra_kwargs["request_id"] = request_id
         if not isinstance(account_holder_type, AccountHolderType):
             account_holder_type = AccountHolderType(account_holder_type)
-        self._sdk.retry_ratelimited_request(
+        resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url=f"/v3/categories/{account_holder_type.value}",
             payload=categories,
             **extra_kwargs,
         )
+        return resp.json()
 
     def reset(
         self,
@@ -61,8 +62,9 @@ class CategoriesResource:
             extra_kwargs["request_id"] = request_id
         if not isinstance(account_holder_type, AccountHolderType):
             account_holder_type = AccountHolderType(account_holder_type)
-        self._sdk.retry_ratelimited_request(
+        resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url=f"/v3/categories/{account_holder_type.value}/reset",
             **extra_kwargs,
         )
+        return resp.json()
