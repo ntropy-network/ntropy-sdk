@@ -1,11 +1,12 @@
 import os
 from itertools import islice
 
+import pytest
+
 from ntropy_sdk import (
     SDK,
-    TransactionInput,
-    AccountHolder,
     NtropyValueError,
+    NtropyNotFoundError,
 )
 
 
@@ -24,6 +25,11 @@ def test_readme(api_key):
     readme_data = readme_file.split("```python")[1].split("```")[0]
     readme_data = readme_data.replace("YOUR-API-KEY", api_key)
     exec(readme_data, globals())
+
+
+def test_404_ah(sdk):
+    with pytest.raises(NtropyNotFoundError):
+        sdk.account_holders.get("non-existent-id")
 
 
 def test_recurrence_groups(sdk):
