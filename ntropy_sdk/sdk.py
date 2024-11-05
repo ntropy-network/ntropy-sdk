@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Dict, Optional
 
+import requests
+
 from ntropy_sdk.account_holders import AccountHoldersResource
 from ntropy_sdk.bank_statements import BankStatementsResource
 from ntropy_sdk.batches import BatchesResource
@@ -22,10 +24,11 @@ class SDK:
         self,
         api_key: Optional[str] = None,
         region: str = DEFAULT_REGION,
+        session: Optional[requests.Session] = None,
     ):
         self.base_url = ALL_REGIONS[region]
         self.api_key = api_key
-        self.http_client = HttpClient()
+        self.http_client = HttpClient(session=session)
         self.account_holders = AccountHoldersResource(self)
         self.batches = BatchesResource(self)
         self.bank_statements = BankStatementsResource(self)
