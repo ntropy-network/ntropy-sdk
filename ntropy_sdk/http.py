@@ -86,6 +86,9 @@ class HttpClient:
             headers.update(extra_headers)
 
         backoff = 1
+        if params is not None:
+            params = {k: v for k, v in params.items() if v is not None}
+
         for _ in range(retries):
             try:
                 resp = cur_session.request(
