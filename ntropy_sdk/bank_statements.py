@@ -7,14 +7,15 @@ import uuid
 
 from pydantic import BaseModel, Field, NonNegativeFloat
 
+from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.transactions import LocationInput, TransactionInput
+from ntropy_sdk.utils import EntryType
 from ntropy_sdk.v2.bank_statements import StatementInfo
 from ntropy_sdk.v2.errors import (
+    NtropyBankStatementError,
     NtropyDatasourceError,
     NtropyTimeoutError,
-    NtropyBankStatementError,
 )
-from ntropy_sdk.utils import EntryType
-from ntropy_sdk.paging import PagedResponse
 
 if TYPE_CHECKING:
     from ntropy_sdk import ExtraKwargs
@@ -69,6 +70,23 @@ class BankStatementTransaction(BaseModel):
     id: str = Field(
         description="A generated unique identifier for the transaction", min_length=1
     )
+
+    def to_transaction_input(
+        self,
+        *,
+        account_holder_id: Optional[str] = None,
+        location: Optional[LocationInput] = None,
+    ) -> TransactionInput:
+        return TransactionInput(
+            id=self.id,
+            description=self.description,
+            date=self.date,
+            amount=self.amount,
+            entry_type=self.entry_type,
+            currency=self.currency,
+            account_holder_id=account_holder_id,
+            location=location,
+        )
 
 
 class BankStatementAccount(BaseModel):

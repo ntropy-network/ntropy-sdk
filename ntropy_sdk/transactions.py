@@ -64,7 +64,7 @@ class _TransactionBase(BaseModel):
 
 class TransactionInput(_TransactionBase):
     account_holder_id: Optional[str] = Field(
-        None,
+        default=None,
         description="The id of the account holder. Unsetting it will disable categorization.",
     )
 
