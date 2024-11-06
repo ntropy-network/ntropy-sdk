@@ -1,8 +1,10 @@
 # Ntropy SDK
 
-This repository hosts the SDK for the Ntropy API.  To use the Ntropy API you require an API key which can be requested at [ntropy.com](https://ntropy.com).
+This repository hosts the SDK for the Ntropy API. To use the Ntropy API you require an API key which can be requested
+at [ntropy.com](https://ntropy.com).
 
-The Ntropy API provides transaction enrichment and categorization, account ledger and metrics. The full documentation is available at the [developer portal](https://developers.ntropy.com/).
+The Ntropy API provides transaction enrichment, categorization and recurrence detection. The full documentation is
+available at [docs.ntropy.com](https://docs.ntropy.com/).
 
 
 ## Installation
@@ -13,8 +15,8 @@ $ python3 -m pip install --upgrade 'ntropy-sdk'
 
 ## Quick Start
 
-
-Enriching your first transaction requires an `SDK` object and an input `Transaction` object. The API key can be set in the environment variable `NTROPY_API_KEY` or in the `SDK` constructor:
+Enriching your first transaction requires an `SDK` object and an input `Transaction` object. The API key can be set in
+the environment variable `NTROPY_API_KEY` or in the `SDK` constructor:
 
 ```python
 from ntropy_sdk import SDK
@@ -34,11 +36,9 @@ r = sdk.transactions.create(
 print(r)
 ```
 
-The returned `EnrichedTransaction` contains the added information by Ntropy API.  You can consult the Enrichment section of the documentation for more information on the parameters for both `Transaction` and `EnrichedTransaction`.
-
-## Documentation
-
- You can consult in-depth documentation and examples at the [developer portal](https://developers.ntropy.com/docs/enrichment) and at the [SDK reference](https://developers.ntropy.com/sdk).
+The returned `EnrichedTransaction` contains the added information by Ntropy API. You can consult
+the [overview](https://docs.ntropy.com/enrichment/introduction) section of the documentation for more details and
+output examples of the enriched output.
 
 ## License:
 Free software: MIT license
