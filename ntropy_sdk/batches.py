@@ -1,19 +1,20 @@
+import time
+import uuid
 from datetime import datetime
 from enum import Enum
-import time
 from typing import List, Optional, TYPE_CHECKING
-import uuid
 
 from pydantic import BaseModel, Field
 
-from ntropy_sdk.errors import NtropyBatchError
-from ntropy_sdk.utils import pydantic_json
-from ntropy_sdk.v3.paging import PagedResponse
-from ntropy_sdk.v3.transactions import EnrichedTransaction, EnrichmentInput
+from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.transactions import (
+    EnrichedTransaction,
+)
+from ntropy_sdk.v2 import NtropyBatchError
 
 if TYPE_CHECKING:
-    from ntropy_sdk.ntropy_sdk import SDK
-    from . import ExtraKwargs
+    from ntropy_sdk import ExtraKwargs, NtropyTimeoutError
+    from ntropy_sdk import SDK
     from typing_extensions import Unpack
 
 
@@ -29,6 +30,7 @@ class Batch(BaseModel):
     """
 
     id: str = Field(description="A unique identifier for the batch.")
+    operation: str = Field(description="Operation for the batch")
     status: BatchStatus = Field(description="The current status of the batch.")
     created_at: datetime = Field(
         description="The timestamp of when the batch was created."
@@ -36,40 +38,20 @@ class Batch(BaseModel):
     updated_at: datetime = Field(
         description="The timestamp of when the batch was last updated."
     )
-    progress: int = Field(description="The number of transactions processed so far.")
-    total: int = Field(description="The total number of transactions in the batch.")
+    progress: int = Field(description="The number of requests processed so far.")
+    total: int = Field(description="The total number of requests in the batch.")
     request_id: Optional[str] = None
 
-    def wait(
-        self,
-        sdk: "SDK",
-        *,
-        timeout: int = 4 * 60 * 60,
-        poll_interval: int = 10,
-        **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> "BatchResult":
-        """Continuously polls the status of this batch, blocking until the batch
-        either succeeds or fails. If successful, returns the results. Otherwise,
-        raises an `NtropyBatchError` exception."""
+    def is_completed(self):
+        return self.status == BatchStatus.COMPLETED
 
-        finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
-        start_time = time.monotonic()
-        while time.monotonic() - start_time < timeout:
-            self.status = sdk.v3.batches.get(id=self.id).status
-            if self.status in finish_statuses:
-                break
-            time.sleep(poll_interval)
-
-        if self.status is BatchStatus.COMPLETED:
-            return sdk.v3.batches.results(id=self.id, **extra_kwargs)
-        else:
-            raise NtropyBatchError(f"Batch[{self.id}] contains errors")
+    def is_error(self):
+        return self.status == BatchStatus.ERROR
 
 
 class BatchResult(BaseModel):
     """
-    The `BatchResult` object represents the result of a batch enrichment job, including its status and
-    enriched transactions.
+    The `BatchResult` object represents the result of a batch enrichment job
     """
 
     id: str = Field(description="A unique identifier for the batch.")
@@ -104,8 +86,8 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            "/v3/batches",
+            method="GET",
+            url="/v3/batches",
             params={
                 "created_before": created_before,
                 "created_after": created_after,
@@ -117,7 +99,7 @@ class BatchesResource:
         )
         page = PagedResponse[Batch](
             **resp.json(),
-            request_id=request_id,
+            request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
             _extra_kwargs=extra_kwargs,
         )
@@ -125,7 +107,7 @@ class BatchesResource:
             t.request_id = request_id
         return page
 
-    def get(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Batch:
+    def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> Batch:
         """Retrieve a batch"""
 
         request_id = extra_kwargs.get("request_id")
@@ -133,16 +115,18 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/batches/{id}",
+            method="GET",
+            url=f"/v3/batches/{id}",
             **extra_kwargs,
         )
-        return Batch(**resp.json(), request_id=request_id)
+        return Batch(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def create(
         self,
-        *,
-        input: EnrichmentInput,
+        operation: str,
+        data: List[dict],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Batch:
         """Submit a batch of transactions for enrichment"""
@@ -152,21 +136,56 @@ class BatchesResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "POST",
-            "/v3/batches",
-            payload_json_str=pydantic_json(input),
+            method="POST",
+            url="/v3/batches",
+            payload={
+                "operation": operation,
+                "data": data,
+            },
             **extra_kwargs,
         )
-        return Batch(**resp.json(), request_id=request_id)
+        return Batch(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
-    def results(self, *, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BatchResult:
+    def results(self, id: str, **extra_kwargs: "Unpack[ExtraKwargs]") -> BatchResult:
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         resp = self._sdk.retry_ratelimited_request(
-            "GET",
-            f"/v3/batches/{id}/results",
+            method="GET",
+            url=f"/v3/batches/{id}/results",
             **extra_kwargs,
         )
-        return BatchResult(**resp.json(), request_id=request_id)
+        return BatchResult(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
+
+    def wait_for_results(
+        self,
+        id: str,
+        *,
+        timeout: int = 10 * 60 * 60,
+        poll_interval: int = 10,
+        **extra_kwargs: "Unpack[ExtraKwargs]",
+    ) -> "BatchResult":
+        """Continuously polls the status of this batch, blocking until the batch
+        either succeeds or fails. Raises `NtropyTimeoutError` if the `timeout` is exceeded or `NtropyBatchError`
+        if the batch encountered an error during processing."""
+
+        finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
+        start_time = time.monotonic()
+
+        batch = None
+        while time.monotonic() - start_time < timeout:
+            batch = self._sdk.batches.get(id=id)
+            if batch.status in finish_statuses:
+                break
+            time.sleep(poll_interval)
+
+        if batch and batch.status not in finish_statuses:
+            raise NtropyTimeoutError()
+        if batch.is_error():
+            raise NtropyBatchError("Batch terminated with an error", id=batch.id)
+        return self._sdk.batches.results(id=id, **extra_kwargs)

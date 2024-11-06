@@ -20,9 +20,8 @@ from typing import (
     Union,
 )
 from itertools import islice
-from json import JSONDecodeError
 
-import requests  # type: ignore
+import requests
 from pydantic import (
     BaseModel,
     Field,
@@ -31,14 +30,14 @@ from pydantic import (
     root_validator,
     Extra,
 )
-from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter  # type: ignore
 from tabulate import tabulate
 from tqdm.auto import tqdm
 
-from ntropy_sdk import __version__
-from ntropy_sdk.bank_statements import StatementInfo
-from ntropy_sdk.income_check import IncomeReport, IncomeGroup
-from ntropy_sdk.recurring_payments import (
+from .bank_statements import StatementInfo
+from .income_check import IncomeReport, IncomeGroup
+
+from ntropy_sdk.http import HttpClient
+from .recurring_payments import (
     RecurringPaymentsGroups,
     RecurringPaymentsGroup,
 )
@@ -50,8 +49,7 @@ from ntropy_sdk.utils import (
     dict_to_str,
     validate_date,
 )
-from ntropy_sdk.errors import (
-    error_from_http_status_code,
+from .errors import (
     NtropyTimeoutError,
     NtropyBatchError,
     NtropyError,
@@ -62,7 +60,6 @@ from ntropy_sdk.errors import (
     NtropyQuotaExceededError,
     NtropyValidationError,
 )
-from ntropy_sdk.v3 import V3
 
 DEFAULT_TIMEOUT = 10 * 60
 DEFAULT_RETRIES = 10
@@ -151,7 +148,7 @@ class Transaction(BaseModel):
     )
     mcc: Optional[int] = Field(
         None,
-        ge=700,
+        ge=0,
         le=9999,
         description="The Merchant Category Code of the merchant, according to ISO 18245.",
     )
@@ -1051,13 +1048,15 @@ class BankStatementRequest(BaseModel):
         """
         url = f"/datasources/bank_statements/{self.bs_id}/statement-info"
         request_id = uuid.uuid4().hex
-        json_resp = self.sdk.retry_ratelimited_request(
+        resp = self.sdk.retry_ratelimited_request(
             "GET",
             url,
             None,
             request_id=request_id,
-        ).json()
-        return StatementInfo(**json_resp, request_id=request_id)
+        )
+        return StatementInfo(
+            **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
+        )
 
     def poll(self) -> BankStatement:
         """Polls the current bank statement status and returns the server response
@@ -1262,9 +1261,8 @@ class SDK:
         self.base_url = ALL_REGIONS[region]
 
         self.token = token
-        self._session: Optional[requests.Session] = None
+        self.http_client = HttpClient()
         self.logger = logging.getLogger("Ntropy-SDK")
-        self.v3 = V3(self)
 
         self._extra_headers = {}
         self._timeout = timeout
@@ -1282,20 +1280,6 @@ class SDK:
                 "or use unique id for each transaction if they're not actually duplicates.",
                 UserWarning,
             )
-
-    def _get_session(self) -> requests.Session:
-        if self._session is None:
-            self._session = requests.Session()
-            self._session.mount("https://", TCPKeepAliveAdapter())
-        return self._session
-
-    @property
-    def session(self) -> requests.Session:
-        return self._get_session()
-
-    @session.setter
-    def session(self, session: requests.Session):
-        self._session = session
 
     def retry_ratelimited_request(
         self,
@@ -1329,102 +1313,22 @@ class SDK:
         NtropyError
             If the request failed after the maximum number of retries.
         """
-
-        if payload_json_str is not None and payload is not None:
-            raise ValueError("payload_json_str and payload cannot be used simultaneously")
-
-        if request_id is None:
-            request_id = uuid.uuid4().hex
-        if api_key is None:
-            api_key = self.token
-        cur_session = session
-        if cur_session is None:
-            cur_session = self._get_session()
-
-        headers = {
-            "X-API-Key": api_key,
-            "User-Agent": f"ntropy-sdk/{__version__}",
-            "X-Request-ID": request_id,
-        }
-        if payload_json_str is None:
-            request_kwargs["json"] = payload
-        else:
-            headers["Content-Type"] = "application/json"
-            request_kwargs["data"] = payload_json_str
-        headers.update(self._extra_headers)
-
-        backoff = 1
-        for _ in range(self._retries):
-            try:
-                resp = cur_session.request(
-                    method,
-                    self.base_url + url,
-                    headers=headers,
-                    timeout=self._timeout,
-                    **request_kwargs,
-                )
-            except requests.ConnectionError:
-                # Rebuild session on connection error and retry
-                if session is None:
-                    self._session = None
-                    cur_session = self._get_session()
-                    continue
-                else:
-                    raise
-
-            if resp.status_code == 429:
-                try:
-                    retry_after = int(resp.headers.get("retry-after", "1"))
-                except ValueError:
-                    retry_after = 1
-                if retry_after <= 0:
-                    retry_after = 1
-
-                self.logger.log(
-                    log_level, "Retrying in %s seconds due to ratelimit", retry_after
-                )
-                time.sleep(retry_after)
-
-                continue
-            elif resp.status_code == 503:
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 8)
-
-                self.logger.log(
-                    log_level,
-                    "Retrying in %s seconds due to unavailability in the server side",
-                    backoff,
-                )
-                continue
-
-            elif (
-                resp.status_code >= 500 and resp.status_code <= 511
-            ) and self._retry_on_unhandled_exception:
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 8)
-
-                self.logger.log(
-                    log_level,
-                    "Retrying in %s seconds due to unhandled exception in the server side",
-                    backoff,
-                )
-
-                continue
-
-            try:
-                resp.raise_for_status()
-            except requests.HTTPError as e:
-                status_code = e.response.status_code
-
-                try:
-                    content = e.response.json()
-                except JSONDecodeError:
-                    content = {}
-
-                err = error_from_http_status_code(request_id, status_code, content)
-                raise err
-            return resp
-        raise NtropyError(f"Failed to {method} {url} after {self._retries} attempts")
+        return self.http_client.retry_ratelimited_request(
+            method=method,
+            url=self.base_url + url,
+            payload=payload,
+            payload_json_str=payload_json_str,
+            log_level=log_level,
+            request_id=request_id,
+            api_key=api_key or self.token,
+            session=session,
+            logger=self.logger,
+            retries=self._retries,
+            timeout=self._timeout,
+            retry_on_unhandled_exception=self._retry_on_unhandled_exception,
+            extra_headers=self._extra_headers,
+            **request_kwargs,
+        )
 
     def create_account_holder(self, account_holder: AccountHolder):
         """Creates an AccountHolder for the current user.
