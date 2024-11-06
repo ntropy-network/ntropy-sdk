@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 - Added support for pydantic >= 2.0
 - Fix sending batches async when chunkedd
 
+## [5.0.1] - 2024-11-06
+- Integration with v3 version of the api
+- API resources are under `SDK` and consistently organized into `create`, `get`, `list` and `delete`.
+```python
+sdk.transactions.create(...)
+sdk.account_holders.create(...)
+```
+- Auto-pagination is now supported for listing resources
+```python
+for txn in sdk.transactions.list().auto_paginate():
+    ...
+```
+- Request ID integration for easier debugging
+- Easier session lifecycle management through `SDK(session=http_session)`
+- Added support for new resources: `webhooks`
+- Added support for missing resources: `account_holders`, `entities`, `rules`, `categories`
+
 ## [4.20.0] - 2023-08-21
 - Added `account_holder_id` property to bank statements structure
 
