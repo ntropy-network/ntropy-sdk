@@ -3,7 +3,7 @@
 This repository hosts the SDK for the Ntropy API. It provides transaction enrichment and categorization, account ledger
 and metrics. The full documentation is available at the [developer portal](https://developers.ntropy.com/).
 
-To obtain an API key, you can follow this [guide](https://docs.ntropy.com/onboarding)
+To obtain an API key, you can follow this [guide](https://docs.ntropy.com/onboarding).
 
 ## Installation
 
