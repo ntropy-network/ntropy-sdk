@@ -193,7 +193,7 @@ class BatchesResource:
         start_time = time.monotonic()
 
         total_set = False
-        with tqdm(total=10) as p:
+        with tqdm() as p:
             while time.monotonic() - start_time < timeout:
                 batch = self._sdk.batches.get(id=id)
                 if not total_set:
