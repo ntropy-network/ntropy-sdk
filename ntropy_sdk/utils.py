@@ -1,4 +1,5 @@
 import math
+import sys
 from datetime import datetime, date
 from typing import Any, Generic, List, TypeVar, Union
 from enum import Enum
@@ -80,3 +81,11 @@ def validate_date(value: Union[str, date, datetime]) -> Union[date, datetime]:
 
 def dict_to_str(dict):
     return ", ".join(f"{k}={v}" for k, v in dict.items())
+
+
+try:
+    from tqdm.auto import tqdm
+
+    DEFAULT_WITH_PROGRESS = hasattr(sys, "ps1")
+except ImportError:
+    DEFAULT_WITH_PROGRESS = False
