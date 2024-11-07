@@ -229,6 +229,7 @@ class RecurrenceGroup(BaseModel):
     categories: Categories = Field(
         description="Categories of the transactions in the recurrence group"
     )
+    transaction_ids: List[str] = Field(description="Transactions in the group")
 
 
 class RecurrenceGroups(BaseModel):
