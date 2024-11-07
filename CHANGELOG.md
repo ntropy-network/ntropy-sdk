@@ -2,9 +2,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-- Added support for pydantic >= 2.0
-- Fix sending batches async when chunkedd
+## [5.0.2] - 2024-11-07
+- Add `transaction_ids` to recurring groups
+- Add progress to `sdk.batches.wait_for_result`
 
 ## [5.0.1] - 2024-11-06
 - Integration with v3 version of the api

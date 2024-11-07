@@ -2,7 +2,7 @@ import time
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING, Callable
 
 from pydantic import BaseModel, Field
 
@@ -10,6 +10,7 @@ from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.transactions import (
     EnrichedTransaction,
 )
+from ntropy_sdk.utils import DEFAULT_WITH_PROGRESS
 from ntropy_sdk.v2 import NtropyBatchError
 
 if TYPE_CHECKING:
@@ -162,12 +163,56 @@ class BatchesResource:
             **resp.json(), request_id=resp.headers.get("x-request-id", request_id)
         )
 
+    def _wait(
+        self,
+        *,
+        id: str,
+        poll_interval: int,
+        timeout: int,
+        stop_fn: Callable[[Batch], bool],
+    ) -> Batch:
+        start_time = time.monotonic()
+        batch = None
+        while time.monotonic() - start_time < timeout:
+            batch = self._sdk.batches.get(id=id)
+            if stop_fn(batch):
+                break
+            time.sleep(poll_interval)
+        return batch
+
+    def _wait_with_progress(
+        self,
+        *,
+        id: str,
+        poll_interval: int,
+        timeout: int,
+        stop_fn: Callable[[Batch], bool],
+    ) -> Batch:
+        from tqdm.auto import tqdm
+
+        start_time = time.monotonic()
+
+        total_set = False
+        with tqdm() as p:
+            while time.monotonic() - start_time < timeout:
+                batch = self._sdk.batches.get(id=id)
+                if not total_set:
+                    p.total = batch.total
+                p.desc = batch.status
+                p.update(batch.progress - p.n)
+
+                if stop_fn(batch):
+                    break
+                time.sleep(poll_interval)
+        return batch
+
     def wait_for_results(
         self,
         id: str,
         *,
         timeout: int = 10 * 60 * 60,
         poll_interval: int = 10,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> "BatchResult":
         """Continuously polls the status of this batch, blocking until the batch
@@ -175,14 +220,18 @@ class BatchesResource:
         if the batch encountered an error during processing."""
 
         finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
-        start_time = time.monotonic()
 
-        batch = None
-        while time.monotonic() - start_time < timeout:
-            batch = self._sdk.batches.get(id=id)
-            if batch.status in finish_statuses:
-                break
-            time.sleep(poll_interval)
+        def stop_fn(b: Batch):
+            return b.status in finish_statuses
+
+        if with_progress:
+            batch = self._wait_with_progress(
+                id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
+            )
+        else:
+            batch = self._wait(
+                id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
+            )
 
         if batch and batch.status not in finish_statuses:
             raise NtropyTimeoutError()
