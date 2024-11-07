@@ -220,7 +220,10 @@ class BatchesResource:
         if the batch encountered an error during processing."""
 
         finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
-        stop_fn = lambda b: b.status in finish_statuses
+
+        def stop_fn(b: Batch):
+            return b.status in finish_statuses
+
         if with_progress:
             batch = self._wait_with_progress(
                 id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
