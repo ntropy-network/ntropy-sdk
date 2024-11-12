@@ -3,7 +3,7 @@ import enum
 from typing import List, Optional, TYPE_CHECKING
 import uuid
 
-from pydantic import BaseModel, Field, NonNegativeFloat
+from pydantic import BaseModel, Field, NonNegativeFloat, Extra
 
 from ntropy_sdk.utils import EntryType, PYDANTIC_V2, pydantic_json
 from ntropy_sdk.paging import PagedResponse
@@ -272,7 +272,7 @@ class _EnrichedTransactionBase(BaseModel):
     )
 
 
-class EnrichedTransaction(_EnrichedTransactionBase):
+class EnrichedTransaction(_EnrichedTransactionBase, extra=Extra.allow):
     id: str = Field(
         description="A unique identifier for the transaction. If two transactions are submitted with the same `id` "
         "the most recent one will replace the previous one.",
