@@ -73,11 +73,12 @@ class AccountHoldersResource:
             },
             **extra_kwargs,
         )
+        extra_kwargs["created_after"] = created_after
         page = PagedResponse[AccountHolderResponse](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for t in page.data:
             t.request_id = request_id
@@ -194,11 +195,12 @@ class AccountHoldersResourceAsync:
             **extra_kwargs,
         )
         async with resp:
+            extra_kwargs["created_after"] = created_after
             page = PagedResponseAsync[AccountHolderResponse](
                 **await resp.json(),
                 request_id=resp.headers.get("x-request-id", request_id),
                 _resource=self,
-                _extra_kwargs=extra_kwargs,
+                _request_kwargs=extra_kwargs,
             )
         for t in page.data:
             t.request_id = request_id

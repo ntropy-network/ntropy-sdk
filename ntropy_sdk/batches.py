@@ -100,11 +100,13 @@ class BatchesResource:
             },
             **extra_kwargs,
         )
+        extra_kwargs["created_after"] = created_after
+        extra_kwargs["status"] = status
         page = PagedResponse[Batch](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for t in page.data:
             t.request_id = request_id
@@ -275,11 +277,13 @@ class BatchesResourceAsync:
             **extra_kwargs,
         )
         async with resp:
+            extra_kwargs["created_after"] = created_after
+            extra_kwargs["status"] = status
             page = PagedResponseAsync[Batch](
                 **await resp.json(),
                 request_id=resp.headers.get("x-request-id", request_id),
                 _resource=self,
-                _extra_kwargs=extra_kwargs,
+                _request_kwargs=extra_kwargs,
             )
         for t in page.data:
             t.request_id = request_id

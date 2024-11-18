@@ -63,6 +63,8 @@ class WebhooksResource:
 
     def list(
         self,
+        cursor: str,
+        limit: Optional[int],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> PagedResponse[Webhook]:
         request_id = extra_kwargs.get("request_id")
@@ -78,7 +80,7 @@ class WebhooksResource:
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for w in page.data:
             w.request_id = request_id
@@ -173,6 +175,8 @@ class WebhooksResourceAsync:
 
     async def list(
         self,
+        cursor: str,
+        limit: Optional[int],
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> PagedResponseAsync[Webhook]:
         request_id = extra_kwargs.get("request_id")
@@ -189,7 +193,7 @@ class WebhooksResourceAsync:
                 **await resp.json(),
                 request_id=resp.headers.get("x-request-id", request_id),
                 _resource=self,
-                _extra_kwargs=extra_kwargs,
+                _request_kwargs=extra_kwargs,
             )
         for w in page.data:
             w.request_id = request_id

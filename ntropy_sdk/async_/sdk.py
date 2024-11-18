@@ -64,5 +64,8 @@ class AsyncSDK:
             **kwargs_copy,
         )
 
-    def __aenter__(self) -> "Self":
+    async def __aenter__(self) -> "Self":
         return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.http_client.close()

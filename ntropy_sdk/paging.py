@@ -4,6 +4,7 @@ from typing import (
     Generic,
     Iterator,
     List,
+    Mapping,
     Optional,
     Protocol,
     TYPE_CHECKING,
@@ -34,7 +35,8 @@ class ListableResource(Protocol[T]):
         cursor: str,
         limit: Optional[int],
         **extra_kwargs: "Unpack[ExtraKwargs]",
-    ) -> "PagedResponse[T]": ...
+    ) -> "PagedResponse[T]":
+        ...
 
 
 class PagedResponse(GenericModel, Generic[T]):
@@ -42,22 +44,18 @@ class PagedResponse(GenericModel, Generic[T]):
     data: List[T]
     request_id: Optional[str] = None
     _resource: Optional[ListableResource[T]] = PrivateAttr(None)
-    if TYPE_CHECKING:
-        _extra_kwargs: Optional["ExtraKwargs"] = PrivateAttr(None)
-        pass
-    else:
-        _extra_kwargs: Any = PrivateAttr()  # pydantic v1 complains about ExtraKwargs
+    _extra_kwargs: Optional[Mapping] = PrivateAttr(None)
 
-        def __init__(
-            self,
-            *,
-            _resource: Optional[ListableResource[T]] = None,
-            _extra_kwargs: Optional["ExtraKwargs"] = None,
-            **data,
-        ):
-            super().__init__(**data)
-            self._resource = _resource
-            self._extra_kwargs = _extra_kwargs
+    def __init__(
+        self,
+        *,
+        _resource: Optional[ListableResource[T]] = None,
+        _request_kwargs: Optional[Mapping] = None,
+        **data,
+    ):
+        super().__init__(**data)
+        self._resource = _resource
+        self._request_kwargs = _request_kwargs
 
     def auto_paginate(
         self,
@@ -85,7 +83,7 @@ class AutoPaginate(Generic[T]):
             page_size=self._page_size,
             next_cursor=self._first_page.next_cursor,
             _resource=self._resource,
-            _extra_kwargs=self._first_page._extra_kwargs or {},
+            _request_kwargs=self._first_page._request_kwargs or {},
         )
 
 
@@ -95,7 +93,7 @@ class AutoPaginateIterator(Generic[T]):
     next_cursor: Optional[str]
     page_size: Optional[int]
     _resource: ListableResource[T]
-    _extra_kwargs: "ExtraKwargs"
+    _request_kwargs: Mapping
 
     def __next__(self) -> T:
         try:
@@ -106,7 +104,7 @@ class AutoPaginateIterator(Generic[T]):
             next_page = self._resource.list(
                 cursor=self.next_cursor,
                 limit=self.page_size,
-                **self._extra_kwargs,
+                **self._request_kwargs,
             )
             self.current_iter = iter(next_page.data)
             self.next_cursor = next_page.next_cursor

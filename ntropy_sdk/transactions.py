@@ -149,7 +149,8 @@ class Counterparty(Entity):
     type: CounterpartyType
 
 
-class Intermediary(Entity): ...
+class Intermediary(Entity):
+    ...
 
 
 class Entities(BaseModel):
@@ -329,11 +330,14 @@ class TransactionsResource:
             payload=None,
             **extra_kwargs,
         )
+        extra_kwargs["created_after"] = created_after
+        extra_kwargs["account_holder_id"] = account_holder_id
+        extra_kwargs["dataset_id"] = dataset_id
         page = PagedResponse[Transaction](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for t in page.data:
             t.request_id = request_id
@@ -468,11 +472,14 @@ class TransactionsResourceAsync:
             **extra_kwargs,
         )
         async with resp:
+            extra_kwargs["created_after"] = created_after
+            extra_kwargs["account_holder_id"] = account_holder_id
+            extra_kwargs["dataset_id"] = dataset_id
             page = PagedResponseAsync[Transaction](
                 **await resp.json(),
                 request_id=resp.headers.get("x-request-id", request_id),
                 _resource=self,
-                _extra_kwargs=extra_kwargs,
+                _request_kwargs=extra_kwargs,
             )
         for t in page.data:
             t.request_id = request_id

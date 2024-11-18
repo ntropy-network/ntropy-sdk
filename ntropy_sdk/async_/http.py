@@ -28,6 +28,11 @@ class HttpClient:
     def session(self, session: aiohttp.ClientSession):
         self._session = session
 
+    async def close(self):
+        if self._session:
+            await self._session.close()
+            self._session = None
+
     async def retry_ratelimited_request(
         self,
         *,

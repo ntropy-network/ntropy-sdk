@@ -10,6 +10,7 @@ import aiohttp
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
 from ntropy_sdk.transactions import LocationInput, TransactionInput
 from ntropy_sdk.utils import EntryType
 from ntropy_sdk.v2.bank_statements import StatementInfo
@@ -22,7 +23,6 @@ from ntropy_sdk.v2.errors import (
 if TYPE_CHECKING:
     from ntropy_sdk import ExtraKwargs, ExtraKwargsAsync, SDK
     from ntropy_sdk.async_.sdk import AsyncSDK
-    from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
     from typing_extensions import Unpack
 
 
@@ -140,11 +140,13 @@ class BankStatementsResource:
             payload=None,
             **extra_kwargs,
         )
+        extra_kwargs["status"] = status
+        extra_kwargs["created_after"] = created_after
         page = PagedResponse[BankStatementJob](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for b in page.data:
             b.request_id = request_id
@@ -303,11 +305,13 @@ class BankStatementsResourceAsync:
             **extra_kwargs,
         )
         async with resp:
+            extra_kwargs["status"] = status
+            extra_kwargs["created_after"] = created_after
             page = PagedResponseAsync[BankStatementJob](
                 **await resp.json(),
                 request_id=resp.headers.get("x-request-id", request_id),
                 _resource=self,
-                _extra_kwargs=extra_kwargs,
+                _request_kwargs=extra_kwargs,
             )
         for b in page.data:
             b.request_id = request_id

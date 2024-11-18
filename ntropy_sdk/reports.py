@@ -79,7 +79,7 @@ class ReportsResource:
         *,
         created_before: Optional[datetime] = None,
         created_after: Optional[datetime] = None,
-        status: str = None,
+        status: Optional[str] = None,
         cursor: Optional[str] = None,
         limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
@@ -102,11 +102,13 @@ class ReportsResource:
             },
             **extra_kwargs,
         )
+        extra_kwargs["status"] = status
+        extra_kwargs["created_after"] = created_after
         page = PagedResponse[ReportResponse](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for t in page.data:
             t.request_id = request_id
@@ -181,7 +183,7 @@ class ReportsResourceAsync:
         *,
         created_before: Optional[datetime] = None,
         created_after: Optional[datetime] = None,
-        status: str = None,
+        status: Optional[str] = None,
         cursor: Optional[str] = None,
         limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
@@ -205,11 +207,13 @@ class ReportsResourceAsync:
             **extra_kwargs,
         )
         async with resp:
+            extra_kwargs["status"] = status
+            extra_kwargs["created_after"] = created_after
             page = PagedResponseAsync[ReportResponse](
                 **await resp.json(),
                 request_id=resp.headers.get("x-request-id", request_id),
                 _resource=self,
-                _extra_kwargs=extra_kwargs,
+                _request_kwargs=extra_kwargs,
             )
         for t in page.data:
             t.request_id = request_id
