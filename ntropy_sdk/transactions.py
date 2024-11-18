@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.utils import EntryType, PYDANTIC_V2, pydantic_json
 from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
 
 PYDANTIC_PATTERN = "pattern" if PYDANTIC_V2 else "regex"
 MAX_SYNC_BATCH = 1000
@@ -14,8 +15,8 @@ MAX_ASYNC_BATCH = 24960
 
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs
-    from ntropy_sdk import SDK
+    from ntropy_sdk import ExtraKwargs, ExtraKwargsAsync, SDK
+    from ntropy_sdk.async_.sdk import AsyncSDK
     from typing_extensions import Unpack
 
 
@@ -148,8 +149,7 @@ class Counterparty(Entity):
     type: CounterpartyType
 
 
-class Intermediary(Entity):
-    ...
+class Intermediary(Entity): ...
 
 
 class Entities(BaseModel):
@@ -425,6 +425,153 @@ class TransactionsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/transactions/{id}",
+            payload=None,
+            **extra_kwargs,
+        )
+
+
+class TransactionsResourceAsync:
+    def __init__(self, sdk: "AsyncSDK"):
+        self._sdk = sdk
+
+    async def list(
+        self,
+        *,
+        created_before: Optional[datetime] = None,
+        created_after: Optional[datetime] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+        account_holder_id: Optional[str] = None,
+        dataset_id: Optional[int] = None,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> PagedResponseAsync[Transaction]:
+        """List all transactions"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url="/v3/transactions",
+            params={
+                "created_before": created_before,
+                "created_after": created_after,
+                "cursor": cursor,
+                "limit": limit,
+                "account_holder_id": account_holder_id,
+                "dataset_id": dataset_id,
+            },
+            payload=None,
+            **extra_kwargs,
+        )
+        async with resp:
+            page = PagedResponseAsync[Transaction](
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+                _resource=self,
+                _extra_kwargs=extra_kwargs,
+            )
+        for t in page.data:
+            t.request_id = request_id
+        return page
+
+    async def get(
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"
+    ) -> Transaction:
+        """Retrieve a transaction"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url=f"/v3/transactions/{id}",
+            payload=None,
+            **extra_kwargs,
+        )
+        async with resp:
+            return Transaction(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def create(
+        self,
+        id: str,
+        description: str,
+        date: str,
+        amount: float,
+        entry_type: str,
+        currency: str,
+        account_holder_id: Optional[str] = None,
+        location: Optional[dict] = None,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ):
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="POST",
+            url="/v3/transactions",
+            payload_json_str=pydantic_json(
+                TransactionInput(
+                    id=id,
+                    description=description,
+                    date=date,
+                    amount=amount,
+                    entry_type=entry_type,
+                    currency=currency,
+                    account_holder_id=account_holder_id,
+                    location=location,
+                )
+            ),
+            **extra_kwargs,
+        )
+        async with resp:
+            return EnrichedTransactionResponse(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def assign(
+        self,
+        transaction_id: str,
+        account_holder_id: str,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> Transaction:
+        """Assign a transaction to an account holder"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="POST",
+            url=f"/v3/transactions/{transaction_id}/assign",
+            payload={
+                "account_holder_id": account_holder_id,
+            },
+            **extra_kwargs,
+        )
+        async with resp:
+            return Transaction(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"):
+        """Delete a transaction"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        await self._sdk.retry_ratelimited_request(
             method="DELETE",
             url=f"/v3/transactions/{id}",
             payload=None,

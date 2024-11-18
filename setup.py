@@ -13,6 +13,7 @@ requirements = [
     "requests_toolbelt",
     "pydantic",
     "tabulate",
+    "aiohttp",
 ]
 
 EXTRAS_REQUIRE = {

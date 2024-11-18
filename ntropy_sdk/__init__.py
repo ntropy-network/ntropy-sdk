@@ -1,20 +1,26 @@
 __version__ = "5.0.2"
 
 from typing import TYPE_CHECKING, Optional
-import requests
 
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
+    import aiohttp
+    import requests
 
-    class ExtraKwargs(TypedDict, total=False):
+    class ExtraKwargsBase(TypedDict, total=False):
         request_id: Optional[str]
         api_key: Optional[str]
-        session: Optional[requests.Session]
         retries: int
         timeout: int
         retry_on_unhandled_exception: bool
         extra_headers: Optional[dict]
+
+    class ExtraKwargs(ExtraKwargsBase, total=False):
+        session: Optional[requests.Session]
+
+    class ExtraKwargsAsync(ExtraKwargsBase, total=False):
+        session: Optional[aiohttp.ClientSession]
 
 
 from .sdk import SDK
