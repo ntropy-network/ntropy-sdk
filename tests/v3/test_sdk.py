@@ -8,6 +8,7 @@ from ntropy_sdk import (
     NtropyValueError,
     NtropyNotFoundError,
 )
+from ntropy_sdk.async_.sdk import AsyncSDK
 
 
 def test_pagination(sdk: SDK):
@@ -15,6 +16,19 @@ def test_pagination(sdk: SDK):
     it = sdk.transactions.list(limit=2).auto_paginate(page_size=2)
     for tx in islice(it, 10):
         tx_ids.add(tx.id)
+    assert len(tx_ids) == 10
+
+
+@pytest.mark.asyncio
+async def test_async_pagination(async_sdk: AsyncSDK):
+    tx_ids = set()
+    it = (await async_sdk.transactions.list(limit=2)).auto_paginate(page_size=2)
+    i = 0
+    async for tx in it:
+        tx_ids.add(tx.id)
+        i += 1
+        if i == 10:
+            break
     assert len(tx_ids) == 10
 
 
