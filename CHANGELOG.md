@@ -2,6 +2,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+- Add `AsyncSDK` and corresponding async methods
+
 ## [5.0.2] - 2024-11-07
 - Add `transaction_ids` to recurring groups
 - Add progress to `sdk.batches.wait_for_result`
