@@ -157,17 +157,15 @@ class HttpClient:
 
                 continue
 
-            try:
-                resp.raise_for_status()
-            except aiohttp.ClientResponseError as e:
-                status_code = resp.status
+            if not resp.ok:
+                async with resp:
+                    status_code = resp.status
+                    try:
+                        content = await resp.json()
+                    except JSONDecodeError:
+                        content = {}
 
-                try:
-                    content = await resp.json()
-                except JSONDecodeError:
-                    content = {}
-
-                err = error_from_http_status_code(request_id, status_code, content)
-                raise err
+                    err = error_from_http_status_code(request_id, status_code, content)
+                    raise err
             return resp
         raise NtropyError(f"Failed to {method} {url} after {retries} attempts")

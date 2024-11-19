@@ -44,7 +44,7 @@ class PagedResponse(GenericModel, Generic[T]):
     data: List[T]
     request_id: Optional[str] = None
     _resource: Optional[ListableResource[T]] = PrivateAttr(None)
-    _extra_kwargs: Optional[Mapping] = PrivateAttr(None)
+    _request_kwargs: Optional[Mapping] = PrivateAttr(None)
 
     def __init__(
         self,
