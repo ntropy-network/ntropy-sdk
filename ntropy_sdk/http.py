@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 from json import JSONDecodeError
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import requests
 
@@ -36,7 +36,7 @@ class HttpClient:
         *,
         method: str,
         url: str,
-        params: Optional[Dict[str, str | int | datetime | None]] = None,
+        params: Optional[Dict[str, Union[str, int, datetime, None]]] = None,
         payload: Optional[object] = None,
         payload_json_str: Optional[str] = None,
         logger: Optional[logging.Logger] = None,

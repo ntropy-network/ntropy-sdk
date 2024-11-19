@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 import uuid
 from json import JSONDecodeError
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import aiohttp
 
@@ -38,7 +38,7 @@ class HttpClient:
         *,
         method: str,
         url: str,
-        params: Optional[Dict[str, str | int | datetime | None]] = None,
+        params: Optional[Dict[str, Union[str, int, datetime, None]]] = None,
         payload: Optional[object] = None,
         payload_json_str: Optional[str] = None,
         logger: Optional[logging.Logger] = None,

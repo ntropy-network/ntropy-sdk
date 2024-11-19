@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import requests
 
@@ -45,7 +45,7 @@ class SDK:
         *,
         method: str,
         url: str,
-        params: Optional[Dict[str, str | int | datetime | None]] = None,
+        params: Optional[Dict[str, Union[str, int, datetime, None]]] = None,
         payload: Optional[object] = None,
         payload_json_str: Optional[str] = None,
         **kwargs: "Unpack[ExtraKwargs]",

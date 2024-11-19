@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING, Union
 
 import aiohttp
 
@@ -46,7 +46,7 @@ class AsyncSDK:
         *,
         method: str,
         url: str,
-        params: Optional[Dict[str, str | int | datetime | None]] = None,
+        params: Optional[Dict[str, Union[str, int, datetime, None]]] = None,
         payload: Optional[object] = None,
         payload_json_str: Optional[str] = None,
         **kwargs: "Unpack[ExtraKwargsAsync]",
