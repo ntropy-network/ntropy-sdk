@@ -128,6 +128,9 @@ class LocationStructured(BaseModel):
         None,
         description="A unique identifier for a specific store or branch, if applicable",
     )
+    house_number: Optional[str] = Field(
+        None, description="The house number if, applicable"
+    )
 
 
 class Location(BaseModel):
