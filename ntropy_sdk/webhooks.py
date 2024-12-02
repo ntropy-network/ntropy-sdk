@@ -5,10 +5,11 @@ import uuid
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs
-    from ntropy_sdk import SDK
+    from ntropy_sdk import ExtraKwargs, ExtraKwargsAsync, SDK
+    from ntropy_sdk.async_.sdk import AsyncSDK
     from typing_extensions import Unpack
 
 
@@ -62,6 +63,8 @@ class WebhooksResource:
 
     def list(
         self,
+        cursor: str,
+        limit: Optional[int],
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> PagedResponse[Webhook]:
         request_id = extra_kwargs.get("request_id")
@@ -77,7 +80,7 @@ class WebhooksResource:
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for w in page.data:
             w.request_id = request_id
@@ -159,6 +162,123 @@ class WebhooksResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         self._sdk.retry_ratelimited_request(
+            method="PATCH",
+            url=f"/v3/webhooks/{id}",
+            payload=payload,
+            **extra_kwargs,
+        )
+
+
+class WebhooksResourceAsync:
+    def __init__(self, sdk: "AsyncSDK"):
+        self._sdk = sdk
+
+    async def list(
+        self,
+        cursor: str,
+        limit: Optional[int],
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> PagedResponseAsync[Webhook]:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url="/v3/webhooks",
+            **extra_kwargs,
+        )
+        async with resp:
+            page = PagedResponseAsync[Webhook](
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+                _resource=self,
+                _request_kwargs=extra_kwargs,
+            )
+        for w in page.data:
+            w.request_id = request_id
+        return page
+
+    async def create(
+        self,
+        *,
+        url: str,
+        events: List[WebhookEventType],
+        token: Optional[str],
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> Webhook:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="POST",
+            url="/v3/webhooks",
+            payload={
+                "url": url,
+                "events": events,
+                "token": token,
+            },
+            **extra_kwargs,
+        )
+        async with resp:
+            return Webhook(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]") -> Webhook:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url=f"/v3/webhooks/{id}",
+            **extra_kwargs,
+        )
+        async with resp:
+            return Webhook(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"):
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        await self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/webhooks/{id}",
+            **extra_kwargs,
+        )
+
+    async def patch(
+        self,
+        id: str,
+        *,
+        url: Union[str, _Unset] = UNSET,
+        events: Union[List[WebhookEventType], _Unset] = UNSET,
+        token: Union[str, None, _Unset] = UNSET,
+        enabled: Union[bool, _Unset] = UNSET,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ):
+        payload = {}
+        if url is not UNSET:
+            payload["url"] = url
+        if events is not UNSET:
+            payload["events"] = events
+        if token is not UNSET:
+            payload["token"] = token
+        if enabled is not UNSET:
+            payload["enabled"] = enabled
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        await self._sdk.retry_ratelimited_request(
             method="PATCH",
             url=f"/v3/webhooks/{id}",
             payload=payload,

@@ -13,6 +13,7 @@ requirements = [
     "requests_toolbelt",
     "pydantic",
     "tabulate",
+    "aiohttp",
 ]
 
 EXTRAS_REQUIRE = {
@@ -54,6 +55,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/ntropy-network/ntropy-sdk",
-    version="5.0.2",
+    version="5.1.0",
     zip_safe=False,
 )

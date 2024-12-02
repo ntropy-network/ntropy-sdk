@@ -1,3 +1,4 @@
+import asyncio
 import time
 import uuid
 from datetime import datetime
@@ -7,6 +8,7 @@ from typing import List, Optional, TYPE_CHECKING, Callable
 from pydantic import BaseModel, Field
 
 from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
 from ntropy_sdk.transactions import (
     EnrichedTransaction,
 )
@@ -14,8 +16,8 @@ from ntropy_sdk.utils import DEFAULT_WITH_PROGRESS
 from ntropy_sdk.v2 import NtropyBatchError
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs, NtropyTimeoutError
-    from ntropy_sdk import SDK
+    from ntropy_sdk import ExtraKwargs, ExtraKwargsAsync, NtropyTimeoutError, SDK
+    from ntropy_sdk.async_.sdk import AsyncSDK
     from typing_extensions import Unpack
 
 
@@ -98,11 +100,13 @@ class BatchesResource:
             },
             **extra_kwargs,
         )
+        extra_kwargs["created_after"] = created_after
+        extra_kwargs["status"] = status
         page = PagedResponse[Batch](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for t in page.data:
             t.request_id = request_id
@@ -174,7 +178,7 @@ class BatchesResource:
         start_time = time.monotonic()
         batch = None
         while time.monotonic() - start_time < timeout:
-            batch = self._sdk.batches.get(id=id)
+            batch = self.get(id=id)
             if stop_fn(batch):
                 break
             time.sleep(poll_interval)
@@ -195,7 +199,7 @@ class BatchesResource:
         total_set = False
         with tqdm() as p:
             while time.monotonic() - start_time < timeout:
-                batch = self._sdk.batches.get(id=id)
+                batch = self.get(id=id)
                 if not total_set:
                     p.total = batch.total
                 p.desc = batch.status
@@ -237,4 +241,189 @@ class BatchesResource:
             raise NtropyTimeoutError()
         if batch.is_error():
             raise NtropyBatchError("Batch terminated with an error", id=batch.id)
-        return self._sdk.batches.results(id=id, **extra_kwargs)
+        return self.results(id=id, **extra_kwargs)
+
+
+class BatchesResourceAsync:
+    def __init__(self, sdk: "AsyncSDK"):
+        self._sdk = sdk
+
+    async def list(
+        self,
+        *,
+        created_before: Optional[datetime] = None,
+        created_after: Optional[datetime] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+        status: Optional[BatchStatus] = None,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> PagedResponseAsync[Batch]:
+        """List all batches"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url="/v3/batches",
+            params={
+                "created_before": created_before,
+                "created_after": created_after,
+                "cursor": cursor,
+                "limit": limit,
+                "status": status.value if status else None,
+            },
+            **extra_kwargs,
+        )
+        async with resp:
+            extra_kwargs["created_after"] = created_after
+            extra_kwargs["status"] = status
+            page = PagedResponseAsync[Batch](
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+                _resource=self,
+                _request_kwargs=extra_kwargs,
+            )
+        for t in page.data:
+            t.request_id = request_id
+        return page
+
+    async def get(self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]") -> Batch:
+        """Retrieve a batch"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url=f"/v3/batches/{id}",
+            **extra_kwargs,
+        )
+        async with resp:
+            return Batch(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def create(
+        self,
+        operation: str,
+        data: List[dict],
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> Batch:
+        """Submit a batch of transactions for enrichment"""
+
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="POST",
+            url="/v3/batches",
+            payload={
+                "operation": operation,
+                "data": data,
+            },
+            **extra_kwargs,
+        )
+        async with resp:
+            return Batch(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def results(
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"
+    ) -> BatchResult:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url=f"/v3/batches/{id}/results",
+            **extra_kwargs,
+        )
+        async with resp:
+            return BatchResult(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def _wait(
+        self,
+        *,
+        id: str,
+        poll_interval: int,
+        timeout: int,
+        stop_fn: Callable[[Batch], bool],
+    ) -> Batch:
+        start_time = time.monotonic()
+        batch = None
+        while time.monotonic() - start_time < timeout:
+            batch = await self.get(id=id)
+            if stop_fn(batch):
+                break
+            await asyncio.sleep(poll_interval)
+        return batch
+
+    async def _wait_with_progress(
+        self,
+        *,
+        id: str,
+        poll_interval: int,
+        timeout: int,
+        stop_fn: Callable[[Batch], bool],
+    ) -> Batch:
+        from tqdm.auto import tqdm
+
+        start_time = time.monotonic()
+
+        total_set = False
+        with tqdm() as p:
+            while time.monotonic() - start_time < timeout:
+                batch = await self.get(id=id)
+                if not total_set:
+                    p.total = batch.total
+                p.desc = batch.status
+                p.update(batch.progress - p.n)
+
+                if stop_fn(batch):
+                    break
+                await asyncio.sleep(poll_interval)
+        return batch
+
+    async def wait_for_results(
+        self,
+        id: str,
+        *,
+        timeout: int = 10 * 60 * 60,
+        poll_interval: int = 10,
+        with_progress: bool = DEFAULT_WITH_PROGRESS,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> "BatchResult":
+        """Continuously polls the status of this batch, blocking until the batch
+        either succeeds or fails. Raises `NtropyTimeoutError` if the `timeout` is exceeded or `NtropyBatchError`
+        if the batch encountered an error during processing."""
+
+        finish_statuses = [BatchStatus.COMPLETED, BatchStatus.ERROR]
+
+        def stop_fn(b: Batch):
+            return b.status in finish_statuses
+
+        if with_progress:
+            batch = await self._wait_with_progress(
+                id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
+            )
+        else:
+            batch = await self._wait(
+                id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
+            )
+
+        if batch and batch.status not in finish_statuses:
+            raise NtropyTimeoutError()
+        if batch.is_error():
+            raise NtropyBatchError("Batch terminated with an error", id=batch.id)
+        return await self.results(id=id, **extra_kwargs)

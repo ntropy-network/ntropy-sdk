@@ -8,6 +8,7 @@ from ntropy_sdk import (
     NtropyValueError,
     NtropyNotFoundError,
 )
+from ntropy_sdk.async_.sdk import AsyncSDK
 
 
 def test_pagination(sdk: SDK):

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime
 from enum import Enum
 from io import IOBase
@@ -5,9 +6,11 @@ import time
 from typing import List, Optional, TYPE_CHECKING, Union
 import uuid
 
+import aiohttp
 from pydantic import BaseModel, Field, NonNegativeFloat
 
 from ntropy_sdk.paging import PagedResponse
+from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
 from ntropy_sdk.transactions import LocationInput, TransactionInput
 from ntropy_sdk.utils import EntryType
 from ntropy_sdk.v2.bank_statements import StatementInfo
@@ -18,8 +21,8 @@ from ntropy_sdk.v2.errors import (
 )
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs
-    from ntropy_sdk import SDK
+    from ntropy_sdk import ExtraKwargs, ExtraKwargsAsync, SDK
+    from ntropy_sdk.async_.sdk import AsyncSDK
     from typing_extensions import Unpack
 
 
@@ -137,11 +140,13 @@ class BankStatementsResource:
             payload=None,
             **extra_kwargs,
         )
+        extra_kwargs["status"] = status
+        extra_kwargs["created_after"] = created_after
         page = PagedResponse[BankStatementJob](
             **resp.json(),
             request_id=resp.headers.get("x-request-id", request_id),
             _resource=self,
-            _extra_kwargs=extra_kwargs,
+            _request_kwargs=extra_kwargs,
         )
         for b in page.data:
             b.request_id = request_id
@@ -261,6 +266,185 @@ class BankStatementsResource:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
         self._sdk.retry_ratelimited_request(
+            method="DELETE",
+            url=f"/v3/bank_statements/{id}",
+            payload=None,
+            **extra_kwargs,
+        )
+
+
+class BankStatementsResourceAsync:
+    def __init__(self, sdk: "AsyncSDK"):
+        self._sdk = sdk
+
+    async def list(
+        self,
+        *,
+        created_before: Optional[datetime] = None,
+        created_after: Optional[datetime] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+        status: Optional[BankStatementJobStatus] = None,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> PagedResponseAsync[BankStatementJob]:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url="/v3/bank_statements",
+            params={
+                "created_before": created_before,
+                "created_after": created_after,
+                "cursor": cursor,
+                "limit": limit,
+                "status": status.value if status else None,
+            },
+            payload=None,
+            **extra_kwargs,
+        )
+        async with resp:
+            extra_kwargs["status"] = status
+            extra_kwargs["created_after"] = created_after
+            page = PagedResponseAsync[BankStatementJob](
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+                _resource=self,
+                _request_kwargs=extra_kwargs,
+            )
+        for b in page.data:
+            b.request_id = request_id
+        return page
+
+    async def create(
+        self,
+        file: Union[IOBase, bytes],
+        *,
+        filename: Optional[str] = None,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> BankStatementJob:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        data = {"file": file}
+        if filename is not None:
+            data = aiohttp.FormData()
+            data.add_field("file", file, filename=filename)
+        resp = await self._sdk.retry_ratelimited_request(
+            method="POST",
+            url="/v3/bank_statements",
+            payload=None,
+            data=data,
+            **extra_kwargs,
+        )
+        async with resp:
+            return BankStatementJob(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def get(
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"
+    ) -> BankStatementJob:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url=f"/v3/bank_statements/{id}",
+            payload=None,
+            **extra_kwargs,
+        )
+        async with resp:
+            return BankStatementJob(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def results(
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"
+    ) -> BankStatementResults:
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="GET",
+            url=f"/v3/bank_statements/{id}/results",
+            payload=None,
+            **extra_kwargs,
+        )
+        async with resp:
+            return BankStatementResults(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def verify(
+        self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"
+    ) -> StatementInfo:
+        """Waits for and returns preliminary statement information from the
+        first page of the PDF. This may not always be consistent with the
+        final results."""
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        resp = await self._sdk.retry_ratelimited_request(
+            method="POST",
+            url=f"/v3/bank_statements/{id}/verify",
+            payload=None,
+            **extra_kwargs,
+        )
+        async with resp:
+            return StatementInfo(
+                **await resp.json(),
+                request_id=resp.headers.get("x-request-id", request_id),
+            )
+
+    async def wait_for_results(
+        self,
+        id: str,
+        *,
+        timeout: int = 10 * 60 * 60,
+        poll_interval: int = 10,
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
+    ) -> "BankStatementResults":
+        """Continuously polls the status of this job, blocking until the job either succeeds
+        or fails. If the job is successful, returns the results. Otherwise, raises an
+        `NtropyBankStatementError` on a bank statement processing error or `NtropyTimeoutError`
+        if the `timeout` is exceeded."""
+
+        finish_statuses = [
+            BankStatementJobStatus.COMPLETED,
+            BankStatementJobStatus.ERROR,
+        ]
+        start_time = time.monotonic()
+        stmt = None
+        while time.monotonic() - start_time < timeout:
+            stmt = await self.get(id=id)
+            if stmt.status in finish_statuses:
+                break
+            await asyncio.sleep(poll_interval)
+
+        if stmt and stmt.status not in finish_statuses:
+            raise NtropyTimeoutError()
+        if stmt.is_error():
+            assert stmt.error is not None
+            raise NtropyBankStatementError(
+                id=stmt.id, code=stmt.error.code, message=stmt.error.message
+            )
+        return await self.results(id=id, **extra_kwargs)
+
+    async def delete(self, id: str, **extra_kwargs: "Unpack[ExtraKwargsAsync]"):
+        request_id = extra_kwargs.get("request_id")
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            extra_kwargs["request_id"] = request_id
+        await self._sdk.retry_ratelimited_request(
             method="DELETE",
             url=f"/v3/bank_statements/{id}",
             payload=None,

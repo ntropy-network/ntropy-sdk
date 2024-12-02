@@ -4,11 +4,11 @@ from typing import (
     Generic,
     Iterator,
     List,
-    Mapping,
     Optional,
     Protocol,
     TYPE_CHECKING,
     TypeVar,
+    Mapping,
 )
 
 from pydantic import PrivateAttr
@@ -16,7 +16,7 @@ from pydantic import PrivateAttr
 from ntropy_sdk.utils import PYDANTIC_V2
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs
+    from ntropy_sdk import ExtraKwargsAsync
     from pydantic import BaseModel as GenericModel
     from typing_extensions import Unpack, Self
 
@@ -29,12 +29,12 @@ T = TypeVar("T")
 
 
 class ListableResource(Protocol[T]):
-    def list(
+    async def list(
         self,
         *,
         cursor: str,
         limit: Optional[int],
-        **extra_kwargs: "Unpack[ExtraKwargs]",
+        **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> "PagedResponse[T]":
         ...
 
@@ -77,7 +77,7 @@ class AutoPaginate(Generic[T]):
     _resource: ListableResource[T]
     _page_size: Optional[int]
 
-    def __iter__(self) -> "AutoPaginateIterator[T]":
+    def __aiter__(self) -> "AutoPaginateIterator[T]":
         return AutoPaginateIterator(
             current_iter=iter(self._first_page.data),
             page_size=self._page_size,
@@ -95,20 +95,20 @@ class AutoPaginateIterator(Generic[T]):
     _resource: ListableResource[T]
     _request_kwargs: Mapping
 
-    def __next__(self) -> T:
+    async def __anext__(self) -> T:
         try:
             return next(self.current_iter)
         except StopIteration:
             if self.next_cursor is None:
-                raise StopIteration
-            next_page = self._resource.list(
+                raise StopAsyncIteration
+            next_page = await self._resource.list(
                 cursor=self.next_cursor,
                 limit=self.page_size,
                 **self._request_kwargs,
             )
             self.current_iter = iter(next_page.data)
             self.next_cursor = next_page.next_cursor
-            return next(self.current_iter)
+            return await self.__anext__()
 
-    def __iter__(self) -> "Self":
+    def __aiter__(self) -> "Self":
         return self

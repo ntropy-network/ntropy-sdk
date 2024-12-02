@@ -1,37 +1,39 @@
+import asyncio
 from datetime import datetime
 import logging
-import time
 import uuid
 from json import JSONDecodeError
 from typing import Dict, Optional, Union
 
-import requests
+import aiohttp
 
 from ntropy_sdk.version import VERSION
 from ntropy_sdk.v2.errors import error_from_http_status_code, NtropyError
 
 
 class HttpClient:
-    def __init__(self, session: Optional[requests.Session] = None):
+    def __init__(self, session: Optional[aiohttp.ClientSession] = None):
         self._session = session
 
-    def _get_session(self) -> requests.Session:
+    def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None:
-            self._session = requests.Session()
-            from requests_toolbelt.adapters.socket_options import TCPKeepAliveAdapter
-
-            self._session.mount("https://", TCPKeepAliveAdapter())
+            self._session = aiohttp.ClientSession()
         return self._session
 
     @property
-    def session(self) -> requests.Session:
+    def session(self) -> aiohttp.ClientSession:
         return self._get_session()
 
     @session.setter
-    def session(self, session: requests.Session):
+    def session(self, session: aiohttp.ClientSession):
         self._session = session
 
-    def retry_ratelimited_request(
+    async def close(self):
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+    async def retry_ratelimited_request(
         self,
         *,
         method: str,
@@ -43,13 +45,13 @@ class HttpClient:
         log_level=logging.DEBUG,
         request_id: Optional[str] = None,
         api_key: Optional[str] = None,
-        session: Optional[requests.Session] = None,
+        session: Optional[aiohttp.ClientSession] = None,
         retries: int = 1,
         timeout: int = 10 * 60,
         retry_on_unhandled_exception: bool = False,
         extra_headers: Optional[dict] = None,
         **request_kwargs,
-    ):
+    ) -> aiohttp.ClientResponse:
         """Executes a request to an endpoint in the Ntropy API (given the `base_url` parameter).
         Catches expected errors and wraps them in NtropyError.
         Retries the request for Rate-Limiting errors or Unexpected Errors (50x)
@@ -92,24 +94,26 @@ class HttpClient:
 
         for _ in range(retries):
             try:
-                resp = cur_session.request(
+                resp = await cur_session.request(
                     method,
                     url,
                     params=params,
                     headers=headers,
-                    timeout=timeout,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
                     **request_kwargs,
                 )
-            except requests.ConnectionError:
+            except aiohttp.ClientConnectionError:
                 # Rebuild session on connection error and retry
                 if session is None:
+                    if self._session is not None:
+                        await self._session.close()
                     self._session = None
                     cur_session = self._get_session()
                     continue
                 else:
                     raise
 
-            if resp.status_code == 429:
+            if resp.status == 429:
                 try:
                     retry_after = int(resp.headers.get("retry-after", "1"))
                 except ValueError:
@@ -123,11 +127,11 @@ class HttpClient:
                         "Retrying in %s seconds due to ratelimit",
                         retry_after,
                     )
-                time.sleep(retry_after)
+                await asyncio.sleep(retry_after)
 
                 continue
-            elif resp.status_code == 503:
-                time.sleep(backoff)
+            elif resp.status == 503:
+                await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 8)
 
                 if logger:
@@ -139,9 +143,9 @@ class HttpClient:
                 continue
 
             elif (
-                resp.status_code >= 500 and resp.status_code <= 511
+                resp.status >= 500 and resp.status <= 511
             ) and retry_on_unhandled_exception:
-                time.sleep(backoff)
+                await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 8)
 
                 if logger:
@@ -153,17 +157,15 @@ class HttpClient:
 
                 continue
 
-            try:
-                resp.raise_for_status()
-            except requests.HTTPError as e:
-                status_code = e.response.status_code
+            if not resp.ok:
+                async with resp:
+                    status_code = resp.status
+                    try:
+                        content = await resp.json()
+                    except JSONDecodeError:
+                        content = {}
 
-                try:
-                    content = e.response.json()
-                except JSONDecodeError:
-                    content = {}
-
-                err = error_from_http_status_code(request_id, status_code, content)
-                raise err
+                    err = error_from_http_status_code(request_id, status_code, content)
+                    raise err
             return resp
         raise NtropyError(f"Failed to {method} {url} after {retries} attempts")
