@@ -63,8 +63,8 @@ class WebhooksResource:
 
     def list(
         self,
-        cursor: str,
-        limit: Optional[int],
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> PagedResponse[Webhook]:
         request_id = extra_kwargs.get("request_id")
@@ -175,8 +175,8 @@ class WebhooksResourceAsync:
 
     async def list(
         self,
-        cursor: str,
-        limit: Optional[int],
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> PagedResponseAsync[Webhook]:
         request_id = extra_kwargs.get("request_id")

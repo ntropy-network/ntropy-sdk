@@ -32,8 +32,8 @@ class ListableResource(Protocol[T]):
     async def list(
         self,
         *,
-        cursor: str,
-        limit: Optional[int],
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> "PagedResponse[T]":
         ...

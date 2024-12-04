@@ -32,8 +32,8 @@ class ListableResource(Protocol[T]):
     def list(
         self,
         *,
-        cursor: str,
-        limit: Optional[int],
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> "PagedResponse[T]":
         ...
