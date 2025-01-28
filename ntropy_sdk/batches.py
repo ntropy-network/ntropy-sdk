@@ -174,11 +174,12 @@ class BatchesResource:
         poll_interval: int,
         timeout: int,
         stop_fn: Callable[[Batch], bool],
+        extra_kwargs: "ExtraKwargs",
     ) -> Batch:
         start_time = time.monotonic()
         batch = None
         while time.monotonic() - start_time < timeout:
-            batch = self.get(id=id)
+            batch = self.get(id=id, **extra_kwargs)
             if stop_fn(batch):
                 break
             time.sleep(poll_interval)
@@ -191,6 +192,7 @@ class BatchesResource:
         poll_interval: int,
         timeout: int,
         stop_fn: Callable[[Batch], bool],
+        extra_kwargs: "ExtraKwargs",
     ) -> Batch:
         from tqdm.auto import tqdm
 
@@ -199,7 +201,7 @@ class BatchesResource:
         total_set = False
         with tqdm() as p:
             while time.monotonic() - start_time < timeout:
-                batch = self.get(id=id)
+                batch = self.get(id=id, **extra_kwargs)
                 if not total_set:
                     p.total = batch.total
                 p.desc = batch.status
@@ -230,11 +232,19 @@ class BatchesResource:
 
         if with_progress:
             batch = self._wait_with_progress(
-                id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
+                id=id,
+                poll_interval=poll_interval,
+                timeout=timeout,
+                stop_fn=stop_fn,
+                extra_kwargs=extra_kwargs,
             )
         else:
             batch = self._wait(
-                id=id, poll_interval=poll_interval, timeout=timeout, stop_fn=stop_fn
+                id=id,
+                poll_interval=poll_interval,
+                timeout=timeout,
+                stop_fn=stop_fn,
+                extra_kwargs=extra_kwargs,
             )
 
         if batch and batch.status not in finish_statuses:
