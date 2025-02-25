@@ -2,7 +2,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [5.1.3] - 2025-02-25
+- Fix `extra_kwargs` handling for bank statements `wait_for_results`
+
+## [5.1.2] - 2025-01-28
+- Fix `extra_kwargs` handling for batches `wait_for_results`
+
+## [5.1.1] - 2024-12-03
+- Webhooks list no longer requires cursor/limit
+
+## [5.1.0] - 2024-12-02
 - Add `AsyncSDK` and corresponding async methods
 
 ## [5.0.2] - 2024-11-07
