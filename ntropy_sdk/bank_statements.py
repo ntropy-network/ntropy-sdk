@@ -246,7 +246,7 @@ class BankStatementsResource:
         start_time = time.monotonic()
         stmt = None
         while time.monotonic() - start_time < timeout:
-            stmt = self._sdk.bank_statements.get(id=id)
+            stmt = self._sdk.bank_statements.get(id=id, **extra_kwargs)
             if stmt.status in finish_statuses:
                 break
             time.sleep(poll_interval)
