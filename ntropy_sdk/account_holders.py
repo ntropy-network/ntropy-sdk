@@ -33,6 +33,10 @@ class AccountHolderCreate(BaseModel):
         default=None,
         description="The name of the account holder",
     )
+    category_id: Optional[str] = Field(
+        default=None,
+        description="The Categories ID that will be used for this account holder's transactions",
+    )
     request_id: Optional[str] = None
 
 
@@ -107,6 +111,7 @@ class AccountHoldersResource:
         id: str,
         type: Union[AccountHolderType, str],
         name: Optional[str] = None,
+        category_id: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> AccountHolderResponse:
         """Create an account holder"""
@@ -123,6 +128,7 @@ class AccountHoldersResource:
                     id=id,
                     type=type,
                     name=name,
+                    category_id=category_id,
                 )
             ),
             **extra_kwargs,
@@ -231,6 +237,7 @@ class AccountHoldersResourceAsync:
         id: str,
         type: Union[AccountHolderType, str],
         name: Optional[str] = None,
+        category_id: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> AccountHolderResponse:
         """Create an account holder"""
@@ -247,6 +254,7 @@ class AccountHoldersResourceAsync:
                     id=id,
                     type=type,
                     name=name,
+                    category_id=category_id,
                 )
             ),
             **extra_kwargs,
