@@ -200,11 +200,11 @@ class RecurrenceType(str, enum.Enum):
 class RecurrencePeriodicity(str, enum.Enum):
     daily = "daily"
     weekly = "weekly"
-    bi_weekly = "bi_weekly"
+    bi_weekly = "bi-weekly"
     monthly = "monthly"
-    bi_monthly = "bi_monthly"
+    bi_monthly = "bi-monthly"
     quarterly = "quarterly"
-    semi_yearly = "semi_yearly"
+    semi_yearly = "semi-yearly"
     yearly = "yearly"
     other = "other"
 
