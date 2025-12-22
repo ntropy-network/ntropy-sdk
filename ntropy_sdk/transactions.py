@@ -93,6 +93,9 @@ class Entity(BaseModel):
         default=[],
         description="A list of [Merchant Category Codes](https://en.wikipedia.org/wiki/Merchant_category_code)",
     )
+    phone_number: Optional[str] = Field(default=None, description="The phone number of the entity")
+    tax_number: Optional[str] = Field(default=None, description="The tax number of the entity")
+    naics2017: Optional[str] = Field(default=None, description="The 2017 NAICS code of the entity")
 
 
 class LocationStructured(BaseModel):
