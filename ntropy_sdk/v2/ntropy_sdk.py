@@ -986,13 +986,13 @@ class Report(BaseModel):
 
 
 class Statement(BaseModel):
-    begin_date: Optional[date]
-    end_date: Optional[date]
-    begin_balance: Optional[float]
-    end_balance: Optional[float]
-    total_incoming: Optional[float]
-    total_outgoing: Optional[float]
-    is_balance_reconciled: Optional[bool]
+    begin_date: Optional[date] = None
+    end_date: Optional[date] = None
+    begin_balance: Optional[float] = None
+    end_balance: Optional[float] = None
+    total_incoming: Optional[float] = None
+    total_outgoing: Optional[float] = None
+    is_balance_reconciled: Optional[bool] = None
 
 
 class BankStatement(BaseModel):
@@ -1001,7 +1001,7 @@ class BankStatement(BaseModel):
     status: str
     transactions: Optional[List] = []
     account_type: AccountHolderType
-    statements: Optional[List[Statement]]
+    statements: Optional[List[Statement]] = None
 
     class Config:
         arbitrary_types_allowed = True

@@ -17,7 +17,7 @@ class Report(BaseModel):
     id: str
     created_at: datetime
     status: str
-    rejection_reason: Optional[str]
+    rejection_reason: Optional[str] = None
 
     transaction_id: str
     description: str

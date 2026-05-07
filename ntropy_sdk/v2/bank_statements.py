@@ -7,20 +7,20 @@ from ntropy_sdk.utils import AccountHolderType
 
 
 class Address(BaseModel):
-    street: Optional[str]
-    postcode: Optional[str]
-    city: Optional[str]
-    state: Optional[str]
-    country: Optional[str]
+    street: Optional[str] = None
+    postcode: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
 
     class Config:
         extra = "allow"
 
 
 class AccountHolder(BaseModel):
-    type: Optional[AccountHolderType]
-    name: Optional[str]
-    address: Optional[Address]
+    type: Optional[AccountHolderType] = None
+    name: Optional[str] = None
+    address: Optional[Address] = None
 
     class Config:
         use_enum_values = True
@@ -28,22 +28,22 @@ class AccountHolder(BaseModel):
 
 
 class Account(BaseModel):
-    type: Optional[str]
-    number: Optional[str]
-    opening_balance: Optional[float]
-    closing_balance: Optional[float]
-    iso_currency_code: Optional[str]
+    type: Optional[str] = None
+    number: Optional[str] = None
+    opening_balance: Optional[float] = None
+    closing_balance: Optional[float] = None
+    iso_currency_code: Optional[str] = None
 
     class Config:
         extra = "allow"
 
 
 class StatementInfo(BaseModel):
-    institution: Optional[str]
-    start_date: Optional[date]
-    end_date: Optional[date]
-    account_holder: Optional[AccountHolder]
-    accounts: Optional[List[Account]]
+    institution: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    account_holder: Optional[AccountHolder] = None
+    accounts: Optional[List[Account]] = None
     request_id: str
 
     class Config:

@@ -60,16 +60,16 @@ class IncomeGroup(BaseModel):
     total_amount: float
     iso_currency_code: str
     income_type: str
-    source: Optional[str]
-    merchant_id: Optional[str]
+    source: Optional[str] = None
+    merchant_id: Optional[str] = None
     first_payment_date: str
     latest_payment_date: str
     duration: str
     is_active: bool
     latest_payment_description: str
-    pay_frequency: Optional[str]
-    next_expected_payment_date: Optional[str]
-    next_expected_payment_amount: Optional[str]
+    pay_frequency: Optional[str] = None
+    next_expected_payment_date: Optional[str] = None
+    next_expected_payment_amount: Optional[str] = None
     transaction_ids: List[Union[int, str]]
     transactions: List[Any]  # List[EnrichedTransaction]
 
@@ -95,8 +95,8 @@ class IncomeGroup(BaseModel):
 
 
 class IncomeSummary(BaseModel):
-    main_income_source: Optional[str]
-    main_income_type: Optional[str]
+    main_income_source: Optional[str] = None
+    main_income_type: Optional[str] = None
     total_income: float
     earned_income: float
     passive_income: float
