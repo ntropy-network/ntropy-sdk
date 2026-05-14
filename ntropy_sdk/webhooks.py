@@ -44,7 +44,7 @@ class Webhook(BaseModel):
         description="A list of events that this webhook subscribes to",
     )
     token: Optional[str] = Field(
-        description="A secret string used to authenticate the webhook. This "
+        None, description="A secret string used to authenticate the webhook. This "
         "value will be included in the `X-Ntropy-Token` header when sending "
         "requests to the webhook",
     )

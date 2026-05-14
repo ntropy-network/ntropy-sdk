@@ -31,7 +31,7 @@ def test_processed_bank_statement(sdk, bank_statement_sample):
     bsr = BankStatementRequest(
         sdk=sdk,
         filename="file",
-        bs_id="940ee882-cdf1-4770-838b-35e31859b56e",
+        bs_id="cc746f97-4dd7-4810-b602-6531e4139460",
     )
 
     df = bsr.wait()

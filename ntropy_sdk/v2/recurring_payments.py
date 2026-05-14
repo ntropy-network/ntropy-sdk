@@ -5,23 +5,23 @@ from tabulate import tabulate
 
 class RecurringPaymentsGroup(BaseModel):
     latest_payment_amount: float
-    periodicity: Optional[str]
-    merchant: Optional[str]
-    merchant_id: Optional[str]
-    website: Optional[str]
-    labels: Optional[List[str]]
-    logo: Optional[str]
+    periodicity: Optional[str] = None
+    merchant: Optional[str] = None
+    merchant_id: Optional[str] = None
+    website: Optional[str] = None
+    labels: Optional[List[str]] = None
+    logo: Optional[str] = None
     type: str
     is_essential: bool
     is_active: bool
     first_payment_date: str
     latest_payment_date: str
-    next_expected_payment_date: Optional[str]
+    next_expected_payment_date: Optional[str] = None
     latest_payment_description: str
     transaction_ids: List[Union[int, str]]
-    transactions: Any  # EnrichedTransactionList
+    transactions: Any = None  # EnrichedTransactionList
     total_amount: float
-    iso_currency_code: Optional[str]
+    iso_currency_code: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):

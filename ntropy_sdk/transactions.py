@@ -241,7 +241,7 @@ class RecurrenceGroup(BaseModel):
 
 class RecurrenceGroups(BaseModel):
     groups: List[RecurrenceGroup]
-    request_id: Optional[str]
+    request_id: Optional[str] = None
 
 
 class Recurrence(BaseModel):

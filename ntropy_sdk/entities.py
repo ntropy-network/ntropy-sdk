@@ -10,10 +10,10 @@ if TYPE_CHECKING:
 
 
 class Entity(BaseModel):
-    id: Optional[str]
-    name: Optional[str]
-    website: Optional[str]
-    logo: Optional[str]
+    id: Optional[str] = None
+    name: Optional[str] = None
+    website: Optional[str] = None
+    logo: Optional[str] = None
     mccs: List[int]
 
 

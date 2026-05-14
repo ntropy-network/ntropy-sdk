@@ -34,7 +34,7 @@ class BankStatementJobStatus(str, Enum):
 
 class BankStatementFile(BaseModel):
     no_pages: int
-    size: Optional[int]
+    size: Optional[int] = None
 
 
 class BankStatementError(BaseModel):
@@ -44,7 +44,7 @@ class BankStatementError(BaseModel):
 
 class BankStatementJob(BaseModel):
     id: str
-    name: Optional[str]
+    name: Optional[str] = None
     status: BankStatementJobStatus
     created_at: datetime
     file: BankStatementFile
@@ -65,7 +65,7 @@ class BankStatementTransaction(BaseModel):
     date: date
     entry_type: EntryType
     amount: NonNegativeFloat
-    running_balance: Optional[float]
+    running_balance: Optional[float] = None
     currency: str = Field(
         description="The currency of the transaction in ISO 4217 format"
     )
@@ -93,14 +93,14 @@ class BankStatementTransaction(BaseModel):
 
 
 class BankStatementAccount(BaseModel):
-    number: Optional[str]
-    opening_balance: Optional[float]
-    closing_balance: Optional[float]
-    start_date: Optional[date]
-    end_date: Optional[date]
-    is_balance_reconciled: Optional[bool]
-    total_incoming: Optional[float]
-    total_outgoing: Optional[float]
+    number: Optional[str] = None
+    opening_balance: Optional[float] = None
+    closing_balance: Optional[float] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    is_balance_reconciled: Optional[bool] = None
+    total_incoming: Optional[float] = None
+    total_outgoing: Optional[float] = None
     transactions: List[BankStatementTransaction]
     request_id: Optional[str] = None
 
