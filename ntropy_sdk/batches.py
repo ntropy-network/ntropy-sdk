@@ -3,12 +3,12 @@ import time
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.async_.paging import PagedResponse as PagedResponseAsync
+from ntropy_sdk.paging import PagedResponse
 from ntropy_sdk.transactions import (
     EnrichedTransaction,
 )
@@ -16,15 +16,24 @@ from ntropy_sdk.utils import DEFAULT_WITH_PROGRESS
 from ntropy_sdk.v2 import NtropyBatchError
 
 if TYPE_CHECKING:
-    from ntropy_sdk import ExtraKwargs, ExtraKwargsAsync, NtropyTimeoutError, SDK
-    from ntropy_sdk.async_.sdk import AsyncSDK
     from typing_extensions import Unpack
+
+    from ntropy_sdk import SDK, ExtraKwargs, ExtraKwargsAsync, NtropyTimeoutError
+    from ntropy_sdk.async_.sdk import AsyncSDK
 
 
 class BatchStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     ERROR = "error"
+
+
+class BatchPriority(str, Enum):
+    DEFAULT = "default"
+    LOW = "low"
+
+
+BatchPriorityLiteral = Literal["default", "low"]
 
 
 class Batch(BaseModel):
@@ -35,6 +44,7 @@ class Batch(BaseModel):
     id: str = Field(description="A unique identifier for the batch.")
     operation: str = Field(description="Operation for the batch")
     status: BatchStatus = Field(description="The current status of the batch.")
+    priority: BatchPriority = Field(description="The priority of the batch.")
     created_at: datetime = Field(
         description="The timestamp of when the batch was created."
     )
@@ -132,6 +142,8 @@ class BatchesResource:
         self,
         operation: str,
         data: List[dict],
+        *,
+        priority: Union[BatchPriority, BatchPriorityLiteral] = BatchPriority.DEFAULT,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Batch:
         """Submit a batch of transactions for enrichment"""
@@ -140,11 +152,15 @@ class BatchesResource:
         if request_id is None:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
+
+        if isinstance(priority, str):
+            priority = BatchPriority(priority)
         resp = self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/batches",
             payload={
                 "operation": operation,
+                "priority": priority.value,
                 "data": data,
             },
             **extra_kwargs,
@@ -321,6 +337,8 @@ class BatchesResourceAsync:
         self,
         operation: str,
         data: List[dict],
+        *,
+        priority: Union[BatchPriority, BatchPriorityLiteral] = BatchPriority.DEFAULT,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> Batch:
         """Submit a batch of transactions for enrichment"""
@@ -329,11 +347,15 @@ class BatchesResourceAsync:
         if request_id is None:
             request_id = uuid.uuid4().hex
             extra_kwargs["request_id"] = request_id
+
+        if isinstance(priority, str):
+            priority = BatchPriority(priority)
         resp = await self._sdk.retry_ratelimited_request(
             method="POST",
             url="/v3/batches",
             payload={
                 "operation": operation,
+                "priority": priority.value,
                 "data": data,
             },
             **extra_kwargs,
