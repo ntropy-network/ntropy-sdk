@@ -2,6 +2,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [5.6.0] - 2026-08-29
+- Add `semi-monthly` recurrence periodicity support.
+- Align compound recurrence periodicity values with the API's hyphenated wire format while accepting legacy underscore spellings.
+
 ## [5.1.3] - 2025-02-25
 - Fix `extra_kwargs` handling for bank statements `wait_for_results`
 

@@ -203,13 +203,24 @@ class RecurrenceType(str, enum.Enum):
 class RecurrencePeriodicity(str, enum.Enum):
     daily = "daily"
     weekly = "weekly"
-    bi_weekly = "bi_weekly"
+    bi_weekly = "bi-weekly"
+    semi_monthly = "semi-monthly"
     monthly = "monthly"
-    bi_monthly = "bi_monthly"
+    bi_monthly = "bi-monthly"
     quarterly = "quarterly"
-    semi_yearly = "semi_yearly"
+    semi_yearly = "semi-yearly"
     yearly = "yearly"
     other = "other"
+
+    @classmethod
+    def _missing_(cls, value):
+        # Accept values emitted by older SDK models while serializing to the
+        # hyphenated spellings used by the API.
+        if isinstance(value, str):
+            wire_value = value.replace("_", "-")
+            if wire_value != value:
+                return cls(wire_value)
+        return None
 
 
 class RecurrenceGroup(BaseModel):
