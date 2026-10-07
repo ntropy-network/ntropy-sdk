@@ -2,6 +2,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [5.7.0] - 2026-10-07
+- Add `hmac_secret` to webhooks.
+
 ## [5.6.0] - 2026-08-29
 - Add `semi-monthly` recurrence periodicity support.
 - Align compound recurrence periodicity values with the API's hyphenated wire format while accepting legacy underscore spellings.
