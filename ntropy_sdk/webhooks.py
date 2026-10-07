@@ -91,7 +91,8 @@ class WebhooksResource:
         *,
         url: str,
         events: List[WebhookEventType],
-        token: Optional[str],
+        token: Optional[str] = None,
+        hmac_secret: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ) -> Webhook:
         request_id = extra_kwargs.get("request_id")
@@ -105,6 +106,7 @@ class WebhooksResource:
                 "url": url,
                 "events": events,
                 "token": token,
+                "hmac_secret": hmac_secret,
             },
             **extra_kwargs,
         )
@@ -145,6 +147,7 @@ class WebhooksResource:
         events: Union[List[WebhookEventType], _Unset] = UNSET,
         token: Union[str, None, _Unset] = UNSET,
         enabled: Union[bool, _Unset] = UNSET,
+        hmac_secret: Union[str, None, _Unset] = UNSET,
         **extra_kwargs: "Unpack[ExtraKwargs]",
     ):
         payload = {}
@@ -156,6 +159,8 @@ class WebhooksResource:
             payload["token"] = token
         if enabled is not UNSET:
             payload["enabled"] = enabled
+        if hmac_secret is not UNSET:
+            payload["hmac_secret"] = hmac_secret
 
         request_id = extra_kwargs.get("request_id")
         if request_id is None:
@@ -204,7 +209,8 @@ class WebhooksResourceAsync:
         *,
         url: str,
         events: List[WebhookEventType],
-        token: Optional[str],
+        token: Optional[str] = None,
+        hmac_secret: Optional[str] = None,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ) -> Webhook:
         request_id = extra_kwargs.get("request_id")
@@ -218,6 +224,7 @@ class WebhooksResourceAsync:
                 "url": url,
                 "events": events,
                 "token": token,
+                "hmac_secret": hmac_secret,
             },
             **extra_kwargs,
         )
@@ -262,6 +269,7 @@ class WebhooksResourceAsync:
         events: Union[List[WebhookEventType], _Unset] = UNSET,
         token: Union[str, None, _Unset] = UNSET,
         enabled: Union[bool, _Unset] = UNSET,
+        hmac_secret: Union[str, None, _Unset] = UNSET,
         **extra_kwargs: "Unpack[ExtraKwargsAsync]",
     ):
         payload = {}
@@ -273,6 +281,8 @@ class WebhooksResourceAsync:
             payload["token"] = token
         if enabled is not UNSET:
             payload["enabled"] = enabled
+        if hmac_secret is not UNSET:
+            payload["hmac_secret"] = hmac_secret
 
         request_id = extra_kwargs.get("request_id")
         if request_id is None:

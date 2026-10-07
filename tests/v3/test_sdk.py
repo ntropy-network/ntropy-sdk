@@ -33,7 +33,8 @@ def test_404_ah(sdk):
         sdk.account_holders.get("non-existent-id")
 
 
-def test_recurrence_groups(sdk):
+def test_recurrence_groups(recurrence_sdk):
+    sdk = recurrence_sdk
     try:
         sdk.account_holders.create(
             id="Xksd9SWd",

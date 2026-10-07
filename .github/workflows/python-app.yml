@@ -41,3 +41,4 @@ jobs:
         pytest
       env:
         NTROPY_API_KEY: ${{ secrets.NTROPY_API_KEY }}
+        NTROPY_RECURRENCE_API_KEY: ${{ secrets.NTROPY_RECURRENCE_API_KEY }}
