@@ -25,3 +25,23 @@ async def async_sdk(api_key):
         if url is not None:
             sdk.base_url = url
         yield sdk
+
+
+@pytest.fixture
+def recurrence_sdk(recurrence_api_key):
+    sdk = SDK(recurrence_api_key)
+
+    url = os.environ.get("NTROPY_API_URL")
+    if url is not None:
+        sdk.base_url = url
+
+    return sdk
+
+
+@pytest_asyncio.fixture
+async def recurrence_async_sdk(recurrence_api_key):
+    async with AsyncSDK(recurrence_api_key) as sdk:
+        url = os.environ.get("NTROPY_API_URL")
+        if url is not None:
+            sdk.base_url = url
+        yield sdk

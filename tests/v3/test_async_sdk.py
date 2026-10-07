@@ -17,8 +17,8 @@ async def test_async_pagination(async_sdk: AsyncSDK):
 
 
 @pytest.mark.asyncio
-async def test_recurrence_groups(async_sdk: AsyncSDK):
-    sdk = async_sdk
+async def test_recurrence_groups(recurrence_async_sdk: AsyncSDK):
+    sdk = recurrence_async_sdk
     try:
         await sdk.account_holders.create(
             id="Xksd9SWd",
